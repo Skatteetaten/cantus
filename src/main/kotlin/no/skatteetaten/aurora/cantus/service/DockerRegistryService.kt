@@ -68,7 +68,27 @@ class DockerRegistryService(val httpClient: RestTemplate) {
         return jsonParser.readTree(jsonParser.writeValueAsString(manifest))
     }
 
-    fun createManifestRequest(
+    fun getImageTags(registryUrl: String?, imageName: String): JsonNode {
+        val url = registryUrl ?: DOCKER_REGISTRY_URL_BODY
+
+        val manifestUri = URI("$url/v2/$imageName/tags/list")
+        val header = HttpHeaders()
+
+        val tagsRequest = RequestEntity<JsonNode>(header, HttpMethod.GET, manifestUri)
+        val response = httpClient.exchange(tagsRequest, JsonNode::class.java)
+
+        val jsonParser = ObjectMapper()
+
+        return jsonParser.readTree(jsonParser.writeValueAsString(response)).at("/body/tags")
+    }
+
+    fun getImageTagsGroupedBySemanticVersion(registryUrl : String?, imageName: String) : JsonNode {
+        val tags = getImageTags(registryUrl, imageName)
+        val jsonParser = ObjectMapper()
+        return jsonParser.convertValue(tags.groupBy { ImageTagType.typeOf(it.asText()) }, JsonNode::class.java)
+    }
+
+    private fun createManifestRequest(
         registryUrl: String,
         imageName: String,
         imageTag: String,

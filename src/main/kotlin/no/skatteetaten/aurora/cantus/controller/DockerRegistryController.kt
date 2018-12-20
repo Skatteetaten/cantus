@@ -10,13 +10,31 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 class DockerRegistryController(val dockerRegistryService: DockerRegistryService) {
 
-    @GetMapping("/group/{group}/name/{name}/tag/{tag}/manifest")
+    @GetMapping("/affiliation/{affiliation}/name/{name}/tag/{tag}/manifest")
     fun getManifestInformation(
-        @PathVariable group: String,
+        @PathVariable affiliation: String,
         @PathVariable name: String,
         @PathVariable tag: String,
         @RequestParam(required = false) dockerRegistryUrl: String?
     ): JsonNode? {
-        return dockerRegistryService.getImageManifest(dockerRegistryUrl, "$group/$name", tag)
+        return dockerRegistryService.getImageManifest(dockerRegistryUrl, "$affiliation/$name", tag)
+    }
+
+    @GetMapping("/affiliation/{affiliation}/name/{name}/tags")
+    fun getImageTags(
+        @PathVariable affiliation: String,
+        @PathVariable name: String,
+        @RequestParam(required = false) dockerRegistryUrl: String?
+    ): JsonNode {
+        return dockerRegistryService.getImageTags(dockerRegistryUrl, "$affiliation/$name")
+    }
+
+    @GetMapping("/affiliation/{affiliation}/name/{name}/tags/groupBy/semanticVersion")
+    fun getImageTagsGroupedBySemanticVersion (
+        @PathVariable affiliation: String,
+        @PathVariable name: String,
+        @RequestParam(required = false) dockerRegistryUrl: String?
+    ): JsonNode {
+        return dockerRegistryService.getImageTagsGroupedBySemanticVersion(dockerRegistryUrl, "$affiliation/$name")
     }
 }
