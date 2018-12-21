@@ -82,7 +82,7 @@ class DockerRegistryService(val httpClient: RestTemplate) {
         return jsonParser.readTree(jsonParser.writeValueAsString(response)).at("/body/tags")
     }
 
-    fun getImageTagsGroupedBySemanticVersion(registryUrl : String?, imageName: String) : JsonNode {
+    fun getImageTagsGroupedBySemanticVersion(registryUrl: String?, imageName: String): JsonNode {
         val tags = getImageTags(registryUrl, imageName)
         val jsonParser = ObjectMapper()
         return jsonParser.convertValue(tags.groupBy { ImageTagType.typeOf(it.asText()) }, JsonNode::class.java)

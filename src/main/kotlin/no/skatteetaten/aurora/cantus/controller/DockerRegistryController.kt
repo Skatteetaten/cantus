@@ -30,7 +30,7 @@ class DockerRegistryController(val dockerRegistryService: DockerRegistryService)
     }
 
     @GetMapping("/affiliation/{affiliation}/name/{name}/tags/groupBy/semanticVersion")
-    fun getImageTagsGroupedBySemanticVersion (
+    fun getImageTagsGroupedBySemanticVersion(
         @PathVariable affiliation: String,
         @PathVariable name: String,
         @RequestParam(required = false) dockerRegistryUrl: String?

@@ -4,8 +4,8 @@ import java.time.Instant
 
 data class ImageRepoDto(val registry: String, val namespace: String, val name: String) {
     val repository: String
-    get() = listOf(registry, namespace, name).joinToString("/")
-    }
+        get() = listOf(registry, namespace, name).joinToString("/")
+}
 
 enum class ImageTagType {
     LATEST,
@@ -15,7 +15,7 @@ enum class ImageTagType {
     BUGFIX,
     AURORA_VERSION,
     AURORA_SNAPSHOT_VERSION,
-    COMMIT_HASH ;
+    COMMIT_HASH;
 
     companion object {
         fun typeOf(tag: String): ImageTagType {
@@ -37,5 +37,5 @@ enum class ImageTagType {
 
 data class ImageTagDto(val name: String, var created: Instant) {
     val type: ImageTagType
-    get() = ImageTagType.typeOf(name)
-    }
+        get() = ImageTagType.typeOf(name)
+}
