@@ -2,102 +2,111 @@ package no.skatteetaten.aurora.cantus.service
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
-import no.skatteetaten.aurora.cantus.extensions.asMap
-import org.springframework.http.HttpHeaders
-import org.springframework.http.HttpMethod
-import org.springframework.http.MediaType
-import org.springframework.http.RequestEntity
+import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.http.*
 import org.springframework.stereotype.Service
 import org.springframework.web.client.RestTemplate
 import java.net.URI
-import java.util.HashSet
+import java.util.*
+
+data class DockerRegistryTagResponse(val name: String, val tags: List<String>)
+data class DockerRegistryManifestResponse(val v1Compatibility: List<List<String>>)
 
 @Service
-class DockerRegistryService(val httpClient: RestTemplate) {
+class DockerRegistryService(val httpClient: RestTemplate,
+                            @Value("\${cantus.docker-registry-url-body}") val dockerRegistryUrlBody: String,
+                            @Value("\${cantus.docker-registry-url-header}") val dockerRegistryUrlHeader: String) {
 
     val DOCKER_MANIFEST_V2: String = "application/vnd.docker.distribution.manifest.v2+json"
-
-    val DOCKER_REGISTRY_URL_BODY = "https://test-docker-registry-internal-group.aurora.skead.no"
-    val DOCKER_REGISTRY_URL_HEAD = "http://uil0paas-utv-registry01.skead.no:9090"
+    val logger = LoggerFactory.getLogger(DockerRegistryService::class.java)
 
     val manifestEnvLabels: HashSet<String> = hashSetOf(
-        "AURORA_VERSION",
-        "IMAGE_BUILD_TIME",
-        "APP_VERSION",
-        "JOLOKIA_VERSION",
-        "JAVA_VERSION_MAJOR",
-        "JAVA_VERSION_MINOR",
-        "JAVA_VERSION_BUILD",
-        "NODE_VERSION"
+            "AURORA_VERSION",
+            "IMAGE_BUILD_TIME",
+            "APP_VERSION",
+            "JOLOKIA_VERSION",
+            "JAVA_VERSION_MAJOR",
+            "JAVA_VERSION_MINOR",
+            "JAVA_VERSION_BUILD",
+            "NODE_VERSION"
     )
 
-    val manifestVersionLabels: HashSet<String> = hashSetOf(
-        "docker_version",
-        "nodejs_version"
-    )
-
+    val manifestVersionLabels: String = "docker_version"
     val manifestImageDigestLabel = "Docker-Content-Digest"
 
-    fun getImageManifest(registryUrl: String?, imageName: String, imageTag: String): JsonNode? {
-        val url = registryUrl ?: DOCKER_REGISTRY_URL_BODY
+    fun getImageManifest(imageName: String, imageTag: String, registryUrl: String? = null): Map<String, String> {
+        /**
+         * P.T så henter denne ut fra to registry, mens i prod så vil det kun være en
+         */
+        val url = registryUrl ?: dockerRegistryUrlBody
 
         val bodyRequest = createManifestRequest(url, imageName, imageTag)
-        val responseBodyRequest = httpClient.exchange(bodyRequest, JsonNode::class.java)
+        val headerRequest = createManifestRequest(dockerRegistryUrlHeader, imageName, imageTag, DOCKER_MANIFEST_V2)
 
-        val jsonParser = ObjectMapper()
-        val bodyOfManifest = jsonParser.readTree(responseBodyRequest.body["history"][0]["v1Compatibility"].asText())
+        logger.debug("Henter ut manifest fra $url")
+        val responseBodyRequest = httpClient.exchange(bodyRequest, JsonNode::class.java)
+        responseBodyRequest.checkInternalServerErrorDocker(url)
+
+        val bodyOfManifest = ObjectMapper().readTree(responseBodyRequest.body?.get("history")?.get(0)?.get("v1Compatibility")?.asText()
+                ?: return mapOf())
 
         val env = bodyOfManifest.at("/config/Env").map {
             val (key, value) = it.asText().split("=")
             key to value
         }.toMap()
+        val imageManifestInformation: MutableMap<String, String> = env
+                .filter { manifestEnvLabels.contains(it.key) }
+                .mapKeys { it.key.toUpperCase() }
+                .toMutableMap()
 
-        val filteredEnv = env.filter { manifestEnvLabels.contains(it.key) }.mapKeys { it.key.toUpperCase() }
-        val versions =
-            bodyOfManifest.asMap().filter { manifestVersionLabels.contains(it.key) }.mapKeys { it.key.toUpperCase() }
-
-        val headerRequest = createManifestRequest(DOCKER_REGISTRY_URL_HEAD, imageName, imageTag, DOCKER_MANIFEST_V2)
+        logger.debug("Henter ut manifest fra $dockerRegistryUrlHeader")
         val responseHeaderRequest = httpClient.exchange(headerRequest, JsonNode::class.java)
+        responseHeaderRequest.checkInternalServerErrorDocker(dockerRegistryUrlHeader)
 
-        val headOfManifest = mapOf(
-            manifestImageDigestLabel.toUpperCase() to responseHeaderRequest.headers[manifestImageDigestLabel]?.get(0)
-        )
+        imageManifestInformation[manifestVersionLabels.toUpperCase()] = bodyOfManifest.get(manifestVersionLabels)?.asText() ?: ""
+        imageManifestInformation[manifestImageDigestLabel.toUpperCase()] = responseHeaderRequest.headers[manifestImageDigestLabel]?.get(0) ?: ""
 
-        val manifest = headOfManifest.plus(versions).plus(filteredEnv)
-
-        return jsonParser.readTree(jsonParser.writeValueAsString(manifest))
+        return imageManifestInformation
     }
 
-    fun getImageTags(registryUrl: String?, imageName: String): JsonNode {
-        val url = registryUrl ?: DOCKER_REGISTRY_URL_BODY
+    fun getImageTags(imageName: String, registryUrl: String? = null): List<String> {
+        val url = registryUrl ?: dockerRegistryUrlBody
 
         val manifestUri = URI("$url/v2/$imageName/tags/list")
         val header = HttpHeaders()
 
+        logger.debug("Henter tags fra {}", manifestUri)
         val tagsRequest = RequestEntity<JsonNode>(header, HttpMethod.GET, manifestUri)
-        val response = httpClient.exchange(tagsRequest, JsonNode::class.java)
+        val response = httpClient.exchange(tagsRequest, DockerRegistryTagResponse::class.java)
+        response.checkInternalServerErrorDocker(url)
 
-        val jsonParser = ObjectMapper()
-
-        return jsonParser.readTree(jsonParser.writeValueAsString(response)).at("/body/tags")
+        return response.body?.tags ?: listOf()
     }
 
-    fun getImageTagsGroupedBySemanticVersion(registryUrl: String?, imageName: String): JsonNode {
-        val tags = getImageTags(registryUrl, imageName)
-        val jsonParser = ObjectMapper()
-        return jsonParser.convertValue(tags.groupBy { ImageTagType.typeOf(it.asText()) }, JsonNode::class.java)
+    fun getImageTagsGroupedBySemanticVersion(imageName: String, registryUrl: String? = null): Map<String, List<String>> {
+        val url = registryUrl ?: dockerRegistryUrlBody
+        val tags = getImageTags(imageName, url)
+
+        logger.debug("Grupperer tags etter semantisk versjon")
+        return tags.groupBy { ImageTagType.typeOf(it).toString() }
     }
 
     private fun createManifestRequest(
-        registryUrl: String,
-        imageName: String,
-        imageTag: String,
-        headerAccept: String = ""
-    ): RequestEntity<*> {
+            registryUrl: String,
+            imageName: String,
+            imageTag: String,
+            headerAccept: String = ""
+    ): RequestEntity<JsonNode> {
         val manifestUri = URI("$registryUrl/v2/$imageName/manifests/$imageTag")
         val header = HttpHeaders()
         if (headerAccept != "") header.accept = listOf(MediaType.valueOf(headerAccept))
 
-        return RequestEntity<JsonNode>(header, HttpMethod.GET, manifestUri)
+        return RequestEntity(header, HttpMethod.GET, manifestUri)
+    }
+
+
+    fun ResponseEntity<*>.checkInternalServerErrorDocker(msg: String) {
+        if (this.statusCode == HttpStatus.INTERNAL_SERVER_ERROR) logger.warn("Feil fra Docker Registry $msg")
     }
 }

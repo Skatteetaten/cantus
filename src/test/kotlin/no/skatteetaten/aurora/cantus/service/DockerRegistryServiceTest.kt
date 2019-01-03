@@ -1,45 +1,72 @@
 package no.skatteetaten.aurora.cantus.service
 
+import assertk.assert
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNotNull
 import io.mockk.clearMocks
-import io.mockk.every
+import no.skatteetaten.aurora.cantus.execute
+import no.skatteetaten.aurora.cantus.setJsonFileAsBody
+import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
-import org.intellij.lang.annotations.Language
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.springframework.web.client.RestTemplate
 
 class DockerRegistryServiceTest {
 
-    private val imageRepoName = "no_skatteetaten_aurora/boober"
-    private val tagName = "1"
+    private val imageRepoName = "no_skatteetaten_aurora_demo/whoami"
+    private val tagName = "2"
 
     private val server = MockWebServer()
     private val url = server.url("/")
+    private val dockerService = DockerRegistryService(RestTemplate(), url.toString(), url.toString())
 
     @BeforeEach
     fun setUp() {
         clearMocks()
+    }
 
-        every {
+    @Test
+    fun `Verify fetches manifest information for specified image`() {
+        val response = MockResponse().setJsonFileAsBody("dockerManifest.json").addHeader("Docker-Content-Digest", "SHA::256")
 
+        val requests = server.execute(response, response) {
+            val jsonResponse = dockerService.getImageManifest(imageRepoName, tagName)
+            assert(jsonResponse).isNotNull {
+                assert(it.actual.size).isEqualTo(9)
+                assert(it.actual["DOCKER-CONTENT-DIGEST"]).isEqualTo("SHA::256")
+                assert(it.actual["DOCKER_VERSION"]).isEqualTo("1.13.1")
+            }
+        }
+        assert(requests.size).isEqualTo(2)
+    }
+
+    @Test
+    fun `Verify fetches all tags for specified image`() {
+        val response = MockResponse().setJsonFileAsBody("dockerTagList.json")
+
+        server.execute(response) {
+            val jsonResponse = dockerService.getImageTags(imageRepoName)
+            assert(jsonResponse).isNotNull {
+                assert(it.actual.size).isEqualTo(5)
+                assert(it.actual[0]).isEqualTo("0")
+                assert(it.actual[1]).isEqualTo("0.0")
+                assert(it.actual[2]).isEqualTo("0.0.0")
+            }
         }
     }
 
     @Test
-    fun 'Verify fetches all tags for specified image' () {
-        val request = server.execute(tagslistResponse)
+    fun `Verify groups tags correctly`() {
+        val response = MockResponse().setJsonFileAsBody("dockerTagList.json")
+
+        server.execute(response) {
+            val jsonResponse = dockerService.getImageTagsGroupedBySemanticVersion(imageRepoName)
+            assert(jsonResponse).isNotNull {
+                assert(it.actual["BUGFIX"]?.size).isEqualTo(2)
+                assert(it.actual["MINOR"]!![0]).isEqualTo("0.0")
+                assert(it.actual.size).isEqualTo(4)
+            }
+        }
     }
 }
-
-@Language("JSON")
-private const val tagsListResponse = """{
-    "name": "no_skatteetaten_aurora/boober",
-    "tags": [
-       "master-SNAPSHOT",
-        "1.0.0-rc.1-b2.2.3-oracle8-1.4.0",
-    "1.0.0-rc.2-b2.2.3-oracle8-1.4.0",
-    "develop-SNAPSHOT",
-    "1"
-    ]
-
-
-}"""
