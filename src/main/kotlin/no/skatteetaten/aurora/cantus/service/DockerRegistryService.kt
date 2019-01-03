@@ -16,6 +16,7 @@ import kotlin.reflect.KClass
 
 data class DockerRegistryTagResponse(val name: String, val tags: List<String>)
 
+
 @Service
 class DockerRegistryService(val restTemplate: RestTemplate,
                             @Value("\${cantus.docker-registry-url-body}") val dockerRegistryUrlBody: String,
@@ -104,11 +105,13 @@ class DockerRegistryService(val restTemplate: RestTemplate,
         return RequestEntity(header, HttpMethod.GET, manifestUri)
     }
 
-    fun <T : Any> RestTemplate.exchangeAndLogError(request : RequestEntity<JsonNode>, returnType : KClass<T>) =
+}
+
+
+private fun <T : Any> RestTemplate.exchangeAndLogError(request : RequestEntity<JsonNode>, returnType : KClass<T>) =
         try {
             this.exchange(request, returnType.java)
         } catch (e : RestClientResponseException) {
-            logger.warn("Feil fra Docker Registry ${request.url} status: ${e.rawStatusCode} - ${e.statusText}")
+            LoggerFactory.getLogger(DockerRegistryService::class.java).warn("Feil fra Docker Registry ${request.url} status: ${e.rawStatusCode} - ${e.statusText}")
             throw DockerRegistryException("Feil fra Docker Registry status: ${e.rawStatusCode} - ${e.statusText}")
         }
-}
