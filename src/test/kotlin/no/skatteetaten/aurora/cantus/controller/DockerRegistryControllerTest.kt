@@ -29,7 +29,7 @@ class DockerRegistryControllerTest {
     @ValueSource(strings = [
         "/affiliation/no_skatteetaten_aurora_demo/name/whoami/tag/2/manifest",
         "/affiliation/no_skatteetaten_aurora_demo/name/whoami/tags",
-        "/affiliation/no_skatteetaten_aurora_demo/name/whoami/tags/groupBy/semanticVersion"
+        "/affiliation/no_skatteetaten_aurora_demo/name/whoami/tags?groupBy=semanticVersion"
     ])
     fun `Get docker registry image info`(path: String) {
         given(dockerService.getImageManifest(any(), any(), anyOrNull())).willReturn(mapOf("1" to "2"))
@@ -44,7 +44,7 @@ class DockerRegistryControllerTest {
     @ValueSource(strings = [
         "/affiliation/no_skatteetaten_aurora_demo/name/whoami/tag/2/manifest",
         "/affiliation/no_skatteetaten_aurora_demo/name/whoami/tags",
-        "/affiliation/no_skatteetaten_aurora_demo/name/whoami/tags/groupBy/semanticVersion"
+        "/affiliation/no_skatteetaten_aurora_demo/name/whoami/tags?groupBy=semanticVersion"
     ])
     fun `Get docker registry image info given missing resource return 404`(path: String) {
         mockMvc.perform(get(path))
