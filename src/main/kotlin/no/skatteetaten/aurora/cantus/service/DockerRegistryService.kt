@@ -11,7 +11,6 @@ import java.net.URI
 import java.util.*
 
 data class DockerRegistryTagResponse(val name: String, val tags: List<String>)
-data class DockerRegistryManifestResponse(val v1Compatibility: List<List<String>>)
 
 @Service
 class DockerRegistryService(val httpClient: RestTemplate,
@@ -32,7 +31,7 @@ class DockerRegistryService(val httpClient: RestTemplate,
             "NODE_VERSION"
     )
 
-    val manifestVersionLabels: String = "docker_version"
+    val manifestVersionLabels = "docker_version"
     val manifestImageDigestLabel = "Docker-Content-Digest"
 
     fun getImageManifest(imageName: String, imageTag: String, registryUrl: String? = null): Map<String, String> {
