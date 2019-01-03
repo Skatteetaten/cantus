@@ -17,8 +17,9 @@ fun MockWebServer.enqueueJson(status: Int = 200, body: Any) {
     this.enqueue(response)
 }
 
-fun MockWebServer.execute(status: Int, response: Any, fn: () -> Unit): RecordedRequest {
-    this.enqueueJson(status, response)
+fun MockWebServer.execute(status: Int, fn: () -> Unit): RecordedRequest {
+    val response = MockResponse().setResponseCode(status)
+    this.enqueue(response)
     fn()
     return this.takeRequest()
 }

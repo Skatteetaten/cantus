@@ -2,18 +2,22 @@ package no.skatteetaten.aurora.cantus.service
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
+import no.skatteetaten.aurora.cantus.controller.DockerRegistryException
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.*
 import org.springframework.stereotype.Service
+import org.springframework.web.client.RestClientException
+import org.springframework.web.client.RestClientResponseException
 import org.springframework.web.client.RestTemplate
 import java.net.URI
 import java.util.*
+import kotlin.reflect.KClass
 
 data class DockerRegistryTagResponse(val name: String, val tags: List<String>)
 
 @Service
-class DockerRegistryService(val httpClient: RestTemplate,
+class DockerRegistryService(val restTemplate: RestTemplate,
                             @Value("\${cantus.docker-registry-url-body}") val dockerRegistryUrlBody: String,
                             @Value("\${cantus.docker-registry-url-header}") val dockerRegistryUrlHeader: String) {
 
@@ -44,8 +48,7 @@ class DockerRegistryService(val httpClient: RestTemplate,
         val headerRequest = createManifestRequest(dockerRegistryUrlHeader, imageName, imageTag, DOCKER_MANIFEST_V2)
 
         logger.debug("Henter ut manifest fra $url")
-        val responseBodyRequest = httpClient.exchange(bodyRequest, JsonNode::class.java)
-        responseBodyRequest.checkInternalServerErrorDocker(url)
+        val responseBodyRequest = restTemplate.exchangeAndLogError(bodyRequest, JsonNode::class)
 
         val bodyOfManifest = ObjectMapper().readTree(responseBodyRequest.body?.get("history")?.get(0)?.get("v1Compatibility")?.asText()
                 ?: return mapOf())
@@ -60,8 +63,7 @@ class DockerRegistryService(val httpClient: RestTemplate,
                 .toMutableMap()
 
         logger.debug("Henter ut manifest fra $dockerRegistryUrlHeader")
-        val responseHeaderRequest = httpClient.exchange(headerRequest, JsonNode::class.java)
-        responseHeaderRequest.checkInternalServerErrorDocker(dockerRegistryUrlHeader)
+        val responseHeaderRequest = restTemplate.exchangeAndLogError(headerRequest, JsonNode::class)
 
         imageManifestInformation[manifestVersionLabels.toUpperCase()] = bodyOfManifest.get(manifestVersionLabels)?.asText() ?: ""
         imageManifestInformation[manifestImageDigestLabel.toUpperCase()] = responseHeaderRequest.headers[manifestImageDigestLabel]?.get(0) ?: ""
@@ -77,9 +79,7 @@ class DockerRegistryService(val httpClient: RestTemplate,
 
         logger.debug("Henter tags fra {}", manifestUri)
         val tagsRequest = RequestEntity<JsonNode>(header, HttpMethod.GET, manifestUri)
-        val response = httpClient.exchange(tagsRequest, DockerRegistryTagResponse::class.java)
-        response.checkInternalServerErrorDocker(url)
-
+        val response = restTemplate.exchangeAndLogError(tagsRequest, DockerRegistryTagResponse::class)
         return response.body?.tags ?: listOf()
     }
 
@@ -104,8 +104,11 @@ class DockerRegistryService(val httpClient: RestTemplate,
         return RequestEntity(header, HttpMethod.GET, manifestUri)
     }
 
-
-    fun ResponseEntity<*>.checkInternalServerErrorDocker(msg: String) {
-        if (this.statusCode == HttpStatus.INTERNAL_SERVER_ERROR) logger.warn("Feil fra Docker Registry $msg")
-    }
+    fun <T : Any> RestTemplate.exchangeAndLogError(request : RequestEntity<JsonNode>, returnType : KClass<T>) =
+        try {
+            this.exchange(request, returnType.java)
+        } catch (e : RestClientResponseException) {
+            logger.warn("Feil fra Docker Registry ${request.url} status: ${e.rawStatusCode} - ${e.statusText}")
+            throw DockerRegistryException("Feil fra Docker Registry status: ${e.rawStatusCode} - ${e.statusText}")
+        }
 }

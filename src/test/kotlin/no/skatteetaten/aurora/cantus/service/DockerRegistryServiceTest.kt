@@ -3,13 +3,19 @@ package no.skatteetaten.aurora.cantus.service
 import assertk.assert
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
+import assertk.catch
 import io.mockk.clearMocks
+import no.skatteetaten.aurora.cantus.controller.DockerRegistryException
 import no.skatteetaten.aurora.cantus.execute
 import no.skatteetaten.aurora.cantus.setJsonFileAsBody
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.EnumSource
+import org.junit.jupiter.params.provider.ValueSource
+import org.springframework.http.HttpStatus
 import org.springframework.web.client.RestTemplate
 
 class DockerRegistryServiceTest {
@@ -64,8 +70,19 @@ class DockerRegistryServiceTest {
             val jsonResponse = dockerService.getImageTagsGroupedBySemanticVersion(imageRepoName)
             assert(jsonResponse).isNotNull {
                 assert(it.actual["BUGFIX"]?.size).isEqualTo(2)
-                assert(it.actual["MINOR"]!![0]).isEqualTo("0.0")
+                assert(it.actual["MINOR"]?.first()).isEqualTo("0.0")
                 assert(it.actual.size).isEqualTo(4)
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = [500, 400, 404])
+    fun `Get image manifest given internal server error in docker registry`(statusCode : Int) {
+        server.execute(statusCode) {
+            val exception = catch { dockerService.getImageManifest(imageRepoName, tagName) }
+            assert(exception).isNotNull {
+                assert(it.actual::class).isEqualTo(DockerRegistryException::class)
             }
         }
     }
