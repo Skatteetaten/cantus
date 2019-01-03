@@ -1,6 +1,5 @@
 package no.skatteetaten.aurora.cantus
 
-import org.springframework.beans.factory.config.BeanPostProcessor
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
@@ -9,7 +8,7 @@ import org.springframework.security.web.authentication.www.BasicAuthenticationEn
 import org.springframework.web.client.RestTemplate
 
 @Configuration
-class ApplicationConfig : BeanPostProcessor {
+class ApplicationConfig {
 
     @Bean
     fun passwordEncoder(): PasswordEncoder {

@@ -5,9 +5,11 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import no.skatteetaten.aurora.cantus.controller.DockerRegistryException
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.http.*
+import org.springframework.http.HttpHeaders
+import org.springframework.http.HttpMethod
+import org.springframework.http.MediaType
+import org.springframework.http.RequestEntity
 import org.springframework.stereotype.Service
-import org.springframework.web.client.RestClientException
 import org.springframework.web.client.RestClientResponseException
 import org.springframework.web.client.RestTemplate
 import java.net.URI
@@ -40,9 +42,6 @@ class DockerRegistryService(val restTemplate: RestTemplate,
     val manifestImageDigestLabel = "Docker-Content-Digest"
 
     fun getImageManifest(imageName: String, imageTag: String, registryUrl: String? = null): Map<String, String> {
-        /**
-         * P.T så henter denne ut fra to registry, mens i prod så vil det kun være en
-         */
         val url = registryUrl ?: dockerRegistryUrlBody
 
         val bodyRequest = createManifestRequest(url, imageName, imageTag)
@@ -108,10 +107,10 @@ class DockerRegistryService(val restTemplate: RestTemplate,
 }
 
 
-private fun <T : Any> RestTemplate.exchangeAndLogError(request : RequestEntity<JsonNode>, returnType : KClass<T>) =
+private fun <T : Any> RestTemplate.exchangeAndLogError(request: RequestEntity<JsonNode>, returnType: KClass<T>) =
         try {
             this.exchange(request, returnType.java)
-        } catch (e : RestClientResponseException) {
+        } catch (e: RestClientResponseException) {
             LoggerFactory.getLogger(DockerRegistryService::class.java).warn("Feil fra Docker Registry ${request.url} status: ${e.rawStatusCode} - ${e.statusText}")
             throw DockerRegistryException("Feil fra Docker Registry status: ${e.rawStatusCode} - ${e.statusText}")
         }

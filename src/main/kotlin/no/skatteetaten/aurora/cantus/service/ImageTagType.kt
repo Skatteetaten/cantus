@@ -1,12 +1,5 @@
 package no.skatteetaten.aurora.cantus.service
 
-import java.time.Instant
-
-data class ImageRepoDto(val registry: String, val namespace: String, val name: String) {
-    val repository: String
-        get() = listOf(registry, namespace, name).joinToString("/")
-}
-
 enum class ImageTagType {
     LATEST,
     SNAPSHOT,
@@ -33,9 +26,4 @@ enum class ImageTagType {
             }
         }
     }
-}
-
-data class ImageTagDto(val name: String, var created: Instant) {
-    val type: ImageTagType
-        get() = ImageTagType.typeOf(name)
 }
