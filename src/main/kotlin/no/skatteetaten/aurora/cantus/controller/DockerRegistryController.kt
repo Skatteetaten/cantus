@@ -28,12 +28,11 @@ class DockerRegistryController(val dockerRegistryService: DockerRegistryService)
             @RequestParam(required = false) dockerRegistryUrl: String?,
             @RequestParam(required = false) groupby: String?
     ): Any {
-        if (groupby.isNullOrEmpty())
-            return dockerRegistryService.getImageTags("$affiliation/$name", dockerRegistryUrl)
-                    .ifEmpty { throw NoSuchResourceException("Fant ikke tags for $affiliation/$name") }
-        else if (groupby == "semantic")
-            return dockerRegistryService.getImageTagsGroupedBySemanticVersion("$affiliation/$name", dockerRegistryUrl)
+        if (groupby == "semantic")
+            dockerRegistryService.getImageTagsGroupedBySemanticVersion("$affiliation/$name", dockerRegistryUrl)
                     .ifEmpty { throw NoSuchResourceException("Kan ikke gruppere tags. Fant ingen tags for $affiliation/$name") }
-        throw NoSuchResourceException("Fant ingen ressurs basert på spørringen")
+        else
+            dockerRegistryService.getImageTags("$affiliation/$name", dockerRegistryUrl)
+                    .ifEmpty { throw NoSuchResourceException("Fant ikke tags for $affiliation/$name") }
     }
 }
