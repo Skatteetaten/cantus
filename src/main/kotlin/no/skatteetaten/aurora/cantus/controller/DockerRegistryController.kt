@@ -25,14 +25,15 @@ class DockerRegistryController(val dockerRegistryService: DockerRegistryService)
     fun getImageTags(
             @PathVariable affiliation: String,
             @PathVariable name: String,
-            @RequestParam(required = false) dockerRegistryUrl: String?,
-            @RequestParam(required = false) groupby: String?
-    ): Any {
-        return if (groupby == "semantic")
-            dockerRegistryService.getImageTagsGroupedBySemanticVersion("$affiliation/$name", dockerRegistryUrl)
-                    .ifEmpty { throw NoSuchResourceException("Kan ikke gruppere tags. Fant ingen tags for $affiliation/$name") }
-        else
+            @RequestParam(required = false) dockerRegistryUrl: String?) =
             dockerRegistryService.getImageTags("$affiliation/$name", dockerRegistryUrl)
                     .ifEmpty { throw NoSuchResourceException("Fant ikke tags for $affiliation/$name") }
-    }
+
+    @GetMapping("/affiliation/{affiliation}/name/{name}/tags/semantic")
+    fun getImageTagsSemantic(@PathVariable affiliation: String,
+                             @PathVariable name: String,
+                             @RequestParam(required = false) dockerRegistryUrl: String?) =
+            dockerRegistryService.getImageTagsGroupedBySemanticVersion("$affiliation/$name", dockerRegistryUrl)
+                    .ifEmpty { throw NoSuchResourceException("Kan ikke gruppere tags. Fant ingen tags for $affiliation/$name") }
+
 }

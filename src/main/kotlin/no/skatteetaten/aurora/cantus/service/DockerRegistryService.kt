@@ -1,7 +1,7 @@
 package no.skatteetaten.aurora.cantus.service
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import no.skatteetaten.aurora.cantus.controller.DockerRegistryException
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
@@ -66,8 +66,7 @@ class DockerRegistryService(val restTemplate: RestTemplate,
     }
 
     fun getImageTagsGroupedBySemanticVersion(imageName: String, registryUrl: String? = null): Map<String, List<String>> {
-        val url = registryUrl ?: dockerRegistryUrlBody
-        val tags = getImageTags(imageName, url)
+        val tags = getImageTags(imageName, registryUrl)
 
         logger.debug("Grupperer tags etter semantisk versjon")
         return tags.groupBy { ImageTagType.typeOf(it).toString() }
@@ -90,20 +89,16 @@ class DockerRegistryService(val restTemplate: RestTemplate,
             responseBodyRequest: ResponseEntity<JsonNode>,
             responseHeaderRequest: ResponseEntity<JsonNode>): Map<String, String> {
 
-        val bodyOfManifest = ObjectMapper().readTree(responseBodyRequest.body?.get("history")?.get(0)?.get("v1Compatibility")?.asText()
-                ?: return mapOf())
+        val relevantManifestInformation = responseBodyRequest.retrieveInformationFromResponseAndManifest()
 
-        val env = bodyOfManifest.at("/config/Env").map {
-            val (key, value) = it.asText().split("=")
-            key to value
-        }.toMap()
+        val environmentVariables = relevantManifestInformation.getEnvironmentVariablesFromManifest()
 
-        val imageManifestEnvInformation = env
+        val imageManifestEnvInformation = environmentVariables
                 .filter { manifestEnvLabels.contains(it.key) }
                 .mapKeys { it.key.toUpperCase() }
 
-        val dockerVersion = bodyOfManifest.get(dockerVersionLabel)?.asText() ?: ""
-        val dockerContentDigest = responseHeaderRequest.headers[dockerContentDigestLabel]?.get(0) ?: ""
+        val dockerVersion = relevantManifestInformation.getVariableFromManifestBody(dockerVersionLabel)
+        val dockerContentDigest = responseHeaderRequest.getVariableFromManifestHeader(dockerContentDigestLabel)
 
         val imageManifestConfigInformation = mapOf(
                 dockerVersionLabel to dockerVersion,
@@ -113,6 +108,18 @@ class DockerRegistryService(val restTemplate: RestTemplate,
         return imageManifestEnvInformation + imageManifestConfigInformation
     }
 
+    private fun ResponseEntity<JsonNode>.retrieveInformationFromResponseAndManifest() =
+            jacksonObjectMapper().readTree(this.body?.get("history")?.get(0)?.get("v1Compatibility")?.asText() ?: "")
+
+    private fun JsonNode.getEnvironmentVariablesFromManifest() =
+            this.at("/config/Env").associate {
+                val (key, value) = it.asText().split("=")
+                key to value
+            }
+
+    private fun JsonNode.getVariableFromManifestBody(label: String) = this.get(label)?.asText() ?: ""
+    private fun ResponseEntity<JsonNode>.getVariableFromManifestHeader(label: String) = this.headers[label]?.get(0)
+            ?: ""
 }
 
 
