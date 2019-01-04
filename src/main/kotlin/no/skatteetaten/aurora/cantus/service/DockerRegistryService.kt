@@ -108,19 +108,21 @@ class DockerRegistryService(val restTemplate: RestTemplate,
         return imageManifestEnvInformation + imageManifestConfigInformation
     }
 
-    private fun ResponseEntity<JsonNode>.retrieveInformationFromResponseAndManifest() =
-            jacksonObjectMapper().readTree(this.body?.get("history")?.get(0)?.get("v1Compatibility")?.asText() ?: "")
 
-    private fun JsonNode.getEnvironmentVariablesFromManifest() =
-            this.at("/config/Env").associate {
-                val (key, value) = it.asText().split("=")
-                key to value
-            }
-
-    private fun JsonNode.getVariableFromManifestBody(label: String) = this.get(label)?.asText() ?: ""
-    private fun ResponseEntity<JsonNode>.getVariableFromManifestHeader(label: String) = this.headers[label]?.get(0)
-            ?: ""
 }
+
+private fun ResponseEntity<JsonNode>.retrieveInformationFromResponseAndManifest() =
+        jacksonObjectMapper().readTree(this.body?.get("history")?.get(0)?.get("v1Compatibility")?.asText() ?: "")
+
+private fun JsonNode.getEnvironmentVariablesFromManifest() =
+        this.at("/config/Env").associate {
+            val (key, value) = it.asText().split("=")
+            key to value
+        }
+
+private fun JsonNode.getVariableFromManifestBody(label: String) = this.get(label)?.asText() ?: ""
+private fun ResponseEntity<JsonNode>.getVariableFromManifestHeader(label: String) = this.headers[label]?.get(0)
+        ?: ""
 
 
 private fun <T : Any> RestTemplate.exchangeAndLogError(request: RequestEntity<JsonNode>, returnType: KClass<T>) =
