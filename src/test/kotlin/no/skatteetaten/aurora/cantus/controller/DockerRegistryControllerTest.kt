@@ -32,7 +32,7 @@ class DockerRegistryControllerTest {
         "/affiliation/no_skatteetaten_aurora_demo/name/whoami/tags?groupBy=semanticVersion"
     ])
     fun `Get docker registry image info`(path: String) {
-        given(dockerService.getImageManifest(any(), any(), anyOrNull())).willReturn(mapOf("1" to "2"))
+        given(dockerService.getImageManifestAndExtractInformation(any(), any(), anyOrNull())).willReturn(mapOf("1" to "2"))
         given(dockerService.getImageTags(any(), anyOrNull())).willReturn(listOf("1", "2"))
         given(dockerService.getImageTagsGroupedBySemanticVersion(any(), anyOrNull())).willReturn(mapOf("1" to listOf("2", "3")))
         mockMvc.perform(get(path))

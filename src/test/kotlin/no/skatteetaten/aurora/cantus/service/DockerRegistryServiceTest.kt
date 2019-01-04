@@ -13,9 +13,7 @@ import okhttp3.mockwebserver.MockWebServer
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.EnumSource
 import org.junit.jupiter.params.provider.ValueSource
-import org.springframework.http.HttpStatus
 import org.springframework.web.client.RestTemplate
 
 class DockerRegistryServiceTest {
@@ -37,7 +35,7 @@ class DockerRegistryServiceTest {
         val response = MockResponse().setJsonFileAsBody("dockerManifest.json").addHeader("Docker-Content-Digest", "SHA::256")
 
         val requests = server.execute(response, response) {
-            val jsonResponse = dockerService.getImageManifest(imageRepoName, tagName)
+            val jsonResponse = dockerService.getImageManifestAndExtractInformation(imageRepoName, tagName)
             assert(jsonResponse).isNotNull {
                 assert(it.actual.size).isEqualTo(9)
                 assert(it.actual["DOCKER-CONTENT-DIGEST"]).isEqualTo("SHA::256")
@@ -78,9 +76,9 @@ class DockerRegistryServiceTest {
 
     @ParameterizedTest
     @ValueSource(ints = [500, 400, 404])
-    fun `Get image manifest given internal server error in docker registry`(statusCode : Int) {
+    fun `Get image manifest given internal server error in docker registry`(statusCode: Int) {
         server.execute(statusCode) {
-            val exception = catch { dockerService.getImageManifest(imageRepoName, tagName) }
+            val exception = catch { dockerService.getImageManifestAndExtractInformation(imageRepoName, tagName) }
             assert(exception).isNotNull {
                 assert(it.actual::class).isEqualTo(DockerRegistryException::class)
             }

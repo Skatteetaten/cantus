@@ -38,10 +38,10 @@ class DockerRegistryService(val restTemplate: RestTemplate,
             "NODE_VERSION"
     )
 
-    val manifestVersionLabels = "docker_version"
-    val manifestImageDigestLabel = "Docker-Content-Digest"
+    val dockerVersionLabel = "docker_version"
+    val dockerContentDigestLabel = "Docker-Content-Digest"
 
-    fun getImageManifest(imageName: String, imageTag: String, registryUrl: String? = null): Map<String, String> {
+    fun getImageManifestAndExtractInformation(imageName: String, imageTag: String, registryUrl: String? = null): Map<String, String> {
         val url = registryUrl ?: dockerRegistryUrlBody
 
         val bodyRequest = createManifestRequest(url, imageName, imageTag)
@@ -57,18 +57,22 @@ class DockerRegistryService(val restTemplate: RestTemplate,
             val (key, value) = it.asText().split("=")
             key to value
         }.toMap()
-        val imageManifestInformation: MutableMap<String, String> = env
+        val imageManifestEnvInformation = env
                 .filter { manifestEnvLabels.contains(it.key) }
                 .mapKeys { it.key.toUpperCase() }
-                .toMutableMap()
 
         logger.debug("Henter ut manifest fra $dockerRegistryUrlHeader")
         val responseHeaderRequest = restTemplate.exchangeAndLogError(headerRequest, JsonNode::class)
 
-        imageManifestInformation[manifestVersionLabels.toUpperCase()] = bodyOfManifest.get(manifestVersionLabels)?.asText() ?: ""
-        imageManifestInformation[manifestImageDigestLabel.toUpperCase()] = responseHeaderRequest.headers[manifestImageDigestLabel]?.get(0) ?: ""
+        val dockerVersion = bodyOfManifest.get(dockerVersionLabel)?.asText() ?: ""
+        val dockerContentDigest = responseHeaderRequest.headers[dockerContentDigestLabel]?.get(0) ?: ""
 
-        return imageManifestInformation
+        val imageManifestConfigInformation = mapOf(
+                dockerVersionLabel to dockerVersion,
+                dockerContentDigestLabel to dockerContentDigest)
+                .mapKeys { it.key.toUpperCase() }
+
+        return imageManifestEnvInformation + imageManifestConfigInformation
     }
 
     fun getImageTags(imageName: String, registryUrl: String? = null): List<String> {
