@@ -26,28 +26,37 @@ class DockerRegistryControllerTest {
     private lateinit var mockMvc: MockMvc
 
     @ParameterizedTest
-    @ValueSource(strings = [
-        "/affiliation/no_skatteetaten_aurora_demo/name/whoami/tag/2/manifest",
-        "/affiliation/no_skatteetaten_aurora_demo/name/whoami/tags",
-        "/affiliation/no_skatteetaten_aurora_demo/name/whoami/tags/semantic"
-    ])
+    @ValueSource(
+        strings = [
+            "/affiliation/no_skatteetaten_aurora_demo/name/whoami/tag/2/manifest",
+            "/affiliation/no_skatteetaten_aurora_demo/name/whoami/tags",
+            "/affiliation/no_skatteetaten_aurora_demo/name/whoami/tags/semantic"
+        ]
+    )
     fun `Get docker registry image info`(path: String) {
         given(dockerService.getImageManifestInformation(any(), any(), anyOrNull())).willReturn(mapOf("1" to "2"))
         given(dockerService.getImageTags(any(), anyOrNull())).willReturn(listOf("1", "2"))
-        given(dockerService.getImageTagsGroupedBySemanticVersion(any(), anyOrNull())).willReturn(mapOf("1" to listOf("2", "3")))
+        given(
+            dockerService.getImageTagsGroupedBySemanticVersion(
+                any(),
+                anyOrNull()
+            )
+        ).willReturn(mapOf("1" to listOf("2", "3")))
         mockMvc.perform(get(path))
-                .andExpect(status().isOk)
-                .andExpect(jsonPath("$").isNotEmpty)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$").isNotEmpty)
     }
 
     @ParameterizedTest
-    @ValueSource(strings = [
-        "/affiliation/no_skatteetaten_aurora_demo/name/whoami/tag/2/manifest",
-        "/affiliation/no_skatteetaten_aurora_demo/name/whoami/tags",
-        "/affiliation/no_skatteetaten_aurora_demo/name/whoami/tags/semantic"
-    ])
+    @ValueSource(
+        strings = [
+            "/affiliation/no_skatteetaten_aurora_demo/name/whoami/tag/2/manifest",
+            "/affiliation/no_skatteetaten_aurora_demo/name/whoami/tags",
+            "/affiliation/no_skatteetaten_aurora_demo/name/whoami/tags/semantic"
+        ]
+    )
     fun `Get docker registry image info given missing resource return 404`(path: String) {
         mockMvc.perform(get(path))
-                .andExpect(status().isNotFound)
+            .andExpect(status().isNotFound)
     }
 }

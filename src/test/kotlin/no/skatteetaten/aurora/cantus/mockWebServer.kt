@@ -8,12 +8,11 @@ import org.springframework.core.io.ClassPathResource
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 
-
 fun MockWebServer.enqueueJson(status: Int = 200, body: Any) {
     val json = body as? String ?: ObjectMapper().writeValueAsString(body)
     val response = MockResponse()
-            .setResponseCode(status)
-            .setBody(json)
+        .setResponseCode(status)
+        .setBody(json)
     this.enqueue(response)
 }
 
@@ -37,13 +36,11 @@ fun MockWebServer.execute(vararg responses: MockResponse, fn: () -> Unit): List<
     return (1..responses.size).toList().map { this.takeRequest() }
 }
 
-
 fun MockWebServer.execute(response: Any, fn: () -> Unit): RecordedRequest {
     this.enqueueJson(body = response)
     fn()
     return this.takeRequest()
 }
-
 
 fun MockResponse.setJsonFileAsBody(fileName: String): MockResponse {
     val classPath = ClassPathResource("/$fileName")

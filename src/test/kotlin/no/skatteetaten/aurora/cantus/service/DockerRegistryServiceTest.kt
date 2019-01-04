@@ -32,7 +32,8 @@ class DockerRegistryServiceTest {
 
     @Test
     fun `Verify fetches manifest information for specified image`() {
-        val response = MockResponse().setJsonFileAsBody("dockerManifest.json").addHeader("Docker-Content-Digest", "SHA::256")
+        val response =
+            MockResponse().setJsonFileAsBody("dockerManifest.json").addHeader("Docker-Content-Digest", "SHA::256")
 
         val requests = server.execute(response, response) {
             val jsonResponse = dockerService.getImageManifestInformation(imageRepoName, tagName)
