@@ -17,7 +17,7 @@ class DockerRegistryController(val dockerRegistryService: DockerRegistryService)
             @RequestParam(required = false) dockerRegistryUrl: String?
     ): Map<String, String> {
         return dockerRegistryService
-                .getImageManifestAndExtractInformation("$affiliation/$name", tag, dockerRegistryUrl)
+                .getImageManifestInformation("$affiliation/$name", tag, dockerRegistryUrl)
                 .ifEmpty { throw NoSuchResourceException("Kunne ikke finne manifestet til image $affiliation/$name") }
     }
 
@@ -28,7 +28,7 @@ class DockerRegistryController(val dockerRegistryService: DockerRegistryService)
             @RequestParam(required = false) dockerRegistryUrl: String?,
             @RequestParam(required = false) groupby: String?
     ): Any {
-        if (groupby == "semantic")
+        return if (groupby == "semantic")
             dockerRegistryService.getImageTagsGroupedBySemanticVersion("$affiliation/$name", dockerRegistryUrl)
                     .ifEmpty { throw NoSuchResourceException("Kan ikke gruppere tags. Fant ingen tags for $affiliation/$name") }
         else

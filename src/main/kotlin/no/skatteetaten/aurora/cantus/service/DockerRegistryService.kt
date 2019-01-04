@@ -5,10 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import no.skatteetaten.aurora.cantus.controller.DockerRegistryException
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.http.HttpHeaders
-import org.springframework.http.HttpMethod
-import org.springframework.http.MediaType
-import org.springframework.http.RequestEntity
+import org.springframework.http.*
 import org.springframework.stereotype.Service
 import org.springframework.web.client.RestClientResponseException
 import org.springframework.web.client.RestTemplate
@@ -41,7 +38,7 @@ class DockerRegistryService(val restTemplate: RestTemplate,
     val dockerVersionLabel = "docker_version"
     val dockerContentDigestLabel = "Docker-Content-Digest"
 
-    fun getImageManifestAndExtractInformation(imageName: String, imageTag: String, registryUrl: String? = null): Map<String, String> {
+    fun getImageManifestInformation(imageName: String, imageTag: String, registryUrl: String? = null): Map<String, String> {
         val url = registryUrl ?: dockerRegistryUrlBody
 
         val bodyRequest = createManifestRequest(url, imageName, imageTag)
@@ -50,29 +47,10 @@ class DockerRegistryService(val restTemplate: RestTemplate,
         logger.debug("Henter ut manifest fra $url")
         val responseBodyRequest = restTemplate.exchangeAndLogError(bodyRequest, JsonNode::class)
 
-        val bodyOfManifest = ObjectMapper().readTree(responseBodyRequest.body?.get("history")?.get(0)?.get("v1Compatibility")?.asText()
-                ?: return mapOf())
-
-        val env = bodyOfManifest.at("/config/Env").map {
-            val (key, value) = it.asText().split("=")
-            key to value
-        }.toMap()
-        val imageManifestEnvInformation = env
-                .filter { manifestEnvLabels.contains(it.key) }
-                .mapKeys { it.key.toUpperCase() }
-
         logger.debug("Henter ut manifest fra $dockerRegistryUrlHeader")
         val responseHeaderRequest = restTemplate.exchangeAndLogError(headerRequest, JsonNode::class)
 
-        val dockerVersion = bodyOfManifest.get(dockerVersionLabel)?.asText() ?: ""
-        val dockerContentDigest = responseHeaderRequest.headers[dockerContentDigestLabel]?.get(0) ?: ""
-
-        val imageManifestConfigInformation = mapOf(
-                dockerVersionLabel to dockerVersion,
-                dockerContentDigestLabel to dockerContentDigest)
-                .mapKeys { it.key.toUpperCase() }
-
-        return imageManifestEnvInformation + imageManifestConfigInformation
+        return extractManifestInformation(responseBodyRequest, responseHeaderRequest)
     }
 
     fun getImageTags(imageName: String, registryUrl: String? = null): List<String> {
@@ -106,6 +84,33 @@ class DockerRegistryService(val restTemplate: RestTemplate,
         if (headerAccept != "") header.accept = listOf(MediaType.valueOf(headerAccept))
 
         return RequestEntity(header, HttpMethod.GET, manifestUri)
+    }
+
+    private fun extractManifestInformation(
+            responseBodyRequest: ResponseEntity<JsonNode>,
+            responseHeaderRequest: ResponseEntity<JsonNode>): Map<String, String> {
+
+        val bodyOfManifest = ObjectMapper().readTree(responseBodyRequest.body?.get("history")?.get(0)?.get("v1Compatibility")?.asText()
+                ?: return mapOf())
+
+        val env = bodyOfManifest.at("/config/Env").map {
+            val (key, value) = it.asText().split("=")
+            key to value
+        }.toMap()
+
+        val imageManifestEnvInformation = env
+                .filter { manifestEnvLabels.contains(it.key) }
+                .mapKeys { it.key.toUpperCase() }
+
+        val dockerVersion = bodyOfManifest.get(dockerVersionLabel)?.asText() ?: ""
+        val dockerContentDigest = responseHeaderRequest.headers[dockerContentDigestLabel]?.get(0) ?: ""
+
+        val imageManifestConfigInformation = mapOf(
+                dockerVersionLabel to dockerVersion,
+                dockerContentDigestLabel to dockerContentDigest)
+                .mapKeys { it.key.toUpperCase() }
+
+        return imageManifestEnvInformation + imageManifestConfigInformation
     }
 
 }
