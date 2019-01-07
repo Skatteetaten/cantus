@@ -24,9 +24,9 @@ class ErrorHandler : ResponseEntityExceptionHandler() {
 
     private fun handleException(e: Exception, request: WebRequest, httpStatus: HttpStatus): ResponseEntity<Any>? {
         val response = mutableMapOf(Pair("errorMessage", e.message))
-        e.cause?.apply { response.put("cause", this.message) }
+        e.cause?.apply { response["cause"] = this.message }
         val headers = HttpHeaders().apply { contentType = MediaType.APPLICATION_JSON }
-        logger.debug("Handle excption", e)
+        logger.debug("Handle exception", e)
         return handleExceptionInternal(e, response, headers, httpStatus, request)
     }
 }
