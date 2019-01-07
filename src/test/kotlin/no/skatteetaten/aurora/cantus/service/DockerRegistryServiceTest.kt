@@ -23,7 +23,7 @@ class DockerRegistryServiceTest {
 
     private val server = MockWebServer()
     private val url = server.url("/")
-    private val dockerService = DockerRegistryService(RestTemplate(), url.toString(), url.toString())
+    private val dockerService = DockerRegistryService(RestTemplate(), url.toString(), listOf(url.toString()))
 
     @BeforeEach
     fun setUp() {

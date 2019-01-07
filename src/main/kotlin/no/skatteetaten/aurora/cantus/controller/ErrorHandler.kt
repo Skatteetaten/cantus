@@ -22,6 +22,11 @@ class ErrorHandler : ResponseEntityExceptionHandler() {
         return handleException(e, request, HttpStatus.NOT_FOUND)
     }
 
+    @ExceptionHandler(BadRequestException::class)
+    fun handleBadRequest(e: BadRequestException, request: WebRequest): ResponseEntity<Any>? {
+        return handleException(e, request, HttpStatus.BAD_REQUEST)
+    }
+
     private fun handleException(e: Exception, request: WebRequest, httpStatus: HttpStatus): ResponseEntity<Any>? {
         val response = mutableMapOf(Pair("errorMessage", e.message))
         e.cause?.apply { response["cause"] = this.message }

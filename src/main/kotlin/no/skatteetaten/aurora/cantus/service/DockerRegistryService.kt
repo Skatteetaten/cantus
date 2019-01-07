@@ -2,6 +2,7 @@ package no.skatteetaten.aurora.cantus.service
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import no.skatteetaten.aurora.cantus.controller.BadRequestException
 import no.skatteetaten.aurora.cantus.controller.DockerRegistryException
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
@@ -23,8 +24,8 @@ val logger = LoggerFactory.getLogger(DockerRegistryService::class.java)
 @Service
 class DockerRegistryService(
     val restTemplate: RestTemplate,
-    @Value("\${cantus.docker-registry-url-body}") val dockerRegistryUrlBody: String,
-    @Value("\${cantus.docker-registry-url-header}") val dockerRegistryUrlHeader: String
+    @Value("\${cantus.docker-registry-url}") val dockerRegistryUrl: String,
+    @Value("\${cantus.docker-registry-url-allowed}") val dockerRegistryUrlsAllowed: List<String>
 ) {
 
     val DOCKER_MANIFEST_V2: String = "application/vnd.docker.distribution.manifest.v2+json"
@@ -48,22 +49,24 @@ class DockerRegistryService(
         imageTag: String,
         registryUrl: String? = null
     ): Map<String, String> {
-        val url = registryUrl ?: dockerRegistryUrlBody
+        val url = registryUrl ?: dockerRegistryUrl
+
+        if (!dockerRegistryUrlsAllowed.any { url == it }) throw BadRequestException("Dette er ikke en gyldig docker registry url")
 
         val bodyRequest = createManifestRequest(url, imageName, imageTag)
-        val headerRequest = createManifestRequest(dockerRegistryUrlHeader, imageName, imageTag, DOCKER_MANIFEST_V2)
+        val headerRequest = createManifestRequest(url, imageName, imageTag, DOCKER_MANIFEST_V2)
 
-        logger.debug("Henter ut manifest fra $url")
+        logger.debug("Henter ut manifest-BODY fra $url")
         val responseBodyRequest: ResponseEntity<JsonNode> = restTemplate.exchangeAndLogError(bodyRequest)
 
-        logger.debug("Henter ut manifest fra $dockerRegistryUrlHeader")
+        logger.debug("Henter ut manifest-HEAD fra $url")
         val responseHeaderRequest: ResponseEntity<JsonNode> = restTemplate.exchangeAndLogError(headerRequest)
 
         return extractManifestInformation(responseBodyRequest, responseHeaderRequest)
     }
 
     fun getImageTags(imageName: String, registryUrl: String? = null): List<String> {
-        val url = registryUrl ?: dockerRegistryUrlBody
+        val url = registryUrl ?: dockerRegistryUrl
 
         val manifestUri = URI("$url/v2/$imageName/tags/list")
         val header = HttpHeaders()
