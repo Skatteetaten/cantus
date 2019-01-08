@@ -43,6 +43,7 @@ class DockerRegistryService(
 
     val dockerVersionLabel = "docker_version"
     val dockerContentDigestLabel = "Docker-Content-Digest"
+    val createdLabel = "created"
 
     fun getImageManifestInformation(
         imageName: String,
@@ -105,27 +106,29 @@ class DockerRegistryService(
         responseHeaderRequest: ResponseEntity<JsonNode>
     ): Map<String, String> {
 
-        val relevantManifestInformation = responseBodyRequest.retrieveInformationFromResponseAndManifest()
+        val v1Compatibility = responseBodyRequest.getV1CompatibilityFromManifest()
 
-        val environmentVariables = relevantManifestInformation.getEnvironmentVariablesFromManifest()
+        val environmentVariables = v1Compatibility.getEnvironmentVariablesFromManifest()
 
         val imageManifestEnvInformation = environmentVariables
             .filter { manifestEnvLabels.contains(it.key) }
             .mapKeys { it.key.toUpperCase() }
 
-        val dockerVersion = relevantManifestInformation.getVariableFromManifestBody(dockerVersionLabel)
+        val dockerVersion = v1Compatibility.getVariableFromManifestBody(dockerVersionLabel)
         val dockerContentDigest = responseHeaderRequest.getVariableFromManifestHeader(dockerContentDigestLabel)
+        val created = v1Compatibility.getVariableFromManifestBody(createdLabel)
 
         val imageManifestConfigInformation = mapOf(
             dockerVersionLabel to dockerVersion,
-            dockerContentDigestLabel to dockerContentDigest
+            dockerContentDigestLabel to dockerContentDigest,
+            createdLabel to created
         ).mapKeys { it.key.toUpperCase() }
 
         return imageManifestEnvInformation + imageManifestConfigInformation
     }
 }
 
-private fun ResponseEntity<JsonNode>.retrieveInformationFromResponseAndManifest() =
+private fun ResponseEntity<JsonNode>.getV1CompatibilityFromManifest() =
     jacksonObjectMapper().readTree(this.body?.get("history")?.get(0)?.get("v1Compatibility")?.asText() ?: "")
 
 private fun JsonNode.getEnvironmentVariablesFromManifest() =
