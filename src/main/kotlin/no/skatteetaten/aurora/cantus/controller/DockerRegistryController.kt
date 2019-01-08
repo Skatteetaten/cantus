@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 class DockerRegistryController(val dockerRegistryService: DockerRegistryService) {
 
-    @GetMapping("/affiliation/{affiliation}/name/{name}/tag/{tag}/manifest")
+    @GetMapping("/{affiliation}/{name}/{tag}/manifest")
     fun getManifestInformation(
         @PathVariable affiliation: String,
         @PathVariable name: String,
@@ -18,24 +18,24 @@ class DockerRegistryController(val dockerRegistryService: DockerRegistryService)
     ): Map<String, String> {
         return dockerRegistryService
             .getImageManifestInformation("$affiliation/$name", tag, dockerRegistryUrl)
-            .ifEmpty { throw NoSuchResourceException("Kunne ikke finne manifestet til image $affiliation/$name") }
+            .ifEmpty { throw NoSuchResourceException("Could not find manifest for image $affiliation/$name") }
     }
 
-    @GetMapping("/affiliation/{affiliation}/name/{name}/tags")
+    @GetMapping("/{affiliation}/{name}/tags")
     fun getImageTags(
         @PathVariable affiliation: String,
         @PathVariable name: String,
         @RequestParam(required = false) dockerRegistryUrl: String?
     ) =
         dockerRegistryService.getImageTags("$affiliation/$name", dockerRegistryUrl)
-            .ifEmpty { throw NoSuchResourceException("Fant ikke tags for $affiliation/$name") }
+            .ifEmpty { throw NoSuchResourceException("Could not find tags for image $affiliation/$name") }
 
-    @GetMapping("/affiliation/{affiliation}/name/{name}/tags/semantic")
+    @GetMapping("/{affiliation}/{name}/tags/semantic")
     fun getImageTagsSemantic(
         @PathVariable affiliation: String,
         @PathVariable name: String,
         @RequestParam(required = false) dockerRegistryUrl: String?
     ) =
         dockerRegistryService.getImageTagsGroupedBySemanticVersion("$affiliation/$name", dockerRegistryUrl)
-            .ifEmpty { throw NoSuchResourceException("Kan ikke gruppere tags. Fant ingen tags for $affiliation/$name") }
+            .ifEmpty { throw NoSuchResourceException("Not possible to group tags by semantic version. Could not find tags for image $affiliation/$name") }
 }

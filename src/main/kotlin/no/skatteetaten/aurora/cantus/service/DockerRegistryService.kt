@@ -52,15 +52,15 @@ class DockerRegistryService(
     ): Map<String, String> {
         val url = registryUrl ?: dockerRegistryUrl
 
-        if (!dockerRegistryUrlsAllowed.any { url == it }) throw BadRequestException("Dette er ikke en gyldig docker registry url")
+        if (!dockerRegistryUrlsAllowed.any { url == it }) throw BadRequestException("Invalid Docker Registry URL")
 
         val bodyRequest = createManifestRequest(url, imageName, imageTag)
         val headerRequest = createManifestRequest(url, imageName, imageTag, DOCKER_MANIFEST_V2)
 
-        logger.debug("Henter ut manifest-BODY fra $url")
+        logger.debug("Retrieving manifest-BODY from $url")
         val responseBodyRequest: ResponseEntity<JsonNode> = restTemplate.exchangeAndLogError(bodyRequest)
 
-        logger.debug("Henter ut manifest-HEAD fra $url")
+        logger.debug("Retrieving manifest-HEAD from $url")
         val responseHeaderRequest: ResponseEntity<JsonNode> = restTemplate.exchangeAndLogError(headerRequest)
 
         return extractManifestInformation(responseBodyRequest, responseHeaderRequest)
@@ -72,7 +72,7 @@ class DockerRegistryService(
         val manifestUri = URI("$url/v2/$imageName/tags/list")
         val header = HttpHeaders()
 
-        logger.debug("Henter tags fra {}", manifestUri)
+        logger.debug("Retrieving tags from {}", manifestUri)
         val tagsRequest = RequestEntity<JsonNode>(header, HttpMethod.GET, manifestUri)
         val response: ResponseEntity<DockerRegistryTagResponse> = restTemplate.exchangeAndLogError(tagsRequest)
         return response.body?.tags ?: listOf()
@@ -84,7 +84,7 @@ class DockerRegistryService(
     ): Map<String, List<String>> {
         val tags = getImageTags(imageName, registryUrl)
 
-        logger.debug("Grupperer tags etter semantisk versjon")
+        logger.debug("Tags are grouped by semantic version")
         return tags.groupBy { ImageTagType.typeOf(it).toString() }
     }
 
@@ -145,6 +145,6 @@ private inline fun <reified T : Any> RestTemplate.exchangeAndLogError(request: R
     try {
         this.exchange(request, T::class.java)
     } catch (e: RestClientResponseException) {
-        logger.warn("Feil fra Docker Registry ${request.url} status: ${e.rawStatusCode} - ${e.statusText}")
-        throw DockerRegistryException("Feil fra Docker Registry status: ${e.rawStatusCode} - ${e.statusText}")
+        logger.warn("Received error from Docker Registry ${request.url} status: ${e.rawStatusCode} - ${e.statusText}")
+        throw DockerRegistryException("Received error from Docker Registry status: ${e.rawStatusCode} - ${e.statusText}")
     }
