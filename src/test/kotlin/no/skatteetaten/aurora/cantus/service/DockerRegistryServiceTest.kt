@@ -5,6 +5,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import assertk.catch
 import io.mockk.clearMocks
+import no.skatteetaten.aurora.cantus.controller.BadRequestException
 import no.skatteetaten.aurora.cantus.controller.DockerRegistryException
 import no.skatteetaten.aurora.cantus.execute
 import no.skatteetaten.aurora.cantus.setJsonFileAsBody
@@ -23,6 +24,7 @@ class DockerRegistryServiceTest {
 
     private val server = MockWebServer()
     private val url = server.url("/")
+    private val allowedUrls = listOf("docker-registry.no", "internal-docker-registry.no")
     private val dockerService = DockerRegistryService(RestTemplate(), url.toString(), listOf(url.toString()))
 
     @BeforeEach
@@ -83,6 +85,19 @@ class DockerRegistryServiceTest {
             val exception = catch { dockerService.getImageManifestInformation(imageRepoName, tagName) }
             assert(exception).isNotNull {
                 assert(it.actual::class).isEqualTo(DockerRegistryException::class)
+            }
+        }
+    }
+
+    @Test
+    fun `Verify that disallowed docker registry url returns bad request error`() {
+        val dockerServiceTestDisallowed = DockerRegistryService(RestTemplate(), url.toString(), allowedUrls)
+
+        server.execute {
+            val exception = catch { dockerServiceTestDisallowed.getImageManifestInformation(imageRepoName, tagName) }
+            assert(exception).isNotNull {
+                assert(it.actual::class).isEqualTo(BadRequestException::class)
+                assert(it.actual.message).isEqualTo("Invalid Docker Registry URL")
             }
         }
     }
