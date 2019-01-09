@@ -52,7 +52,7 @@ class DockerRegistryService(
     ): Map<String, String> {
         val url = registryUrl ?: dockerRegistryUrl
 
-        url.validateDockerRegistryUrl(dockerRegistryUrlsAllowed)
+        validateDockerRegistryUrl(url, dockerRegistryUrlsAllowed)
 
         val bodyRequest = createManifestRequest(url, imageName, imageTag)
         val headerRequest = createManifestRequest(url, imageName, imageTag, DOCKER_MANIFEST_V2)
@@ -69,7 +69,7 @@ class DockerRegistryService(
     fun getImageTags(imageName: String, registryUrl: String? = null): List<String> {
         val url = registryUrl ?: dockerRegistryUrl
 
-        url.validateDockerRegistryUrl(dockerRegistryUrlsAllowed)
+        validateDockerRegistryUrl(url, dockerRegistryUrlsAllowed)
 
         val manifestUri = URI("$url/v2/$imageName/tags/list")
         val header = HttpHeaders()
@@ -128,10 +128,10 @@ class DockerRegistryService(
 
         return imageManifestEnvInformation + imageManifestConfigInformation
     }
-}
 
-private fun String.validateDockerRegistryUrl(alllowedUrls: List<String>) {
-    if (!alllowedUrls.any { allowedUrl: String -> this == allowedUrl }) throw BadRequestException("Invalid Docker Registry URL")
+    private fun validateDockerRegistryUrl(urlToValidate: String, alllowedUrls: List<String>) {
+        if (!alllowedUrls.any { allowedUrl: String -> urlToValidate == allowedUrl }) throw BadRequestException("Invalid Docker Registry URL")
+    }
 }
 
 private fun ResponseEntity<JsonNode>.getV1CompatibilityFromManifest() =
