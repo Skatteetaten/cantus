@@ -41,7 +41,7 @@ class DockerRegistryServiceTest {
             val jsonResponse = dockerService.getImageManifestInformation(imageRepoName, tagName)
             assert(jsonResponse).isNotNull {
                 assert(it.actual.size).isEqualTo(10)
-                assert(it.actual["DOCKER-CONTENT-DIGEST"]).isEqualTo("SHA::256")
+                assert(it.actual["DOCKER_CONTENT_DIGEST"]).isEqualTo("SHA::256")
                 assert(it.actual["DOCKER_VERSION"]).isEqualTo("1.13.1")
                 assert(it.actual["CREATED"]).isEqualTo("2018-11-05T14:01:22.654389192Z")
             }

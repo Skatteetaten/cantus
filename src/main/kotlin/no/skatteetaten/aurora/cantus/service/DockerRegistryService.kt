@@ -124,7 +124,7 @@ class DockerRegistryService(
             dockerVersionLabel to dockerVersion,
             dockerContentDigestLabel to dockerContentDigest,
             createdLabel to created
-        ).mapKeys { it.key.toUpperCase() }
+        ).mapKeys { it.key.toUpperCase().replace("-", "_") }
 
         return imageManifestEnvInformation + imageManifestConfigInformation
     }

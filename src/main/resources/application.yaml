@@ -32,6 +32,13 @@ cantus:
     username: cantus
     password: cantus
 
+server:
+    port: 8090
+
+management:
+    server:
+        port: 8091
+
 logging:
     pattern:
       console: "%d [%-9.9thread] %highlight(%-5level) %cyan(%logger:%L) %X - %msg %n%rEx{full}"
