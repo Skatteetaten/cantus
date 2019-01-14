@@ -15,7 +15,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import org.springframework.web.client.RestTemplate
+import org.springframework.web.reactive.function.client.WebClient
 
 class DockerRegistryServiceTest {
 
@@ -25,7 +25,7 @@ class DockerRegistryServiceTest {
     private val server = MockWebServer()
     private val url = server.url("/")
     private val allowedUrls = listOf("docker-registry.no", "internal-docker-registry.no")
-    private val dockerService = DockerRegistryService(RestTemplate(), url.toString(), listOf(url.toString()))
+    private val dockerService = DockerRegistryService(WebClient.create(), url.toString(), listOf(url.toString()))
 
     @BeforeEach
     fun setUp() {
@@ -37,7 +37,7 @@ class DockerRegistryServiceTest {
         val response =
             MockResponse().setJsonFileAsBody("dockerManifest.json").addHeader("Docker-Content-Digest", "SHA::256")
 
-        val requests = server.execute(response, response) {
+        server.execute(response) {
             val jsonResponse = dockerService.getImageManifestInformation(imageRepoName, tagName)
             assert(jsonResponse).isNotNull {
                 assert(it.actual.size).isEqualTo(10)
@@ -46,7 +46,6 @@ class DockerRegistryServiceTest {
                 assert(it.actual["CREATED"]).isEqualTo("2018-11-05T14:01:22.654389192Z")
             }
         }
-        assert(requests.size).isEqualTo(2)
     }
 
     @Test
@@ -91,7 +90,7 @@ class DockerRegistryServiceTest {
 
     @Test
     fun `Verify that disallowed docker registry url returns bad request error`() {
-        val dockerServiceTestDisallowed = DockerRegistryService(RestTemplate(), url.toString(), allowedUrls)
+        val dockerServiceTestDisallowed = DockerRegistryService(WebClient.create(), url.toString(), allowedUrls)
 
         server.execute {
             val exception = catch { dockerServiceTestDisallowed.getImageManifestInformation(imageRepoName, tagName) }

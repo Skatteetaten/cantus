@@ -15,7 +15,7 @@ aurora:
 
 logging:
   level:
-    no.skatteetaten.aurora.cantus: INFO
+    no.skatteetaten.aurora.cantus: DEBUG
     org:
       hibernate: WARN
       springframework: WARN
@@ -37,7 +37,7 @@ server:
 
 management:
     server:
-        port: 8091
+        port: 8095
 
 logging:
     pattern:
