@@ -69,6 +69,7 @@ class ApplicationConfig {
                         MediaType.valueOf("application/vnd.docker.distribution.manifest.v1+json"),
                         MediaType.valueOf("application/vnd.docker.distribution.manifest.v1+prettyjws"),
                         MediaType.valueOf("application/vnd.docker.distribution.manifest.v2+json"),
+                        MediaType.valueOf("application/vnd.docker.container.image.v1+json"),
                         MediaType.valueOf("application/json")
                     )
                 )

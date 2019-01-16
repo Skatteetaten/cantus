@@ -17,7 +17,7 @@ class DockerRegistryController(val dockerRegistryService: DockerRegistryService)
         @RequestParam(required = false) dockerRegistryUrl: String?
     ): Map<String, String> {
         return dockerRegistryService
-            .getImageManifestInformation("$affiliation/$name", tag, dockerRegistryUrl)
+            .getImageManifestInformation(affiliation, name, tag, dockerRegistryUrl)
             .ifEmpty { throw NoSuchResourceException("Could not find manifest for image $affiliation/$name") }
     }
 

@@ -3,16 +3,11 @@ package no.skatteetaten.aurora.cantus.service
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import no.skatteetaten.aurora.cantus.controller.BadRequestException
-import no.skatteetaten.aurora.cantus.controller.DockerRegistryException
 import no.skatteetaten.aurora.cantus.controller.SourceSystemException
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Service
-import org.springframework.web.reactive.function.BodyExtractor
-import org.springframework.web.reactive.function.BodyExtractors
-import org.springframework.web.reactive.function.client.ClientResponse
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.WebClientResponseException
 import org.springframework.web.reactive.function.client.bodyToMono
@@ -20,10 +15,9 @@ import reactor.core.publisher.Mono
 import reactor.core.publisher.toMono
 import java.time.Duration
 import java.util.HashSet
-import java.util.function.Function
-import java.util.function.Predicate
 
 data class DockerRegistryTagResponse(val name: String, val tags: List<String>)
+data class ManifestResponse(val contentType: String, val dockerContentDigest: String, val manifestBody: JsonNode)
 
 val logger = LoggerFactory.getLogger(DockerRegistryService::class.java)
 
@@ -55,6 +49,7 @@ class DockerRegistryService(
     val createdLabel = "created"
 
     fun getImageManifestInformation(
+        imageAffiliation: String,
         imageName: String,
         imageTag: String,
         registryUrl: String? = null
@@ -64,11 +59,12 @@ class DockerRegistryService(
         validateDockerRegistryUrl(url, dockerRegistryUrlsAllowed)
 
         logger.debug("Retrieving manifest from $url")
-        logger.debug("Trying to get image with name $imageName and tag $imageTag")
-        val manifestUri = createManifestRequest(url, imageName, imageTag)
-        val dockerResponse = getManifestFromRegistry(imageName, manifestUri)
-        val dockerContentDigest = dockerResponse?.second ?: throw DockerRegistryException("Error from Docker Registry")
-        val manifestBody = dockerResponse.first
+        logger.debug("Trying to get image with name $imageAffiliation/$imageName and tag $imageTag")
+        val manifestUri = createManifestRequest(url, imageAffiliation, imageName, imageTag)
+        val dockerResponse = getManifestFromRegistry(manifestUri)
+        val dockerContentDigest = dockerResponse.dockerContentDigest
+        val contentType = dockerResponse.contentType
+        val manifestBody = dockerResponse.manifestBody.checkCompatibility(contentType, imageAffiliation, imageName)
 
         return extractManifestInformation(manifestBody, dockerContentDigest)
     }
@@ -78,10 +74,11 @@ class DockerRegistryService(
 
         validateDockerRegistryUrl(url, dockerRegistryUrlsAllowed)
 
-        val tagsUrl = ("$url/v2/$imageName/tags/list")
+        val tagsResponse: DockerRegistryTagResponse? = getBodyFromDockerRegistry {
+            logger.debug("Retrieving tags from {url}/v2/{imageName}/tags/list", url, imageName)
+            it.get().uri(replaceEncodedSlash("{url}/v2/{imageName}/tags/list"), url, imageName)
 
-        logger.debug("Retrieving tags from {}", tagsUrl)
-        val tagsResponse: DockerRegistryTagResponse? = getBodyFromDockerRegistry(tagsUrl)
+        }
 
         return tagsResponse?.tags ?: listOf()
     }
@@ -98,9 +95,10 @@ class DockerRegistryService(
 
     private fun createManifestRequest(
         registryUrl: String,
+        imageAffiliation: String,
         imageName: String,
         imageTag: String
-    ) = "$registryUrl/v2/$imageName/manifests/$imageTag"
+    ) = "$registryUrl/v2/$imageAffiliation/$imageName/manifests/$imageTag"
 
     private fun extractManifestInformation(
         manifestBody: JsonNode,
@@ -128,22 +126,18 @@ class DockerRegistryService(
         if (!alllowedUrls.any { allowedUrl: String -> urlToValidate == allowedUrl }) throw BadRequestException("Invalid Docker Registry URL")
     }
 
-    private final inline fun <reified T: Any> getBodyFromDockerRegistry(
-        apiUrl: String
-    ): T? = webClient
-        .get()
-        .uri(apiUrl)
+    private final inline fun <reified T : Any> getBodyFromDockerRegistry(
+        fn: (WebClient) -> WebClient.RequestHeadersSpec<*>
+    ): T? = fn(webClient)
         .exchange()
-        .flatMap {resp ->
+        .flatMap { resp ->
             resp.bodyToMono(T::class.java)
         }
         .blockAndHandleError(sourceSystem = "docker")
 
-
     private fun getManifestFromRegistry(
-        imageName: String,
         apiUrl: String
-    ): Pair<JsonNode, String>? {
+    ): ManifestResponse {
         return webClient
             .get()
             .uri(apiUrl)
@@ -153,32 +147,42 @@ class DockerRegistryService(
             .exchange()
             .flatMap { resp ->
                 val contentType = resp.headers().contentType().get().toString()
-                val headers = resp.headers().header(dockerContentDigestLabel).first()
+                val dockerContentDigest = resp.headers().header(dockerContentDigestLabel).first()
 
                 resp.bodyToMono<JsonNode>().map {
-                    it.checkCompatibility(contentType, imageName) to headers
+                    ManifestResponse(contentType, dockerContentDigest, it)
                 }
-
-            }.blockNonNullAndHandleError(sourceSystem = "docker")
+            }.blockNonNullAndHandleError()
     }
 
     private fun JsonNode.checkCompatibility(
         contentType: String,
+        imageAffiliation: String,
         imageName: String
     ): JsonNode =
         when (contentType) {
             "application/vnd.docker.distribution.manifest.v2+json" ->
-                this.getV2Information(imageName)
+                this.getV2Information(imageAffiliation, imageName)
             else -> {
                 this.getV1CompatibilityFromManifest()
             }
         }
 
-    private fun JsonNode.getV2Information(imageName: String): JsonNode {
-        val configDigest = this.at("/config").get("digest")
-        return getBodyFromDockerRegistry("/$imageName/blobs/$configDigest") ?: jacksonObjectMapper().createObjectNode()
+    private fun JsonNode.getV2Information(imageAffiliation: String, imageName: String): JsonNode {
+        val configDigest = this.at("/config").get("digest").asText().replace("\\s".toRegex(), "").split(":").last()
+        return getBodyFromDockerRegistry {webClient->
+            webClient
+                .get()
+                .uri("$dockerRegistryUrl/v2/{imageAffiliation}/{imageName}/blobs/sha256:{configDigest}", imageAffiliation, imageName, configDigest)
+                .headers {
+                    it.accept = listOf(MediaType.valueOf("application/json"))
+                }
+        } ?: jacksonObjectMapper().createObjectNode()
     }
+
+    private fun replaceEncodedSlash(uri : String) = uri.replace("%2F", "/")
 }
+
 
 fun <T> Mono<T>.blockNonNullAndHandleError(duration: Duration = Duration.ofSeconds(30), sourceSystem: String? = null) =
     this.switchIfEmpty(SourceSystemException("Empty response", sourceSystem = sourceSystem).toMono())
