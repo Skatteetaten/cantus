@@ -56,8 +56,10 @@ class DockerRegistryControllerTest {
         ]
     )
     fun `Get docker registry image info given missing resource return empty list or map`(path: String) {
-        print(mockMvc.perform(get(path))
-            .andExpect ( status().isOk )
-            .andExpect(jsonPath("$.[*]").isEmpty))
+        print(
+            mockMvc.perform(get(path))
+                .andExpect(status().isOk)
+                .andExpect(jsonPath("$.[*]").isEmpty)
+        )
     }
 }

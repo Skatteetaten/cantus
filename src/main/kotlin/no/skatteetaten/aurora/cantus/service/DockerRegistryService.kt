@@ -70,11 +70,12 @@ class DockerRegistryService<T>(
                     it.accept = dockerManfestAccept
                 }
         }
-        
+
         val dockerContentDigest = dockerResponse.dockerContentDigest ?: return emptyMap()
         val contentType = dockerResponse.contentType ?: return emptyMap()
         val manifestBody =
-            dockerResponse.manifestBody?.checkSchemaCompatibility(contentType, imageAffiliation, imageName) ?: return emptyMap()
+            dockerResponse.manifestBody?.checkSchemaCompatibility(contentType, imageAffiliation, imageName)
+                ?: return emptyMap()
 
         return extractManifestInformation(manifestBody, dockerContentDigest)
     }
@@ -90,8 +91,6 @@ class DockerRegistryService<T>(
                 .get()
                 .uri("$url/v2/{imageGroup}/{imageName}/tags/list", imageGroup, imageName)
         }
-
-
 
         return tagsResponse?.tags ?: emptyList()
     }

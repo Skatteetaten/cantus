@@ -94,7 +94,8 @@ class DockerRegistryServiceTest {
         val dockerServiceTestDisallowed = DockerRegistryService<Any>(WebClient.create(), url.toString(), allowedUrls)
 
         server.execute {
-            val exception = catch { dockerServiceTestDisallowed.getImageManifestInformation(imageGroup, imageName, tagName) }
+            val exception =
+                catch { dockerServiceTestDisallowed.getImageManifestInformation(imageGroup, imageName, tagName) }
             assert(exception).isNotNull {
                 assert(it.actual::class).isEqualTo(BadRequestException::class)
                 assert(it.actual.message).isEqualTo("Invalid Docker Registry URL")
