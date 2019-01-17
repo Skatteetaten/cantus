@@ -17,7 +17,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 @WebMvcTest(value = [DockerRegistryController::class, ErrorHandler::class], secure = false)
 class DockerRegistryControllerTest {
     @MockBean
-    private lateinit var dockerService: DockerRegistryService
+    private lateinit var dockerService: DockerRegistryService<Any?>
 
     @Autowired
     private lateinit var mockMvc: MockMvc

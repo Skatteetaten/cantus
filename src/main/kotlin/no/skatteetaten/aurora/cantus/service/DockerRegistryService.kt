@@ -3,17 +3,14 @@ package no.skatteetaten.aurora.cantus.service
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import no.skatteetaten.aurora.cantus.controller.BadRequestException
-import no.skatteetaten.aurora.cantus.controller.SourceSystemException
+import no.skatteetaten.aurora.cantus.controller.blockAndHandleError
+import no.skatteetaten.aurora.cantus.controller.blockNonNullAndHandleError
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient
-import org.springframework.web.reactive.function.client.WebClientResponseException
 import org.springframework.web.reactive.function.client.bodyToMono
-import reactor.core.publisher.Mono
-import reactor.core.publisher.toMono
-import java.time.Duration
 import java.util.HashSet
 
 data class DockerRegistryTagResponse(val name: String, val tags: List<String>)
@@ -22,7 +19,7 @@ data class ManifestResponse(val contentType: String, val dockerContentDigest: St
 val logger = LoggerFactory.getLogger(DockerRegistryService::class.java)
 
 @Service
-class DockerRegistryService(
+class DockerRegistryService<T>(
     val webClient: WebClient,
     @Value("\${cantus.docker-registry-url}") val dockerRegistryUrl: String,
     @Value("\${cantus.docker-registry-url-allowed}") val dockerRegistryUrlsAllowed: List<String>
@@ -30,7 +27,6 @@ class DockerRegistryService(
     val dockerManfestAccept: List<MediaType> = listOf(
         MediaType.valueOf("application/vnd.docker.distribution.manifest.v2+json"),
         MediaType.valueOf("application/vnd.docker.distribution.manifest.v1+json")
-        //MediaType.valueOf("application/json")
     )
 
     val manifestEnvLabels: HashSet<String> = hashSetOf(
@@ -59,12 +55,24 @@ class DockerRegistryService(
         validateDockerRegistryUrl(url, dockerRegistryUrlsAllowed)
 
         logger.debug("Retrieving manifest from $url")
-        logger.debug("Trying to get image with name $imageAffiliation/$imageName and tag $imageTag")
-        val manifestUri = createManifestRequest(url, imageAffiliation, imageName, imageTag)
-        val dockerResponse = getManifestFromRegistry(manifestUri)
+        logger.debug("Retrieving image manifest with name $imageAffiliation/$imageName and tag $imageTag")
+        val dockerResponse = getManifestFromRegistry { webClient ->
+            webClient
+                .get()
+                .uri(
+                    "$url/v2/{imageAffiliation}/{imageName}/manifests/{imageTag}",
+                    imageAffiliation,
+                    imageName,
+                    imageTag
+                )
+                .headers {
+                    it.accept = dockerManfestAccept
+                }
+        }
+
         val dockerContentDigest = dockerResponse.dockerContentDigest
         val contentType = dockerResponse.contentType
-        val manifestBody = dockerResponse.manifestBody.checkCompatibility(contentType, imageAffiliation, imageName)
+        val manifestBody = dockerResponse.manifestBody.checkSchemaCompatibility(contentType, imageAffiliation, imageName)
 
         return extractManifestInformation(manifestBody, dockerContentDigest)
     }
@@ -76,7 +84,9 @@ class DockerRegistryService(
 
         val tagsResponse: DockerRegistryTagResponse? = getBodyFromDockerRegistry {
             logger.debug("Retrieving tags from {url}/v2/{imageName}/tags/list", url, imageName)
-            it.get().uri(replaceEncodedSlash("{url}/v2/{imageName}/tags/list"), url, imageName)
+            it
+                .get()
+                .uri("$url/v2/{imageName}/tags/list", imageName)
 
         }
 
@@ -92,13 +102,6 @@ class DockerRegistryService(
         logger.debug("Tags are grouped by semantic version")
         return tags.groupBy { ImageTagType.typeOf(it).toString() }
     }
-
-    private fun createManifestRequest(
-        registryUrl: String,
-        imageAffiliation: String,
-        imageName: String,
-        imageTag: String
-    ) = "$registryUrl/v2/$imageAffiliation/$imageName/manifests/$imageTag"
 
     private fun extractManifestInformation(
         manifestBody: JsonNode,
@@ -136,26 +139,19 @@ class DockerRegistryService(
         .blockAndHandleError(sourceSystem = "docker")
 
     private fun getManifestFromRegistry(
-        apiUrl: String
-    ): ManifestResponse {
-        return webClient
-            .get()
-            .uri(apiUrl)
-            .headers {
-                it.accept = dockerManfestAccept
+        fn: (WebClient) -> WebClient.RequestHeadersSpec<*>
+    ): ManifestResponse = fn(webClient)
+        .exchange()
+        .flatMap { resp ->
+            val contentType = resp.headers().contentType().get().toString()
+            val dockerContentDigest = resp.headers().header(dockerContentDigestLabel).first()
+
+            resp.bodyToMono<JsonNode>().map {
+                ManifestResponse(contentType, dockerContentDigest, it)
             }
-            .exchange()
-            .flatMap { resp ->
-                val contentType = resp.headers().contentType().get().toString()
-                val dockerContentDigest = resp.headers().header(dockerContentDigestLabel).first()
+        }.blockNonNullAndHandleError(sourceSystem = "docker")
 
-                resp.bodyToMono<JsonNode>().map {
-                    ManifestResponse(contentType, dockerContentDigest, it)
-                }
-            }.blockNonNullAndHandleError()
-    }
-
-    private fun JsonNode.checkCompatibility(
+    private fun JsonNode.checkSchemaCompatibility(
         contentType: String,
         imageAffiliation: String,
         imageName: String
@@ -170,39 +166,21 @@ class DockerRegistryService(
 
     private fun JsonNode.getV2Information(imageAffiliation: String, imageName: String): JsonNode {
         val configDigest = this.at("/config").get("digest").asText().replace("\\s".toRegex(), "").split(":").last()
-        return getBodyFromDockerRegistry {webClient->
+        return getBodyFromDockerRegistry { webClient ->
             webClient
                 .get()
-                .uri("$dockerRegistryUrl/v2/{imageAffiliation}/{imageName}/blobs/sha256:{configDigest}", imageAffiliation, imageName, configDigest)
+                .uri(
+                    "$dockerRegistryUrl/v2/{imageAffiliation}/{imageName}/blobs/sha256:{configDigest}",
+                    imageAffiliation,
+                    imageName,
+                    configDigest
+                )
                 .headers {
                     it.accept = listOf(MediaType.valueOf("application/json"))
                 }
         } ?: jacksonObjectMapper().createObjectNode()
     }
-
-    private fun replaceEncodedSlash(uri : String) = uri.replace("%2F", "/")
 }
-
-
-fun <T> Mono<T>.blockNonNullAndHandleError(duration: Duration = Duration.ofSeconds(30), sourceSystem: String? = null) =
-    this.switchIfEmpty(SourceSystemException("Empty response", sourceSystem = sourceSystem).toMono())
-        .blockAndHandleError(duration, sourceSystem)!!
-
-fun <T> Mono<T>.blockAndHandleError(duration: Duration = Duration.ofSeconds(30), sourceSystem: String? = null) =
-    this.handleError(sourceSystem).toMono().block(duration)
-
-private fun <T> Mono<T>.handleError(sourceSystem: String?) =
-    this.doOnError {
-        if (it is WebClientResponseException) {
-            throw SourceSystemException(
-                message = "Error in response, status:${it.statusCode} message:${it.statusText}",
-                cause = it,
-                sourceSystem = sourceSystem,
-                code = it.statusCode.name
-            )
-        }
-        throw SourceSystemException("Error response", it)
-    }
 
 private fun JsonNode.getV1CompatibilityFromManifest() =
     jacksonObjectMapper().readTree(this.get("history")?.get(0)?.get("v1Compatibility")?.asText() ?: "")

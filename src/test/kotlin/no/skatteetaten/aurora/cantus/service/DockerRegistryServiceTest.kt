@@ -26,7 +26,7 @@ class DockerRegistryServiceTest {
     private val server = MockWebServer()
     private val url = server.url("/")
     private val allowedUrls = listOf("docker-registry.no", "internal-docker-registry.no")
-    private val dockerService = DockerRegistryService(WebClient.create(), url.toString(), listOf(url.toString()))
+    private val dockerService = DockerRegistryService<Any>(WebClient.create(), url.toString(), listOf(url.toString()))
 
     @BeforeEach
     fun setUp() {
@@ -91,7 +91,7 @@ class DockerRegistryServiceTest {
 
     @Test
     fun `Verify that disallowed docker registry url returns bad request error`() {
-        val dockerServiceTestDisallowed = DockerRegistryService(WebClient.create(), url.toString(), allowedUrls)
+        val dockerServiceTestDisallowed = DockerRegistryService<Any>(WebClient.create(), url.toString(), allowedUrls)
 
         server.execute {
             val exception = catch { dockerServiceTestDisallowed.getImageManifestInformation(imageAffiliation, imageName, tagName) }
