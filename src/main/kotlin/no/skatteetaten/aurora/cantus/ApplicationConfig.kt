@@ -41,9 +41,8 @@ class ApplicationConfig {
     @Bean
     fun webClient() = webClientBuilder().build()
 
-    fun webClientBuilder(): WebClient.Builder {
-
-        return WebClient
+    fun webClientBuilder(): WebClient.Builder =
+        WebClient
             .builder()
             .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
             .exchangeStrategies(exchangeStrategies())
@@ -56,10 +55,10 @@ class ApplicationConfig {
                 it.toMono()
             })
             .clientConnector(clientConnector())
-    }
 
     private fun exchangeStrategies(): ExchangeStrategies {
         val objectMapper = createObjectMapper()
+
         return ExchangeStrategies
             .builder()
             .codecs {

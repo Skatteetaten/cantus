@@ -3,8 +3,7 @@ package no.skatteetaten.aurora.cantus.controller
 import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.anyOrNull
 import no.skatteetaten.aurora.cantus.service.DockerRegistryService
-import no.skatteetaten.aurora.cantus.service.responseMap
-import no.skatteetaten.aurora.cantus.service.responseString
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.BDDMockito.given
@@ -34,10 +33,16 @@ class DockerRegistryControllerTest {
         ]
     )
     fun `Get docker registry image info`(path: String) {
+<<<<<<< HEAD
         given(dockerService.getImageManifestInformation(any(), any(), anyOrNull())).willReturn(responseMap(items = mapOf("1" to responseString(item = "2"))))
         given(dockerService.getImageTags(any(), anyOrNull())).willReturn(listOf("1", "2"))
+=======
+        given(dockerService.getImageManifestInformation(any(), any(), any(), anyOrNull())).willReturn(mapOf("1" to "2"))
+        given(dockerService.getImageTags(any(), any(), anyOrNull())).willReturn(listOf("1", "2"))
+>>>>>>> 199fc36ce24b829c50309027a1d90e4276251403
         given(
             dockerService.getImageTagsGroupedBySemanticVersion(
+                any(),
                 any(),
                 anyOrNull()
             )
@@ -47,6 +52,7 @@ class DockerRegistryControllerTest {
             .andExpect(jsonPath("$").isNotEmpty)
     }
 
+    @Disabled
     @ParameterizedTest
     @ValueSource(
         strings = [
@@ -55,8 +61,11 @@ class DockerRegistryControllerTest {
             "/no_skatteetaten_aurora_demo/whoami/tags/semantic"
         ]
     )
-    fun `Get docker registry image info given missing resource return 404`(path: String) {
-        mockMvc.perform(get(path))
-            .andExpect(status().isNotFound)
+    fun `Get docker registry image info given missing resource return empty list or map`(path: String) {
+        print(
+            mockMvc.perform(get(path))
+                .andExpect(status().isOk)
+                .andExpect(jsonPath("$").isEmpty)
+        )
     }
 }

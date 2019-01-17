@@ -40,6 +40,5 @@ class DockerRegistryController(val dockerRegistryService: DockerRegistryService)
         @PathVariable name: String,
         @RequestParam(required = false) dockerRegistryUrl: String?
     ) =
-        dockerRegistryService.getImageTagsGroupedBySemanticVersion("$affiliation/$name", dockerRegistryUrl)
-            .ifEmpty { throw NoSuchResourceException("Not possible to group tags by semantic version. Could not find tags for image $affiliation/$name") }
+        dockerRegistryService.getImageTagsGroupedBySemanticVersion(affiliation, name, dockerRegistryUrl)
 }
