@@ -15,12 +15,12 @@ import reactor.core.publisher.toMono
 import java.util.HashSet
 
 data class DockerRegistryTagResponse(val name: String, val tags: List<String>)
-data class ManifestResponse(val contentType: String?, val dockerContentDigest: String?, val manifestBody: JsonNode?)
+data class ManifestResponse(val contentType: String, val dockerContentDigest: String, val manifestBody: JsonNode, val statusCode: Int)
 
 val logger = LoggerFactory.getLogger(DockerRegistryService::class.java)
 
 @Service
-class DockerRegistryService<T>(
+class DockerRegistryService(
     val webClient: WebClient,
     @Value("\${cantus.docker-registry-url}") val dockerRegistryUrl: String,
     @Value("\${cantus.docker-registry-url-allowed}") val dockerRegistryUrlsAllowed: List<String>
@@ -46,7 +46,7 @@ class DockerRegistryService<T>(
     val createdLabel = "created"
 
     fun getImageManifestInformation(
-        imageAffiliation: String,
+        imageGroup: String,
         imageName: String,
         imageTag: String,
         registryUrl: String? = null
@@ -56,13 +56,13 @@ class DockerRegistryService<T>(
         validateDockerRegistryUrl(url, dockerRegistryUrlsAllowed)
 
         logger.debug("Retrieving manifest from $url")
-        logger.debug("Retrieving image manifest with name $imageAffiliation/$imageName and tag $imageTag")
+        logger.debug("Retrieving image manifest with name $imageGroup/$imageName and tag $imageTag")
         val dockerResponse = getManifestFromRegistry { webClient ->
             webClient
                 .get()
                 .uri(
-                    "$url/v2/{imageAffiliation}/{imageName}/manifests/{imageTag}",
-                    imageAffiliation,
+                    "$url/v2/{imageGroup}/{imageName}/manifests/{imageTag}",
+                    imageGroup,
                     imageName,
                     imageTag
                 )
@@ -70,12 +70,12 @@ class DockerRegistryService<T>(
                     it.accept = dockerManfestAccept
                 }
         }
+        if (dockerResponse.statusCode == 404) return emptyMap()
 
-        val dockerContentDigest = dockerResponse.dockerContentDigest ?: return emptyMap()
-        val contentType = dockerResponse.contentType ?: return emptyMap()
-        val manifestBody =
-            dockerResponse.manifestBody?.checkSchemaCompatibility(contentType, imageAffiliation, imageName)
-                ?: return emptyMap()
+        val dockerContentDigest = dockerResponse.dockerContentDigest
+        val contentType = dockerResponse.contentType
+        val manifestBody = dockerResponse
+            .manifestBody.checkSchemaCompatibility(contentType, imageGroup, imageName)
 
         return extractManifestInformation(manifestBody, dockerContentDigest)
     }
@@ -85,14 +85,14 @@ class DockerRegistryService<T>(
 
         validateDockerRegistryUrl(url, dockerRegistryUrlsAllowed)
 
-        val tagsResponse: DockerRegistryTagResponse? = getBodyFromDockerRegistry {
+        val tagsResponse: DockerRegistryTagResponse = getBodyFromDockerRegistry {
             logger.debug("Retrieving tags from {url}/v2/{imageGroup}/{imageName}/tags/list", url, imageName)
             it
                 .get()
                 .uri("$url/v2/{imageGroup}/{imageName}/tags/list", imageGroup, imageName)
         }
 
-        return tagsResponse?.tags ?: emptyList()
+        return tagsResponse.tags
     }
 
     fun getImageTagsGroupedBySemanticVersion(
@@ -146,14 +146,15 @@ class DockerRegistryService<T>(
     ): ManifestResponse = fn(webClient)
         .exchange()
         .flatMap { resp ->
-            if (resp.statusCode() == HttpStatus.NOT_FOUND) {
-                ManifestResponse(null, null, null).toMono()
+            val statusCode = resp.statusCode().value()
+            if (statusCode == 404) {
+                ManifestResponse("", "", jacksonObjectMapper().createObjectNode(), statusCode).toMono()
             } else {
                 val contentType = resp.headers().contentType().get().toString()
                 val dockerContentDigest = resp.headers().header(dockerContentDigestLabel).first()
 
                 resp.bodyToMono<JsonNode>().map {
-                    ManifestResponse(contentType, dockerContentDigest, it)
+                    ManifestResponse(contentType, dockerContentDigest, it, statusCode)
                 }
             }
         }.blockNonNullAndHandleError(sourceSystem = "docker")

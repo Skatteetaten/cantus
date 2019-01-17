@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-class DockerRegistryController(val dockerRegistryService: DockerRegistryService<Any?>) {
+class DockerRegistryController(val dockerRegistryService: DockerRegistryService) {
 
     @GetMapping("/{affiliation}/{name}/{tag}/manifest")
     fun getManifestInformation(
