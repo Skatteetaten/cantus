@@ -6,7 +6,7 @@ import assertk.assertions.isNotNull
 import assertk.catch
 import io.mockk.clearMocks
 import no.skatteetaten.aurora.cantus.controller.BadRequestException
-import no.skatteetaten.aurora.cantus.controller.DockerRegistryException
+import no.skatteetaten.aurora.cantus.controller.SourceSystemException
 import no.skatteetaten.aurora.cantus.execute
 import no.skatteetaten.aurora.cantus.setJsonFileAsBody
 import okhttp3.mockwebserver.MockResponse
@@ -19,7 +19,7 @@ import org.springframework.web.reactive.function.client.WebClient
 
 class DockerRegistryServiceTest {
 
-    private val imageAffiliation = "no_skatteetaten_aurora_demo"
+    private val imageGroup = "no_skatteetaten_aurora_demo"
     private val imageName = "whoami"
     private val tagName = "2"
 
@@ -39,7 +39,7 @@ class DockerRegistryServiceTest {
             MockResponse().setJsonFileAsBody("dockerManifest.json").addHeader("Docker-Content-Digest", "SHA::256")
 
         server.execute(response) {
-            val jsonResponse = dockerService.getImageManifestInformation(imageAffiliation, imageName, tagName)
+            val jsonResponse = dockerService.getImageManifestInformation(imageGroup, imageName, tagName)
             assert(jsonResponse).isNotNull {
                 assert(it.actual.size).isEqualTo(10)
                 assert(it.actual["DOCKER_CONTENT_DIGEST"]).isEqualTo("SHA::256")
@@ -54,7 +54,7 @@ class DockerRegistryServiceTest {
         val response = MockResponse().setJsonFileAsBody("dockerTagList.json")
 
         server.execute(response) {
-            val jsonResponse = dockerService.getImageTags("$imageAffiliation/$imageName")
+            val jsonResponse = dockerService.getImageTags(imageGroup, imageName)
             assert(jsonResponse).isNotNull {
                 assert(it.actual.size).isEqualTo(5)
                 assert(it.actual[0]).isEqualTo("0")
@@ -69,7 +69,7 @@ class DockerRegistryServiceTest {
         val response = MockResponse().setJsonFileAsBody("dockerTagList.json")
 
         server.execute(response) {
-            val jsonResponse = dockerService.getImageTagsGroupedBySemanticVersion("$imageAffiliation/$imageName")
+            val jsonResponse = dockerService.getImageTagsGroupedBySemanticVersion(imageGroup, imageName)
             assert(jsonResponse).isNotNull {
                 assert(it.actual["BUGFIX"]?.size).isEqualTo(2)
                 assert(it.actual["MINOR"]?.first()).isEqualTo("0.0")
@@ -79,12 +79,12 @@ class DockerRegistryServiceTest {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = [500, 400, 404])
+    @ValueSource(ints = [500, 400])
     fun `Get image manifest given internal server error in docker registry`(statusCode: Int) {
         server.execute(statusCode) {
-            val exception = catch { dockerService.getImageManifestInformation(imageAffiliation, imageName, tagName) }
+            val exception = catch { dockerService.getImageManifestInformation(imageGroup, imageName, tagName) }
             assert(exception).isNotNull {
-                assert(it.actual::class).isEqualTo(DockerRegistryException::class)
+                assert(it.actual::class).isEqualTo(SourceSystemException::class)
             }
         }
     }
@@ -94,7 +94,7 @@ class DockerRegistryServiceTest {
         val dockerServiceTestDisallowed = DockerRegistryService<Any>(WebClient.create(), url.toString(), allowedUrls)
 
         server.execute {
-            val exception = catch { dockerServiceTestDisallowed.getImageManifestInformation(imageAffiliation, imageName, tagName) }
+            val exception = catch { dockerServiceTestDisallowed.getImageManifestInformation(imageGroup, imageName, tagName) }
             assert(exception).isNotNull {
                 assert(it.actual::class).isEqualTo(BadRequestException::class)
                 assert(it.actual.message).isEqualTo("Invalid Docker Registry URL")

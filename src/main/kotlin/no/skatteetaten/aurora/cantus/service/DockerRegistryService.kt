@@ -3,18 +3,19 @@ package no.skatteetaten.aurora.cantus.service
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import no.skatteetaten.aurora.cantus.controller.BadRequestException
-import no.skatteetaten.aurora.cantus.controller.blockAndHandleError
 import no.skatteetaten.aurora.cantus.controller.blockNonNullAndHandleError
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.bodyToMono
+import reactor.core.publisher.toMono
 import java.util.HashSet
 
 data class DockerRegistryTagResponse(val name: String, val tags: List<String>)
-data class ManifestResponse(val contentType: String, val dockerContentDigest: String, val manifestBody: JsonNode)
+data class ManifestResponse(val contentType: String?, val dockerContentDigest: String?, val manifestBody: JsonNode?)
 
 val logger = LoggerFactory.getLogger(DockerRegistryService::class.java)
 
@@ -69,35 +70,38 @@ class DockerRegistryService<T>(
                     it.accept = dockerManfestAccept
                 }
         }
-
-        val dockerContentDigest = dockerResponse.dockerContentDigest
-        val contentType = dockerResponse.contentType
-        val manifestBody = dockerResponse.manifestBody.checkSchemaCompatibility(contentType, imageAffiliation, imageName)
+        
+        val dockerContentDigest = dockerResponse.dockerContentDigest ?: return emptyMap()
+        val contentType = dockerResponse.contentType ?: return emptyMap()
+        val manifestBody =
+            dockerResponse.manifestBody?.checkSchemaCompatibility(contentType, imageAffiliation, imageName) ?: return emptyMap()
 
         return extractManifestInformation(manifestBody, dockerContentDigest)
     }
 
-    fun getImageTags(imageName: String, registryUrl: String? = null): List<String> {
+    fun getImageTags(imageGroup: String, imageName: String, registryUrl: String? = null): List<String> {
         val url = registryUrl ?: dockerRegistryUrl
 
         validateDockerRegistryUrl(url, dockerRegistryUrlsAllowed)
 
         val tagsResponse: DockerRegistryTagResponse? = getBodyFromDockerRegistry {
-            logger.debug("Retrieving tags from {url}/v2/{imageName}/tags/list", url, imageName)
+            logger.debug("Retrieving tags from {url}/v2/{imageGroup}/{imageName}/tags/list", url, imageName)
             it
                 .get()
-                .uri("$url/v2/{imageName}/tags/list", imageName)
-
+                .uri("$url/v2/{imageGroup}/{imageName}/tags/list", imageGroup, imageName)
         }
 
-        return tagsResponse?.tags ?: listOf()
+
+
+        return tagsResponse?.tags ?: emptyList()
     }
 
     fun getImageTagsGroupedBySemanticVersion(
+        imageGroup: String,
         imageName: String,
         registryUrl: String? = null
     ): Map<String, List<String>> {
-        val tags = getImageTags(imageName, registryUrl)
+        val tags = getImageTags(imageGroup, imageName, registryUrl)
 
         logger.debug("Tags are grouped by semantic version")
         return tags.groupBy { ImageTagType.typeOf(it).toString() }
@@ -131,23 +135,27 @@ class DockerRegistryService<T>(
 
     private final inline fun <reified T : Any> getBodyFromDockerRegistry(
         fn: (WebClient) -> WebClient.RequestHeadersSpec<*>
-    ): T? = fn(webClient)
+    ): T = fn(webClient)
         .exchange()
         .flatMap { resp ->
             resp.bodyToMono(T::class.java)
         }
-        .blockAndHandleError(sourceSystem = "docker")
+        .blockNonNullAndHandleError(sourceSystem = "docker")
 
     private fun getManifestFromRegistry(
         fn: (WebClient) -> WebClient.RequestHeadersSpec<*>
     ): ManifestResponse = fn(webClient)
         .exchange()
         .flatMap { resp ->
-            val contentType = resp.headers().contentType().get().toString()
-            val dockerContentDigest = resp.headers().header(dockerContentDigestLabel).first()
+            if (resp.statusCode() == HttpStatus.NOT_FOUND) {
+                ManifestResponse(null, null, null).toMono()
+            } else {
+                val contentType = resp.headers().contentType().get().toString()
+                val dockerContentDigest = resp.headers().header(dockerContentDigestLabel).first()
 
-            resp.bodyToMono<JsonNode>().map {
-                ManifestResponse(contentType, dockerContentDigest, it)
+                resp.bodyToMono<JsonNode>().map {
+                    ManifestResponse(contentType, dockerContentDigest, it)
+                }
             }
         }.blockNonNullAndHandleError(sourceSystem = "docker")
 
@@ -170,7 +178,7 @@ class DockerRegistryService<T>(
             webClient
                 .get()
                 .uri(
-                    "$dockerRegistryUrl/v2/{imageAffiliation}/{imageName}/blobs/sha256:{configDigest}",
+                    "$dockerRegistryUrl/v2/{imageGroup}/{imageName}/blobs/sha256:{configDigest}",
                     imageAffiliation,
                     imageName,
                     configDigest
@@ -178,7 +186,7 @@ class DockerRegistryService<T>(
                 .headers {
                     it.accept = listOf(MediaType.valueOf("application/json"))
                 }
-        } ?: jacksonObjectMapper().createObjectNode()
+        }
     }
 }
 
