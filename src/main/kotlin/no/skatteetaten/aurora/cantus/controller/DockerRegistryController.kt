@@ -1,10 +1,13 @@
 package no.skatteetaten.aurora.cantus.controller
 
 import no.skatteetaten.aurora.cantus.service.DockerRegistryService
+import no.skatteetaten.aurora.cantus.service.TagResponse
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import uk.q3c.rest.hal.HalLink
+import uk.q3c.rest.hal.HalResource
 
 @RestController
 class DockerRegistryController(val dockerRegistryService: DockerRegistryService) {
@@ -15,10 +18,9 @@ class DockerRegistryController(val dockerRegistryService: DockerRegistryService)
         @PathVariable name: String,
         @PathVariable tag: String,
         @RequestParam(required = false) dockerRegistryUrl: String?
-    ): Map<String, String> {
+    ): HalResource {
         return dockerRegistryService
             .getImageManifestInformation(affiliation, name, tag, dockerRegistryUrl)
-            .ifEmpty { throw NoSuchResourceException("Could not find manifest for image $affiliation/$name") }
     }
 
     @GetMapping("/{affiliation}/{name}/tags")
@@ -27,8 +29,10 @@ class DockerRegistryController(val dockerRegistryService: DockerRegistryService)
         @PathVariable name: String,
         @RequestParam(required = false) dockerRegistryUrl: String?
     ) =
-        dockerRegistryService.getImageTags("$affiliation/$name", dockerRegistryUrl)
-            .ifEmpty { throw NoSuchResourceException("Could not find tags for image $affiliation/$name") }
+        TagResponse(items=dockerRegistryService.getImageTags("$affiliation/$name", dockerRegistryUrl)
+            .ifEmpty { throw NoSuchResourceException("Could not find tags for image $affiliation/$name") })
+            .link("test", HalLink("foo"))
+            .embed("foobar", TagResponse(success = true, message="foobar"))
 
     @GetMapping("/{affiliation}/{name}/tags/semantic")
     fun getImageTagsSemantic(

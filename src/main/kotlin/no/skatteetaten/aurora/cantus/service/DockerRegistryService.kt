@@ -3,23 +3,60 @@ package no.skatteetaten.aurora.cantus.service
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import no.skatteetaten.aurora.cantus.controller.BadRequestException
-import no.skatteetaten.aurora.cantus.controller.SourceSystemException
+import no.skatteetaten.aurora.cantus.controller.blockAndHandleError
+import no.skatteetaten.aurora.cantus.controller.blockNonNullAndHandleError
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient
-import org.springframework.web.reactive.function.client.WebClientResponseException
 import org.springframework.web.reactive.function.client.bodyToMono
-import reactor.core.publisher.Mono
-import reactor.core.publisher.toMono
-import java.time.Duration
+import uk.q3c.rest.hal.HalResource
+import java.time.Instant
 import java.util.HashSet
 
 data class DockerRegistryTagResponse(val name: String, val tags: List<String>)
 data class ManifestResponse(val contentType: String, val dockerContentDigest: String, val manifestBody: JsonNode)
+data class CantusManifestResponse(
+    val dockerContentDigest: String
+) : HalResource()
 
 val logger = LoggerFactory.getLogger(DockerRegistryService::class.java)
+
+data class TagResource(val name: String, val type: ImageTagType) : HalResource()
+
+data class ImageTagResource(
+    val auroraVersion: String?,
+    val appVersion:String?,
+    val timeline: Map<String, Instant> = emptyMap(),
+    val dockerVersion: String,
+    val dockerDigest: String
+) : HalResource()
+
+data class JavaImage(
+    val major: String,
+    val minor:String,
+    val build:String,
+    val jolokia: String?
+): HalResource()
+
+
+data class NodeImage(
+    val nodeVersion: String,
+    val nginxVersion:String
+): HalResource()
+
+
+
+
+
+data class AuroraResponse<T : HalResource>(
+    val items: List<T> = emptyList(),
+    val success: Boolean = true,
+    val message: String = "OK",
+    val exception: Throwable? = null,
+    val count: Int = items.size
+) : HalResource()
 
 @Service
 class DockerRegistryService(
@@ -53,34 +90,76 @@ class DockerRegistryService(
         imageName: String,
         imageTag: String,
         registryUrl: String? = null
-    ): Map<String, String> {
+    ): ImageTagResource {
         val url = registryUrl ?: dockerRegistryUrl
 
         validateDockerRegistryUrl(url, dockerRegistryUrlsAllowed)
 
         logger.debug("Retrieving manifest from $url")
         logger.debug("Trying to get image with name $imageAffiliation/$imageName and tag $imageTag")
-        val manifestUri = createManifestRequest(url, imageAffiliation, imageName, imageTag)
-        val dockerResponse = getManifestFromRegistry(manifestUri)
+
+        val dockerResponse = getManifestFromRegistry { webClient ->
+            webClient
+                .get()
+                .uri(
+                    "$url/v2/{imageAffiliation}/{imageName}/manifests/{imageTag}",
+                    imageAffiliation,
+                    imageName,
+                    imageTag
+                )
+                .headers {
+                    it.accept = dockerManfestAccept
+                }
+        }
         val dockerContentDigest = dockerResponse.dockerContentDigest
         val contentType = dockerResponse.contentType
         val manifestBody = dockerResponse.manifestBody.checkCompatibility(contentType, imageAffiliation, imageName)
 
-        return extractManifestInformation(manifestBody, dockerContentDigest)
+        val manifestInformationMap = extractManifestInformation(manifestBody, dockerContentDigest)
+
+        return ImageTagResource(
+            auroraVersion = manifestInformationMap["AURORA_VERSION"],
+            appVersion = manifestInformationMap["APP_VERSION"],
+            timeline = mapOf(
+                "BUILD_STARTED" to Instant.parse(manifestInformationMap["IMAGE_BUILD_TIME"]),
+                "BUILD_DONE" to Instant.parse(manifestInformationMap["CREATED"])
+            ),
+            dockerDigest = manifestInformationMap["DOCKER_CONTENT_DIGEST"]!!,
+            dockerVersion = manifestInformationMap["DOCKER_VERSION"]!!
+        ).let {
+
+            if(manifestInformationMap.containsKey("JAVA_VERSION_MAJOR")) {
+                it.embed("java", JavaImage(
+                    major = manifestInformationMap["JAVA_VERSION_MAJOR"]!!,
+                    minor = manifestInformationMap["JAVA_VERSION_MINORl"]!!,
+                    build = manifestInformationMap["JAVA_VERSION_BUILD"]!!,
+                    jolokia = manifestInformationMap["JOLOKIA_VERSION"]!!
+                ))
+            } else if (manifestInformationMap.containsKey("NODE_VERSION")) {
+                it.embed("node", NodeImage(
+                    nodeVersion = manifestInformationMap["NODE_VERSION"]!!,
+                    nginxVersion = ""
+                ))
+            }
+            it
+        }
     }
 
-    fun getImageTags(imageName: String, registryUrl: String? = null): List<String> {
+    fun getImageTags(imageName: String, registryUrl: String? = null): AuroraResponse<TagResource> {
         val url = registryUrl ?: dockerRegistryUrl
 
         validateDockerRegistryUrl(url, dockerRegistryUrlsAllowed)
 
         val tagsResponse: DockerRegistryTagResponse? = getBodyFromDockerRegistry {
             logger.debug("Retrieving tags from {url}/v2/{imageName}/tags/list", url, imageName)
-            it.get().uri(replaceEncodedSlash("{url}/v2/{imageName}/tags/list"), url, imageName)
-
+            it.get().uri("$url/v2/{imageName}/tags/list", imageName)
         }
 
-        return tagsResponse?.tags ?: listOf()
+        if(tagsResponse == null) {
+            return AuroraResponse(message = "Fikk ingen svar for...")
+        }
+
+        return AuroraResponse(tagsResponse.tags.map{ TagResource(it, ImageTagType.typeOf(it))})
     }
 
     fun getImageTagsGroupedBySemanticVersion(
@@ -90,15 +169,10 @@ class DockerRegistryService(
         val tags = getImageTags(imageName, registryUrl)
 
         logger.debug("Tags are grouped by semantic version")
-        return tags.groupBy { ImageTagType.typeOf(it).toString() }
+        return tags.items.groupBy {
+            it.type.toString()
+        }
     }
-
-    private fun createManifestRequest(
-        registryUrl: String,
-        imageAffiliation: String,
-        imageName: String,
-        imageTag: String
-    ) = "$registryUrl/v2/$imageAffiliation/$imageName/manifests/$imageTag"
 
     private fun extractManifestInformation(
         manifestBody: JsonNode,
@@ -136,14 +210,9 @@ class DockerRegistryService(
         .blockAndHandleError(sourceSystem = "docker")
 
     private fun getManifestFromRegistry(
-        apiUrl: String
+        fn: (WebClient) -> WebClient.RequestHeadersSpec<*>
     ): ManifestResponse {
-        return webClient
-            .get()
-            .uri(apiUrl)
-            .headers {
-                it.accept = dockerManfestAccept
-            }
+        return fn(webClient)
             .exchange()
             .flatMap { resp ->
                 val contentType = resp.headers().contentType().get().toString()
@@ -170,39 +239,21 @@ class DockerRegistryService(
 
     private fun JsonNode.getV2Information(imageAffiliation: String, imageName: String): JsonNode {
         val configDigest = this.at("/config").get("digest").asText().replace("\\s".toRegex(), "").split(":").last()
-        return getBodyFromDockerRegistry {webClient->
+        return getBodyFromDockerRegistry { webClient ->
             webClient
                 .get()
-                .uri("$dockerRegistryUrl/v2/{imageAffiliation}/{imageName}/blobs/sha256:{configDigest}", imageAffiliation, imageName, configDigest)
+                .uri(
+                    "$dockerRegistryUrl/v2/{imageAffiliation}/{imageName}/blobs/sha256:{configDigest}",
+                    imageAffiliation,
+                    imageName,
+                    configDigest
+                )
                 .headers {
                     it.accept = listOf(MediaType.valueOf("application/json"))
                 }
         } ?: jacksonObjectMapper().createObjectNode()
     }
-
-    private fun replaceEncodedSlash(uri : String) = uri.replace("%2F", "/")
 }
-
-
-fun <T> Mono<T>.blockNonNullAndHandleError(duration: Duration = Duration.ofSeconds(30), sourceSystem: String? = null) =
-    this.switchIfEmpty(SourceSystemException("Empty response", sourceSystem = sourceSystem).toMono())
-        .blockAndHandleError(duration, sourceSystem)!!
-
-fun <T> Mono<T>.blockAndHandleError(duration: Duration = Duration.ofSeconds(30), sourceSystem: String? = null) =
-    this.handleError(sourceSystem).toMono().block(duration)
-
-private fun <T> Mono<T>.handleError(sourceSystem: String?) =
-    this.doOnError {
-        if (it is WebClientResponseException) {
-            throw SourceSystemException(
-                message = "Error in response, status:${it.statusCode} message:${it.statusText}",
-                cause = it,
-                sourceSystem = sourceSystem,
-                code = it.statusCode.name
-            )
-        }
-        throw SourceSystemException("Error response", it)
-    }
 
 private fun JsonNode.getV1CompatibilityFromManifest() =
     jacksonObjectMapper().readTree(this.get("history")?.get(0)?.get("v1Compatibility")?.asText() ?: "")

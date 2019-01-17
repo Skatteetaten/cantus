@@ -3,6 +3,8 @@ package no.skatteetaten.aurora.cantus.controller
 import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.anyOrNull
 import no.skatteetaten.aurora.cantus.service.DockerRegistryService
+import no.skatteetaten.aurora.cantus.service.responseMap
+import no.skatteetaten.aurora.cantus.service.responseString
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.BDDMockito.given
@@ -13,6 +15,7 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import uk.q3c.rest.hal.HalResource
 
 @WebMvcTest(value = [DockerRegistryController::class, ErrorHandler::class], secure = false)
 class DockerRegistryControllerTest {
@@ -31,7 +34,7 @@ class DockerRegistryControllerTest {
         ]
     )
     fun `Get docker registry image info`(path: String) {
-        given(dockerService.getImageManifestInformation(any(), any(), anyOrNull())).willReturn(mapOf("1" to "2"))
+        given(dockerService.getImageManifestInformation(any(), any(), anyOrNull())).willReturn(responseMap(items = mapOf("1" to responseString(item = "2"))))
         given(dockerService.getImageTags(any(), anyOrNull())).willReturn(listOf("1", "2"))
         given(
             dockerService.getImageTagsGroupedBySemanticVersion(

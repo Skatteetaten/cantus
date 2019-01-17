@@ -15,10 +15,11 @@ aurora:
 
 logging:
   level:
+    io.netty: DEBUG
     no.skatteetaten.aurora.cantus: DEBUG
     org:
       hibernate: WARN
-      springframework: WARN
+      springframework: INFO
       apache:
         catalina: WARN
         velocity: WARN
