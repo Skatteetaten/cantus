@@ -6,7 +6,6 @@ import no.skatteetaten.aurora.cantus.controller.BadRequestException
 import no.skatteetaten.aurora.cantus.controller.blockNonNullAndHandleError
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient
@@ -161,25 +160,25 @@ class DockerRegistryService(
 
     private fun JsonNode.checkSchemaCompatibility(
         contentType: String,
-        imageAffiliation: String,
+        imageGroup: String,
         imageName: String
     ): JsonNode =
         when (contentType) {
             "application/vnd.docker.distribution.manifest.v2+json" ->
-                this.getV2Information(imageAffiliation, imageName)
+                this.getV2Information(imageGroup, imageName)
             else -> {
                 this.getV1CompatibilityFromManifest()
             }
         }
 
-    private fun JsonNode.getV2Information(imageAffiliation: String, imageName: String): JsonNode {
+    private fun JsonNode.getV2Information(imageGroup: String, imageName: String): JsonNode {
         val configDigest = this.at("/config").get("digest").asText().replace("\\s".toRegex(), "").split(":").last()
         return getBodyFromDockerRegistry { webClient ->
             webClient
                 .get()
                 .uri(
                     "$dockerRegistryUrl/v2/{imageGroup}/{imageName}/blobs/sha256:{configDigest}",
-                    imageAffiliation,
+                    imageGroup,
                     imageName,
                     configDigest
                 )

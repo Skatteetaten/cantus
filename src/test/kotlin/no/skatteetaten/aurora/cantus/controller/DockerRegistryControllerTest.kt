@@ -59,7 +59,7 @@ class DockerRegistryControllerTest {
         print(
             mockMvc.perform(get(path))
                 .andExpect(status().isOk)
-                .andExpect(jsonPath("$.[*]").isEmpty)
+                .andExpect(jsonPath("$").isEmpty)
         )
     }
 }
