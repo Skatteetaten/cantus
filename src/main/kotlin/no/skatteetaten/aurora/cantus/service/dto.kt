@@ -19,13 +19,33 @@ data class ImageManifestDto(
     val buildEnded: String? = null,
     val dockerVersion: String,
     val dockerDigest: String,
-    val javaVersionMajor: String? = null,
-    val javaVersionMinor: String? = null,
-    val javaVersionBuild: String? = null,
+    val java: JavaImageDto? = null,
     val jolokiaVersion: String? = null,
     val nodeVersion: String? = null
 )
 
+data class JavaImageDto(
+    val major:String,
+    val minor:String,
+    val build:String
+) {
+    companion object {
+        fun fromEnvMap(envMap: Map<String, String>): JavaImageDto? {
+            if (envMap["JAVA_VERSION_MAJOR"] == null ||
+                envMap["JAVA_VERSION_MINOR"] == null ||
+                envMap["JAVA_VERSION_BUILD"] == null
+                ) {
+                return null
+            }
+
+            return JavaImageDto(
+                major = envMap["JAVA_VERSION_MAJOR"]!!,
+                minor = envMap["JAVA_VERSION_MINOR"]!!,
+                build = envMap["JAVA_VERSION_BUILD"]!!
+            )
+        }
+    }
+}
 
 data class ImageTagTypedDto(val name: String, val type: ImageTagType = ImageTagType.typeOf(name))
 data class ImageTagsWithTypeDto(val tags: List<ImageTagTypedDto>)

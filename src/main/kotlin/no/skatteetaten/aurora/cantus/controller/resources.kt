@@ -1,18 +1,21 @@
 package no.skatteetaten.aurora.cantus.controller
 
+import no.skatteetaten.aurora.cantus.service.ImageManifestDto
 import no.skatteetaten.aurora.cantus.service.ImageTagType
+import no.skatteetaten.aurora.cantus.service.JavaImageDto
 import uk.q3c.rest.hal.HalResource
+import java.awt.Image
 import java.time.Instant
 
 data class TagResource(val name: String, val type: ImageTagType = ImageTagType.typeOf(name)) : HalResource()
 
-data class GroupedTagResource(val group:String) : HalResource()
+data class GroupedTagResource(val group:String, val tagResource: List<TagResource>) : HalResource()
 
 
 data class ImageTagResource(
     val auroraVersion: String? = null,
     val appVersion:String? = null,
-    val timeline: Map<String, Instant> = emptyMap(),
+    val timeline: ImageBuildTimeline,
     val dockerVersion: String,
     val dockerDigest: String,
     val java:JavaImage? = null,
@@ -24,12 +27,52 @@ data class JavaImage(
     val minor:String,
     val build:String,
     val jolokia: String?
-)
+) {
+    companion object {
+        fun fromDto(dto:ImageManifestDto): JavaImage? {
+            if (dto.java == null) {
+                return null
+            }
 
+            return JavaImage(
+                major = dto.java.major,
+                minor = dto.java.minor,
+                build = dto.java.build,
+                jolokia = dto.jolokiaVersion
+            )
+        }
+    }
+}
+
+data class ImageBuildTimeline(
+    val buildStarted: Instant?,
+    val buildEnded: Instant?
+) {
+    companion object {
+        fun fromDto(dto: ImageManifestDto): ImageBuildTimeline {
+            return ImageBuildTimeline(
+                try { Instant.parse(dto.buildStarted)}
+                catch (e: Exception) {null},
+                try { Instant.parse(dto.buildEnded)}
+                catch (e: Exception) {null}
+            )
+        }
+    }
+}
 
 data class NodeImage(
     val nodeVersion: String
-)
+){
+    companion object {
+        fun fromDto(dto: ImageManifestDto): NodeImage?{
+            if(dto.nodeVersion == null) {
+                return null
+            }
+
+            return NodeImage(dto.nodeVersion)
+        }
+    }
+}
 
 data class AuroraResponse<T : HalResource>(
     val items: List<T> = emptyList(),
@@ -37,7 +80,12 @@ data class AuroraResponse<T : HalResource>(
     val message: String = "OK",
     val exception: Throwable? = null,
     val count: Int = items.size
-) : HalResource()
+) : HalResource() {
+
+    //TODO: trenger vi denne?
+    val item: T
+        get() = items.first()
+}
 
 /*val java= if (manifestInformationMap.containsKey("JAVA_VERSION_MAJOR")) {
             JavaImage(

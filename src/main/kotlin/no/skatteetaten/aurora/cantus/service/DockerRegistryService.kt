@@ -140,7 +140,8 @@ class DockerRegistryService(
         if (imageManifestResponse.statusCode == 404 ||
             imageManifestResponse.contentType == null ||
             imageManifestResponse.dockerContentDigest == null ||
-            imageManifestResponse.manifestBody == null){
+            imageManifestResponse.manifestBody == null
+        ) {
             return ImageManifestDto(dockerDigest = "", dockerVersion = "")
         }
 
@@ -164,9 +165,8 @@ class DockerRegistryService(
             nodeVersion = imageManifestEnvInformation["NODE_VERSION"],
             appVersion = imageManifestEnvInformation["APP_VERSION"],
             buildStarted = imageManifestEnvInformation["IMAGE_BUILD_TIME"],
-            javaVersionMajor = imageManifestEnvInformation["JAVA_VERSION_MAJOR"],
-            javaVersionMinor = imageManifestEnvInformation["JAVA_VERSION_MINOR"],
-            javaVersionBuild = imageManifestEnvInformation["JAVA_VERSION_BUILD"]
+            java = JavaImageDto.fromEnvMap(imageManifestEnvInformation),
+            jolokiaVersion = imageManifestEnvInformation["JOLOKIA_VERSION"]
         )
     }
 
@@ -199,6 +199,7 @@ class DockerRegistryService(
                 }
         }
     }
+
     private fun JsonNode.getV1CompatibilityFromManifest() =
         jacksonObjectMapper().readTree(this.get("history")?.get(0)?.get("v1Compatibility")?.asText() ?: "")
 
@@ -208,8 +209,6 @@ class DockerRegistryService(
         if (!alllowedUrls.any { allowedUrl: String -> urlToValidate == allowedUrl }) throw BadRequestException("Invalid Docker Registry URL")
     }
 }
-
-
 
 private fun JsonNode.getEnvironmentVariablesFromManifest() =
     this.at("/config/Env").associate {
