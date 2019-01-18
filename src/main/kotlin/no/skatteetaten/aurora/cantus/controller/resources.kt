@@ -2,34 +2,35 @@ package no.skatteetaten.aurora.cantus.controller
 
 import no.skatteetaten.aurora.cantus.service.ImageManifestDto
 import no.skatteetaten.aurora.cantus.service.ImageTagType
-import no.skatteetaten.aurora.cantus.service.JavaImageDto
 import uk.q3c.rest.hal.HalResource
-import java.awt.Image
 import java.time.Instant
 
 data class TagResource(val name: String, val type: ImageTagType = ImageTagType.typeOf(name)) : HalResource()
 
-data class GroupedTagResource(val group:String, val tagResource: List<TagResource>) : HalResource()
-
+data class GroupedTagResource(
+    val group: String,
+    val tagResource: List<TagResource>,
+    val itemsInGroup: Int = tagResource.size
+) : HalResource()
 
 data class ImageTagResource(
     val auroraVersion: String? = null,
-    val appVersion:String? = null,
+    val appVersion: String? = null,
     val timeline: ImageBuildTimeline,
     val dockerVersion: String,
     val dockerDigest: String,
-    val java:JavaImage? = null,
-    val node:NodeImage? = null
+    val java: JavaImage? = null,
+    val node: NodeImage? = null
 ) : HalResource()
 
 data class JavaImage(
     val major: String,
-    val minor:String,
-    val build:String,
+    val minor: String,
+    val build: String,
     val jolokia: String?
 ) {
     companion object {
-        fun fromDto(dto:ImageManifestDto): JavaImage? {
+        fun fromDto(dto: ImageManifestDto): JavaImage? {
             if (dto.java == null) {
                 return null
             }
@@ -51,10 +52,16 @@ data class ImageBuildTimeline(
     companion object {
         fun fromDto(dto: ImageManifestDto): ImageBuildTimeline {
             return ImageBuildTimeline(
-                try { Instant.parse(dto.buildStarted)}
-                catch (e: Exception) {null},
-                try { Instant.parse(dto.buildEnded)}
-                catch (e: Exception) {null}
+                try {
+                    Instant.parse(dto.buildStarted)
+                } catch (e: Exception) {
+                    null
+                },
+                try {
+                    Instant.parse(dto.buildEnded)
+                } catch (e: Exception) {
+                    null
+                }
             )
         }
     }
@@ -62,10 +69,10 @@ data class ImageBuildTimeline(
 
 data class NodeImage(
     val nodeVersion: String
-){
+) {
     companion object {
-        fun fromDto(dto: ImageManifestDto): NodeImage?{
-            if(dto.nodeVersion == null) {
+        fun fromDto(dto: ImageManifestDto): NodeImage? {
+            if (dto.nodeVersion == null) {
                 return null
             }
 
@@ -82,34 +89,7 @@ data class AuroraResponse<T : HalResource>(
     val count: Int = items.size
 ) : HalResource() {
 
-    //TODO: trenger vi denne?
+    // TODO: trenger vi denne?
     val item: T
         get() = items.first()
 }
-
-/*val java= if (manifestInformationMap.containsKey("JAVA_VERSION_MAJOR")) {
-            JavaImage(
-                major = manifestInformationMap["JAVA_VERSION_MAJOR"]!!,
-                minor = manifestInformationMap["JAVA_VERSION_MINOR"]!!,
-                build = manifestInformationMap["JAVA_VERSION_BUILD"]!!,
-                jolokia = manifestInformationMap["JOLOKIA_VERSION"]!!
-            )
-        } else null
-
-        val node= if (manifestInformationMap.containsKey("NODE_VERSION")) {
-            NodeImage(
-                nodeVersion = manifestInformationMap["NODE_VERSION"]!!
-            )
-        } else null
-        return ImageTagResource(
-            auroraVersion = manifestInformationMap["AURORA_VERSION"],
-            appVersion = manifestInformationMap["APP_VERSION"],
-            timeline = mapOf(
-                "BUILD_STARTED" to Instant.parse(manifestInformationMap["IMAGE_BUILD_TIME"] ?: Instant.EPOCH.toString()),
-                "BUILD_DONE" to Instant.parse(manifestInformationMap["CREATED"] ?: Instant.EPOCH.toString())
-            ),
-            dockerDigest = manifestInformationMap["DOCKER_CONTENT_DIGEST"]!!,
-            dockerVersion = manifestInformationMap["DOCKER_VERSION"]!!,
-            java = java,
-            node = node
-        )*/

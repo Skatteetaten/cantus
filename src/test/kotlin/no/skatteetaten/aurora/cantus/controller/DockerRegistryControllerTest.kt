@@ -31,7 +31,7 @@ class DockerRegistryControllerTest {
         strings = [
             "/no_skatteetaten_aurora_demo/whoami/2/manifest",
             "/no_skatteetaten_aurora_demo/whoami/tags"
-            //"/no_skatteetaten_aurora_demo/whoami/tags/semantic"
+            // "/no_skatteetaten_aurora_demo/whoami/tags/semantic"
         ]
     )
     fun `Get docker registry image info`(path: String) {

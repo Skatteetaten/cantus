@@ -88,22 +88,6 @@ class DockerRegistryService(
             ImageTagTypedDto(it)
         })
     }
-/*
-
-    fun getImageTagsGroupedBySemanticVersion(
-        imageGroup: String,
-        imageName: String,
-        registryUrl: String? = null
-    ): Map<ImageTagType, List<TagResource>> {
-        val tags = getImageTags(imageGroup, imageName, registryUrl)
-
-        logger.debug("Tags are grouped by semantic version")
-
-        return tags.items.groupBy {
-            it.type
-        }
-    }
-*/
 
     private final inline fun <reified T : Any> getBodyFromDockerRegistry(
         fn: (WebClient) -> WebClient.RequestHeadersSpec<*>
@@ -215,5 +199,3 @@ private fun JsonNode.getEnvironmentVariablesFromManifest() =
         val (key, value) = it.asText().split("=")
         key to value
     }
-
-

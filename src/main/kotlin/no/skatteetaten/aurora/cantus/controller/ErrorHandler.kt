@@ -11,7 +11,6 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler
 import reactor.core.publisher.Mono
 import reactor.core.publisher.toMono
-import uk.q3c.rest.hal.HalResource
 import java.time.Duration
 
 @ControllerAdvice
@@ -29,7 +28,6 @@ class ErrorHandler : ResponseEntityExceptionHandler() {
 
     private fun handleException(e: Exception, request: WebRequest, httpStatus: HttpStatus): ResponseEntity<Any>? {
 
-        //val res = AuroraResponse<HalResource>(success = false, exception = e, message = e.message ?: "")
         val headers = HttpHeaders().apply { contentType = MediaType.APPLICATION_JSON }
         logger.debug("Handle exception", e)
         return handleExceptionInternal(e, e.message, headers, httpStatus, request)

@@ -2,7 +2,6 @@ package no.skatteetaten.aurora.cantus.controller
 
 import no.skatteetaten.aurora.cantus.service.DockerRegistryService
 import no.skatteetaten.aurora.cantus.service.ImageManifestDto
-import no.skatteetaten.aurora.cantus.service.ImageTagTypedDto
 import no.skatteetaten.aurora.cantus.service.ImageTagsWithTypeDto
 import org.springframework.stereotype.Component
 import org.springframework.web.bind.annotation.GetMapping
@@ -84,11 +83,11 @@ class ImageTagResoureAssembler {
         fun toGroupedResource(tags: ImageTagsWithTypeDto, message: String): AuroraResponse<GroupedTagResource> {
 
             return AuroraResponse(
-                success =  true,
+                success = true,
                 message = message,
                 items = tags.tags.groupBy {
                     it.type
-                }.map {groupedTag ->
+                }.map { groupedTag ->
                     GroupedTagResource(
                         group = groupedTag.key.toString(),
                         tagResource = groupedTag.value.map {

@@ -58,7 +58,6 @@ dependencies {
       "org.springframework.boot:spring-boot-starter-security",
       "org.springframework.boot:spring-boot-starter-actuator",
       "org.springframework.boot:spring-boot-starter-webflux",
-      'org.springframework.boot:spring-boot-starter-hateoas',
       "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
 
   )

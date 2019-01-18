@@ -2,7 +2,6 @@ package no.skatteetaten.aurora.cantus.service
 
 import com.fasterxml.jackson.databind.JsonNode
 
-
 data class ImageTagsResponseDto(val tags: List<String>)
 
 data class ImageManifestResponseDto(
@@ -25,16 +24,16 @@ data class ImageManifestDto(
 )
 
 data class JavaImageDto(
-    val major:String,
-    val minor:String,
-    val build:String
+    val major: String,
+    val minor: String,
+    val build: String
 ) {
     companion object {
         fun fromEnvMap(envMap: Map<String, String>): JavaImageDto? {
             if (envMap["JAVA_VERSION_MAJOR"] == null ||
                 envMap["JAVA_VERSION_MINOR"] == null ||
                 envMap["JAVA_VERSION_BUILD"] == null
-                ) {
+            ) {
                 return null
             }
 
