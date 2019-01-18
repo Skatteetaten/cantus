@@ -1,6 +1,5 @@
 package no.skatteetaten.aurora.cantus.controller
 
-import no.skatteetaten.aurora.cantus.service.AuroraResponse
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
@@ -30,10 +29,10 @@ class ErrorHandler : ResponseEntityExceptionHandler() {
 
     private fun handleException(e: Exception, request: WebRequest, httpStatus: HttpStatus): ResponseEntity<Any>? {
 
-        val res = AuroraResponse<HalResource>(success = false, exception = e, message = e.localizedMessage)
+        //val res = AuroraResponse<HalResource>(success = false, exception = e, message = e.message ?: "")
         val headers = HttpHeaders().apply { contentType = MediaType.APPLICATION_JSON }
         logger.debug("Handle exception", e)
-        return handleExceptionInternal(e, res, headers, httpStatus, request)
+        return handleExceptionInternal(e, e.message, headers, httpStatus, request)
     }
 }
 
