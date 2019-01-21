@@ -5,7 +5,6 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import no.skatteetaten.aurora.cantus.controller.BadRequestException
 import no.skatteetaten.aurora.cantus.controller.SourceSystemException
 import no.skatteetaten.aurora.cantus.controller.blockAndHandleError
-import no.skatteetaten.aurora.cantus.controller.blockNonNullAndHandleError
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.MediaType
@@ -69,31 +68,28 @@ class DockerRegistryService(
                 .headers {
                     it.accept = dockerManfestAccept
                 }
-        }
-        if (dockerResponse == null) {
-            throw SourceSystemException(
-                "Manifest not found for image $imageGroup/$imageName:$imageTag",
-                code = "404",
-                sourceSystem = url
-            )
-        }
+        } ?: throw SourceSystemException(
+            "Manifest not found for image $imageGroup/$imageName:$imageTag",
+            code = "404",
+            sourceSystem = url
+        )
 
         return imageManifestResponseToImageManifest(imageGroup, imageName, dockerResponse)
-        }
+    }
 
     fun getImageTags(imageGroup: String, imageName: String, registryUrl: String? = null): ImageTagsWithTypeDto {
         url = registryUrl ?: dockerRegistryUrl
 
         validateDockerRegistryUrl(url, dockerRegistryUrlsAllowed)
 
-        val tagsResponse: ImageTagsResponseDto = getBodyFromDockerRegistry {
+        val tagsResponse: ImageTagsResponseDto? = getBodyFromDockerRegistry {
             logger.debug("Retrieving tags from {url}/v2/{imageGroup}/{imageName}/tags/list", url, imageGroup, imageName)
             it
                 .get()
                 .uri("$url/v2/{imageGroup}/{imageName}/tags/list", imageGroup, imageName)
         }
 
-        if (tagsResponse.tags.size == 0) {
+        if (tagsResponse == null || tagsResponse.tags.isEmpty()) {
             throw SourceSystemException(
                 message = "Tags not found for image $imageGroup/$imageName",
                 code = "404",
@@ -108,12 +104,12 @@ class DockerRegistryService(
 
     private final inline fun <reified T : Any> getBodyFromDockerRegistry(
         fn: (WebClient) -> WebClient.RequestHeadersSpec<*>
-    ): T = fn(webClient)
+    ): T? = fn(webClient)
         .exchange()
         .flatMap { resp ->
             resp.bodyToMono(T::class.java)
         }
-        .blockNonNullAndHandleError(sourceSystem = url)
+        .blockAndHandleError(sourceSystem = url)
 
     private fun getManifestFromRegistry(
         fn: (WebClient) -> WebClient.RequestHeadersSpec<*>
@@ -193,7 +189,11 @@ class DockerRegistryService(
                 .headers {
                     it.accept = listOf(MediaType.valueOf("application/json"))
                 }
-        }
+        } ?: throw SourceSystemException(
+            message = "Unable to retrieve V2 manifest from $url/v2/$imageGroup/$imageName/blobs/sha256:$configDigest",
+            code = "404",
+            sourceSystem = url
+        )
     }
 
     private fun JsonNode.getV1CompatibilityFromManifest() =

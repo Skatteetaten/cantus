@@ -92,7 +92,7 @@ data class AuroraResponse<T : HalResource>(
     // TODO: trenger vi denne?
     val item: T?
         get() {
-            if(count == 1) {
+            if (count == 1) {
                 return items.first()
             }
             return null

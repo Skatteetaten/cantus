@@ -1,6 +1,10 @@
 package no.skatteetaten.aurora.cantus.controller
 
-class BadRequestException(message: String) : RuntimeException(message)
+class BadRequestException(
+    message: String,
+    cause: Throwable? = null,
+    code: String = "404"
+) : CantusException(message, cause, code)
 
 open class CantusException(
     message: String,

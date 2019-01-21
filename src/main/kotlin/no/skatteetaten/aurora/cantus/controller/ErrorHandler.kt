@@ -10,7 +10,6 @@ import org.springframework.web.context.request.WebRequest
 import org.springframework.web.reactive.function.client.WebClientResponseException
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler
 import reactor.core.publisher.Mono
-import reactor.core.publisher.ofType
 import reactor.core.publisher.toMono
 import uk.q3c.rest.hal.HalResource
 import java.time.Duration

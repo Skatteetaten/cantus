@@ -1,6 +1,5 @@
 package no.skatteetaten.aurora.cantus
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.netty.channel.ChannelOption
 import io.netty.handler.ssl.SslContextBuilder
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory
@@ -13,7 +12,6 @@ import org.springframework.http.MediaType
 import org.springframework.http.client.reactive.ReactorClientHttpConnector
 import org.springframework.http.codec.json.Jackson2JsonDecoder
 import org.springframework.http.codec.json.Jackson2JsonEncoder
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter
 import org.springframework.web.reactive.function.client.ExchangeFilterFunction
 import org.springframework.web.reactive.function.client.ExchangeStrategies
 import org.springframework.web.reactive.function.client.WebClient
@@ -28,15 +26,6 @@ import kotlin.math.min
 class ApplicationConfig {
 
     private val logger = LoggerFactory.getLogger(ApplicationConfig::class.java)
-
-    @Bean
-    fun mappingJackson2HttpMessageConverter(): MappingJackson2HttpMessageConverter {
-        val jsonConverter = MappingJackson2HttpMessageConverter()
-        val objectMapper = jacksonObjectMapper()
-
-        jsonConverter.objectMapper = objectMapper
-        return jsonConverter
-    }
 
     @Bean
     fun webClient() = webClientBuilder().build()

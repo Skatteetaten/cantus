@@ -12,7 +12,6 @@ import no.skatteetaten.aurora.cantus.setJsonFileAsBody
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -33,7 +32,6 @@ class DockerRegistryServiceTest {
     fun setUp() {
         clearMocks()
     }
-/*
 
     @Test
     fun `Verify fetches manifest information for specified image`() {
@@ -43,16 +41,9 @@ class DockerRegistryServiceTest {
         server.execute(response) {
             val jsonResponse = dockerService.getImageManifestInformation(imageGroup, imageName, tagName)
             assert(jsonResponse).isNotNull {
-<<<<<<< HEAD
                 assert(it.actual.dockerDigest).isEqualTo("SHA::256")
                 assert(it.actual.dockerVersion).isEqualTo("1.13.1")
-                assert(it.actual.timeline["BUILD_DONE"]).isEqualTo("2018-11-05T14:01:22.654389192Z")
-=======
-                assert(it.actual.size).isEqualTo(10)
-                assert(it.actual["DOCKER_CONTENT_DIGEST"]).isEqualTo("SHA::256")
-                assert(it.actual["DOCKER_VERSION"]).isEqualTo("1.13.1")
-                assert(it.actual["CREATED"]).isEqualTo("2018-11-05T14:01:22.654389192Z")
->>>>>>> origin/master
+                assert(it.actual.buildEnded).isEqualTo("2018-11-05T14:01:22.654389192Z")
             }
         }
     }
@@ -64,28 +55,12 @@ class DockerRegistryServiceTest {
         server.execute(response) {
             val jsonResponse = dockerService.getImageTags(imageGroup, imageName)
             assert(jsonResponse).isNotNull {
-                assert(it.actual.count).isEqualTo(5)
-                assert(it.actual.items[0]).isEqualTo("0")
-                assert(it.actual.items[1]).isEqualTo("0.0")
-                assert(it.actual.items[2]).isEqualTo("0.0.0")
+                assert(it.actual.tags.size).isEqualTo(5)
+                assert(it.actual.tags[0].name).isEqualTo("0")
+                assert(it.actual.tags[1].name).isEqualTo("0.0")
+                assert(it.actual.tags[2].name).isEqualTo("0.0.0")
             }
         }
-    }
-*/
-
-    @Disabled
-    @Test
-    fun `Verify groups tags correctly`() {
-        val response = MockResponse().setJsonFileAsBody("dockerTagList.json")
-
-        /*server.execute(response) {
-            val jsonResponse = dockerService.getImageTagsGroupedBySemanticVersion(imageGroup, imageName)
-            assert(jsonResponse).isNotNull {
-                assert(it.actual["BUGFIX"]?.size).isEqualTo(2)
-                assert(it.actual["MINOR"]?.first()).isEqualTo("0.0")
-                assert(it.actual.size).isEqualTo(4)
-            }
-        }*/
     }
 
     @ParameterizedTest
