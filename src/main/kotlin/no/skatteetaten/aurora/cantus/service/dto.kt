@@ -5,10 +5,9 @@ import com.fasterxml.jackson.databind.JsonNode
 data class ImageTagsResponseDto(val tags: List<String>)
 
 data class ImageManifestResponseDto(
-    val contentType: String? = null,
-    val dockerContentDigest: String? = null,
-    val manifestBody: JsonNode? = null,
-    val statusCode: Int
+    val contentType: String,
+    val dockerContentDigest: String,
+    val manifestBody: JsonNode
 )
 
 data class ImageManifestDto(

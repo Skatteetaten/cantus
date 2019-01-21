@@ -78,9 +78,8 @@ class DockerRegistryService(
             )
         }
 
-        val imageManifest = imageManifestResponseToImageManifest(imageGroup, imageName, dockerResponse)
-        return imageManifest
-    }
+        return imageManifestResponseToImageManifest(imageGroup, imageName, dockerResponse)
+        }
 
     fun getImageTags(imageGroup: String, imageName: String, registryUrl: String? = null): ImageTagsWithTypeDto {
         url = registryUrl ?: dockerRegistryUrl
@@ -121,16 +120,17 @@ class DockerRegistryService(
     ): ImageManifestResponseDto? = fn(webClient)
         .exchange()
         .flatMap { resp ->
-            val statusCode = resp.statusCode().value()
+            val statusCode = resp.rawStatusCode()
+            println(statusCode)
+            println(statusCode)
             if (statusCode == 404) {
                 Mono.empty<ImageManifestResponseDto>()
-//                ImageManifestResponseDto(statusCode = statusCode).toMono()
             } else {
                 val contentType = resp.headers().contentType().get().toString()
                 val dockerContentDigest = resp.headers().header(dockerContentDigestLabel).first()
 
                 resp.bodyToMono<JsonNode>().map {
-                    ImageManifestResponseDto(contentType, dockerContentDigest, it, statusCode)
+                    ImageManifestResponseDto(contentType, dockerContentDigest, it)
                 }
             }
         }.blockAndHandleError(sourceSystem = url)
@@ -140,13 +140,6 @@ class DockerRegistryService(
         imageName: String,
         imageManifestResponse: ImageManifestResponseDto
     ): ImageManifestDto {
-        if (imageManifestResponse.statusCode == 100 ||
-            imageManifestResponse.contentType == null ||
-            imageManifestResponse.dockerContentDigest == null ||
-            imageManifestResponse.manifestBody == null
-        ) {
-            return ImageManifestDto(dockerDigest = "", dockerVersion = "")
-        }
 
         val manifestBody = imageManifestResponse
             .manifestBody.checkSchemaCompatibility(imageManifestResponse.contentType, imageGroup, imageName)

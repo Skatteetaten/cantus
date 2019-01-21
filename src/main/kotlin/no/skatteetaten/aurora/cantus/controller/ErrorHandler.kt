@@ -10,6 +10,7 @@ import org.springframework.web.context.request.WebRequest
 import org.springframework.web.reactive.function.client.WebClientResponseException
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler
 import reactor.core.publisher.Mono
+import reactor.core.publisher.ofType
 import reactor.core.publisher.toMono
 import uk.q3c.rest.hal.HalResource
 import java.time.Duration
@@ -49,7 +50,9 @@ fun <T> Mono<T>.blockAndHandleError(duration: Duration = Duration.ofSeconds(30),
 
 private fun <T> Mono<T>.handleError(sourceSystem: String?) =
     this.doOnError {
+        println(it.message)
         if (it is WebClientResponseException) {
+            println(it.rawStatusCode)
             throw SourceSystemException(
                 message = "Error in response, status:${it.statusCode} message:${it.statusText}",
                 cause = it,
