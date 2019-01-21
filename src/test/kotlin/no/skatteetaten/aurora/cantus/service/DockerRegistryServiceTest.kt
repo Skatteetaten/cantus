@@ -36,7 +36,7 @@ class DockerRegistryServiceTest {
     @Test
     fun `Verify fetches manifest information for specified image`() {
         val response =
-            MockResponse().setJsonFileAsBody("dockerManifest.json").addHeader("Docker-Content-Digest", "SHA::256")
+            MockResponse().setJsonFileAsBody("dockerManifestV1.json").addHeader("Docker-Content-Digest", "SHA::256")
 
         server.execute(response) {
             val jsonResponse = dockerService.getImageManifestInformation(imageGroup, imageName, tagName)
@@ -86,5 +86,29 @@ class DockerRegistryServiceTest {
                 assert(it.actual.message).isEqualTo("Invalid Docker Registry URL")
             }
         }
+    }
+
+    @Test
+    fun `Verify that if V2 content type is set then retrieve manifest with V2 method`() {
+        val response = MockResponse()
+            .setJsonFileAsBody("dockerManifestV2.json")
+            .setHeader("Content-Type", "application/vnd.docker.distribution.manifest.v2+json")
+            .addHeader("Docker-Content-Digest", "sha256")
+
+        val response2 = MockResponse()
+            .setJsonFileAsBody("dockerManifestV2Config.json")
+
+        val requests = server.execute(response, response2) {
+            val jsonResponse = dockerService.getImageManifestInformation(imageGroup, imageName, tagName)
+
+            assert(jsonResponse).isNotNull {
+                assert(it.actual.dockerDigest).isEqualTo("sha256")
+                assert(it.actual.nodeVersion).isEqualTo(null)
+                assert(it.actual.buildEnded).isEqualTo("2018-11-05T14:01:22.654389192Z")
+                assert(it.actual.java?.major).isEqualTo("8")
+            }
+        }
+
+        assert(requests.size).isEqualTo(2)
     }
 }
