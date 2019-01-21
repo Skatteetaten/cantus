@@ -3,6 +3,8 @@ package no.skatteetaten.aurora.cantus.service
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import no.skatteetaten.aurora.cantus.controller.BadRequestException
+import no.skatteetaten.aurora.cantus.controller.SourceSystemException
+import no.skatteetaten.aurora.cantus.controller.blockAndHandleError
 import no.skatteetaten.aurora.cantus.controller.blockNonNullAndHandleError
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
@@ -10,7 +12,7 @@ import org.springframework.http.MediaType
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.bodyToMono
-import reactor.core.publisher.toMono
+import reactor.core.publisher.Mono
 import java.util.HashSet
 
 val logger = LoggerFactory.getLogger(DockerRegistryService::class.java)
@@ -41,6 +43,7 @@ class DockerRegistryService(
     val dockerVersionLabel = "docker_version"
     val dockerContentDigestLabel = "Docker-Content-Digest"
     val createdLabel = "created"
+    lateinit var url: String
 
     fun getImageManifestInformation(
         imageGroup: String,
@@ -48,7 +51,7 @@ class DockerRegistryService(
         imageTag: String,
         registryUrl: String? = null
     ): ImageManifestDto {
-        val url = registryUrl ?: dockerRegistryUrl
+        url = registryUrl ?: dockerRegistryUrl
 
         validateDockerRegistryUrl(url, dockerRegistryUrlsAllowed)
 
@@ -67,13 +70,20 @@ class DockerRegistryService(
                     it.accept = dockerManfestAccept
                 }
         }
+        if (dockerResponse == null) {
+            throw SourceSystemException(
+                "Manifest not found for image $imageGroup/$imageName:$imageTag",
+                code = "404",
+                sourceSystem = url
+            )
+        }
 
         val imageManifest = imageManifestResponseToImageManifest(imageGroup, imageName, dockerResponse)
         return imageManifest
     }
 
     fun getImageTags(imageGroup: String, imageName: String, registryUrl: String? = null): ImageTagsWithTypeDto {
-        val url = registryUrl ?: dockerRegistryUrl
+        url = registryUrl ?: dockerRegistryUrl
 
         validateDockerRegistryUrl(url, dockerRegistryUrlsAllowed)
 
@@ -82,6 +92,14 @@ class DockerRegistryService(
             it
                 .get()
                 .uri("$url/v2/{imageGroup}/{imageName}/tags/list", imageGroup, imageName)
+        }
+
+        if (tagsResponse.tags.size == 0) {
+            throw SourceSystemException(
+                message = "Tags not found for image $imageGroup/$imageName",
+                code = "404",
+                sourceSystem = url
+            )
         }
 
         return ImageTagsWithTypeDto(tags = tagsResponse.tags.map {
@@ -96,16 +114,17 @@ class DockerRegistryService(
         .flatMap { resp ->
             resp.bodyToMono(T::class.java)
         }
-        .blockNonNullAndHandleError(sourceSystem = "docker")
+        .blockNonNullAndHandleError(sourceSystem = url)
 
     private fun getManifestFromRegistry(
         fn: (WebClient) -> WebClient.RequestHeadersSpec<*>
-    ): ImageManifestResponseDto = fn(webClient)
+    ): ImageManifestResponseDto? = fn(webClient)
         .exchange()
         .flatMap { resp ->
             val statusCode = resp.statusCode().value()
             if (statusCode == 404) {
-                ImageManifestResponseDto(statusCode = statusCode).toMono()
+                Mono.empty<ImageManifestResponseDto>()
+//                ImageManifestResponseDto(statusCode = statusCode).toMono()
             } else {
                 val contentType = resp.headers().contentType().get().toString()
                 val dockerContentDigest = resp.headers().header(dockerContentDigestLabel).first()
@@ -114,14 +133,14 @@ class DockerRegistryService(
                     ImageManifestResponseDto(contentType, dockerContentDigest, it, statusCode)
                 }
             }
-        }.blockNonNullAndHandleError(sourceSystem = "docker")
+        }.blockAndHandleError(sourceSystem = url)
 
     private fun imageManifestResponseToImageManifest(
         imageGroup: String,
         imageName: String,
         imageManifestResponse: ImageManifestResponseDto
     ): ImageManifestDto {
-        if (imageManifestResponse.statusCode == 404 ||
+        if (imageManifestResponse.statusCode == 100 ||
             imageManifestResponse.contentType == null ||
             imageManifestResponse.dockerContentDigest == null ||
             imageManifestResponse.manifestBody == null
@@ -173,7 +192,7 @@ class DockerRegistryService(
             webClient
                 .get()
                 .uri(
-                    "$dockerRegistryUrl/v2/{imageGroup}/{imageName}/blobs/sha256:{configDigest}",
+                    "$url/v2/{imageGroup}/{imageName}/blobs/sha256:{configDigest}",
                     imageGroup,
                     imageName,
                     configDigest

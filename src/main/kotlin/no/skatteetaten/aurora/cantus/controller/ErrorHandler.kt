@@ -11,6 +11,7 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler
 import reactor.core.publisher.Mono
 import reactor.core.publisher.toMono
+import uk.q3c.rest.hal.HalResource
 import java.time.Duration
 
 @ControllerAdvice
@@ -27,10 +28,15 @@ class ErrorHandler : ResponseEntityExceptionHandler() {
     }
 
     private fun handleException(e: Exception, request: WebRequest, httpStatus: HttpStatus): ResponseEntity<Any>? {
+        val auroraResponse = AuroraResponse<HalResource>(
+            success = false,
+            message = e.message ?: "Cantus error",
+            exception = e
 
+        )
         val headers = HttpHeaders().apply { contentType = MediaType.APPLICATION_JSON }
         logger.debug("Handle exception", e)
-        return handleExceptionInternal(e, e.message, headers, httpStatus, request)
+        return handleExceptionInternal(e, auroraResponse, headers, httpStatus, request)
     }
 }
 
