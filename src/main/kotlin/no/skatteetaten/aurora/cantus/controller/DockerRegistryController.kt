@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 class DockerRegistryController(
     val dockerRegistryService: DockerRegistryService,
-    val imageTagResourceAssembler: ImageTagResoureAssembler
+    val imageTagResourceAssembler: ImageTagResourceAssembler
 ) {
 
     @GetMapping("/{affiliation}/{name}/{tag}/manifest")
@@ -23,8 +23,11 @@ class DockerRegistryController(
         @RequestParam(required = false) dockerRegistryUrl: String?
     ): AuroraResponse<ImageTagResource> {
         return dockerRegistryService
-            .getImageManifestInformation(affiliation, name, tag, dockerRegistryUrl).let {
-                imageTagResourceAssembler.toResource(it, "Success")
+            .getImageManifestInformation(affiliation, name, tag, dockerRegistryUrl).let { manifestDto ->
+                imageTagResourceAssembler.toResource(
+                    manifestDto,
+                    "Successfully retrieved manifest information for image $affiliation/$name:$tag"
+                )
             }
     }
 
@@ -33,8 +36,11 @@ class DockerRegistryController(
         @PathVariable affiliation: String,
         @PathVariable name: String,
         @RequestParam(required = false) dockerRegistryUrl: String?
-    ) = dockerRegistryService.getImageTags(affiliation, name, dockerRegistryUrl).let {
-        imageTagResourceAssembler.toResource(it, "Success tags")
+    ) = dockerRegistryService.getImageTags(affiliation, name, dockerRegistryUrl).let { imageTagsWithTypeDto ->
+        imageTagResourceAssembler.toResource(
+            imageTagsWithTypeDto,
+            "Successfully retrieved tags for image $affiliation/$name"
+        )
     }
 
     @GetMapping("/{affiliation}/{name}/tags/semantic")
@@ -43,16 +49,18 @@ class DockerRegistryController(
         @PathVariable name: String,
         @RequestParam(required = false) dockerRegistryUrl: String?
     ) =
-        dockerRegistryService.getImageTags(affiliation, name, dockerRegistryUrl).let {
-            imageTagResourceAssembler.toGroupedResource(it, "Success group")
+        dockerRegistryService.getImageTags(affiliation, name, dockerRegistryUrl).let { imageTagsWithTypeDto ->
+            imageTagResourceAssembler.toGroupedResource(
+                imageTagsWithTypeDto,
+                "Successfully retrieved tags grouped by semantic version for image $affiliation/$name"
+            )
         }
 }
 
 @Component
-class ImageTagResoureAssembler {
-    fun toResource(manifestDto: ImageManifestDto, message: String): AuroraResponse<ImageTagResource> {
-
-        return AuroraResponse(
+class ImageTagResourceAssembler {
+    fun toResource(manifestDto: ImageManifestDto, message: String): AuroraResponse<ImageTagResource> =
+        AuroraResponse(
             success = true,
             message = message,
             items = listOf(
@@ -67,11 +75,9 @@ class ImageTagResoureAssembler {
                 )
             )
         )
-    }
 
-    fun toResource(tags: ImageTagsWithTypeDto, message: String): AuroraResponse<TagResource> {
-
-        return AuroraResponse(
+    fun toResource(tags: ImageTagsWithTypeDto, message: String): AuroraResponse<TagResource> =
+        AuroraResponse(
             success = true,
             message = message,
             items = tags.tags.map {
@@ -80,11 +86,9 @@ class ImageTagResoureAssembler {
                 )
             }
         )
-    }
 
-    fun toGroupedResource(tags: ImageTagsWithTypeDto, message: String): AuroraResponse<GroupedTagResource> {
-
-        return AuroraResponse(
+    fun toGroupedResource(tags: ImageTagsWithTypeDto, message: String): AuroraResponse<GroupedTagResource> =
+        AuroraResponse(
             success = true,
             message = message,
             items = tags.tags.groupBy {
@@ -101,5 +105,4 @@ class ImageTagResoureAssembler {
                 )
             }
         )
-    }
 }

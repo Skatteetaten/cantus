@@ -24,7 +24,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.test.web.servlet.setup.MockMvcBuilders
 
 @WebMvcTest(
-    value = [DockerRegistryController::class, ErrorHandler::class, ImageTagResoureAssembler::class],
+    value = [DockerRegistryController::class, ErrorHandler::class, ImageTagResourceAssembler::class],
     secure = false
 )
 class DockerRegistryControllerTest {
