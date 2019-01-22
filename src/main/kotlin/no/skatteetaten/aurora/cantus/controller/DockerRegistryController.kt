@@ -10,7 +10,10 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-class DockerRegistryController(val dockerRegistryService: DockerRegistryService) {
+class DockerRegistryController(
+    val dockerRegistryService: DockerRegistryService,
+    val imageTagResourceAssembler: ImageTagResoureAssembler
+) {
 
     @GetMapping("/{affiliation}/{name}/{tag}/manifest")
     fun getManifestInformation(
@@ -21,7 +24,7 @@ class DockerRegistryController(val dockerRegistryService: DockerRegistryService)
     ): AuroraResponse<ImageTagResource> {
         return dockerRegistryService
             .getImageManifestInformation(affiliation, name, tag, dockerRegistryUrl).let {
-                ImageTagResoureAssembler.toResource(it, "Success")
+                imageTagResourceAssembler.toResource(it, "Success")
             }
     }
 
@@ -31,7 +34,7 @@ class DockerRegistryController(val dockerRegistryService: DockerRegistryService)
         @PathVariable name: String,
         @RequestParam(required = false) dockerRegistryUrl: String?
     ) = dockerRegistryService.getImageTags(affiliation, name, dockerRegistryUrl).let {
-        ImageTagResoureAssembler.toResource(it, "Success tags")
+        imageTagResourceAssembler.toResource(it, "Success tags")
     }
 
     @GetMapping("/{affiliation}/{name}/tags/semantic")
@@ -41,64 +44,62 @@ class DockerRegistryController(val dockerRegistryService: DockerRegistryService)
         @RequestParam(required = false) dockerRegistryUrl: String?
     ) =
         dockerRegistryService.getImageTags(affiliation, name, dockerRegistryUrl).let {
-            ImageTagResoureAssembler.toGroupedResource(it, "Success group")
+            imageTagResourceAssembler.toGroupedResource(it, "Success group")
         }
 }
 
 @Component
 class ImageTagResoureAssembler {
-    companion object {
-        fun toResource(manifestDto: ImageManifestDto, message: String): AuroraResponse<ImageTagResource> {
+    fun toResource(manifestDto: ImageManifestDto, message: String): AuroraResponse<ImageTagResource> {
 
-            return AuroraResponse(
-                success = true,
-                message = message,
-                items = listOf(
-                    ImageTagResource(
-                        java = JavaImage.fromDto(manifestDto),
-                        dockerDigest = manifestDto.dockerDigest,
-                        dockerVersion = manifestDto.dockerVersion,
-                        appVersion = manifestDto.appVersion,
-                        auroraVersion = manifestDto.auroraVersion,
-                        timeline = ImageBuildTimeline.fromDto(manifestDto),
-                        node = NodeImage.fromDto(manifestDto)
-                    )
+        return AuroraResponse(
+            success = true,
+            message = message,
+            items = listOf(
+                ImageTagResource(
+                    java = JavaImage.fromDto(manifestDto),
+                    dockerDigest = manifestDto.dockerDigest,
+                    dockerVersion = manifestDto.dockerVersion,
+                    appVersion = manifestDto.appVersion,
+                    auroraVersion = manifestDto.auroraVersion,
+                    timeline = ImageBuildTimeline.fromDto(manifestDto),
+                    node = NodeImage.fromDto(manifestDto)
                 )
             )
-        }
+        )
+    }
 
-        fun toResource(tags: ImageTagsWithTypeDto, message: String): AuroraResponse<TagResource> {
+    fun toResource(tags: ImageTagsWithTypeDto, message: String): AuroraResponse<TagResource> {
 
-            return AuroraResponse(
-                success = true,
-                message = message,
-                items = tags.tags.map {
-                    TagResource(
-                        name = it.name
-                    )
-                }
-            )
-        }
+        return AuroraResponse(
+            success = true,
+            message = message,
+            items = tags.tags.map {
+                TagResource(
+                    name = it.name
+                )
+            }
+        )
+    }
 
-        fun toGroupedResource(tags: ImageTagsWithTypeDto, message: String): AuroraResponse<GroupedTagResource> {
+    fun toGroupedResource(tags: ImageTagsWithTypeDto, message: String): AuroraResponse<GroupedTagResource> {
 
-            return AuroraResponse(
-                success = true,
-                message = message,
-                items = tags.tags.groupBy {
-                    it.type
-                }.map { groupedTag ->
-                    GroupedTagResource(
-                        group = groupedTag.key.toString(),
-                        tagResource = groupedTag.value.map {
-                            TagResource(
-                                name = it.name,
-                                type = it.type
-                            )
-                        }
-                    )
-                }
-            )
-        }
+        return AuroraResponse(
+            success = true,
+            message = message,
+            items = tags.tags.groupBy {
+                it.type
+            }.map { groupedTag ->
+                GroupedTagResource(
+                    group = groupedTag.key.toString(),
+                    tagResource = groupedTag.value.map {
+                        TagResource(
+                            name = it.name,
+                            type = it.type
+                        )
+                    }
+                )
+            }
+        )
     }
 }

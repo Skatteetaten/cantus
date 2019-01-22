@@ -4,6 +4,7 @@ import io.netty.channel.ChannelOption
 import io.netty.handler.ssl.SslContextBuilder
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory
 import io.netty.handler.timeout.ReadTimeoutHandler
+import no.skatteetaten.aurora.cantus.controller.ImageTagResoureAssembler
 import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -26,6 +27,9 @@ import kotlin.math.min
 class ApplicationConfig {
 
     private val logger = LoggerFactory.getLogger(ApplicationConfig::class.java)
+
+    @Bean
+    fun imageTagResourceAssembler() = ImageTagResoureAssembler()
 
     @Bean
     fun webClient() = webClientBuilder().build()

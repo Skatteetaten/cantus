@@ -13,7 +13,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.BDDMockito.given
-import org.mockito.Mockito.`when`
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.boot.test.mock.mockito.MockBean
@@ -24,7 +23,10 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPat
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.test.web.servlet.setup.MockMvcBuilders
 
-@WebMvcTest(value = [DockerRegistryController::class, ErrorHandler::class], secure = false)
+@WebMvcTest(
+    value = [DockerRegistryController::class, ErrorHandler::class, ImageTagResoureAssembler::class],
+    secure = false
+)
 class DockerRegistryControllerTest {
     @MockBean
     private lateinit var dockerService: DockerRegistryService
@@ -76,7 +78,7 @@ class DockerRegistryControllerTest {
     fun `Get docker registry image info given missing resource`(path: String) {
         val dockerUrl = "https://localhost.no"
 
-        `when`(dockerService.getImageTags(any(), any(), anyOrNull())).thenThrow(
+        given(dockerService.getImageTags(any(), any(), anyOrNull())).willThrow(
             SourceSystemException(
                 message = "Tags not found for image no_skatteetaten/test",
                 code = "404",
@@ -84,7 +86,7 @@ class DockerRegistryControllerTest {
             )
         )
 
-        `when`(dockerService.getImageManifestInformation(any(), any(), any(), anyOrNull())).thenThrow(
+        given(dockerService.getImageManifestInformation(any(), any(), any(), anyOrNull())).willThrow(
             SourceSystemException(
                 message = "Manifest not found for image no_skatteetaten/test:0",
                 code = "404",
@@ -92,7 +94,7 @@ class DockerRegistryControllerTest {
             )
         )
 
-        `when`(dockerService.getImageManifestInformation(any(), any(), any(), anyOrNull())).thenThrow(
+        given(dockerService.getImageManifestInformation(any(), any(), any(), anyOrNull())).willThrow(
             SourceSystemException(
                 message = "Unable to retrieve V2 manifest from https:/docker/v2/no_skatteetaten/test/blobs/sha256:2456",
                 code = "404",

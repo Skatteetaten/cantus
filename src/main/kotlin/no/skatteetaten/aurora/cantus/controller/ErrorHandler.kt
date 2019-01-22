@@ -49,7 +49,6 @@ fun <T> Mono<T>.blockAndHandleError(duration: Duration = Duration.ofSeconds(30),
 
 private fun <T> Mono<T>.handleError(sourceSystem: String?) =
     this.doOnError {
-        println(it.message)
         if (it is WebClientResponseException) {
             println(it.rawStatusCode)
             throw SourceSystemException(

@@ -107,7 +107,7 @@ class DockerRegistryService(
     ): T? = fn(webClient)
         .exchange()
         .flatMap { resp ->
-            resp.bodyToMono(T::class.java)
+            resp.bodyToMono<T>()
         }
         .blockAndHandleError(sourceSystem = url)
 
@@ -117,10 +117,11 @@ class DockerRegistryService(
         .exchange()
         .flatMap { resp ->
             val statusCode = resp.rawStatusCode()
-            println(statusCode)
-            println(statusCode)
+
             if (statusCode == 404) {
+                resp.bodyToMono<JsonNode>() // Release resource
                 Mono.empty<ImageManifestResponseDto>()
+
             } else {
                 val contentType = resp.headers().contentType().get().toString()
                 val dockerContentDigest = resp.headers().header(dockerContentDigestLabel).first()
