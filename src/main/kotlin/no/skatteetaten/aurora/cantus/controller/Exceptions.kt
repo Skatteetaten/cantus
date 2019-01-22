@@ -3,7 +3,7 @@ package no.skatteetaten.aurora.cantus.controller
 class BadRequestException(
     message: String,
     cause: Throwable? = null,
-    code: String = "404"
+    code: String = "400"
 ) : CantusException(message, cause, code)
 
 open class CantusException(
@@ -15,6 +15,6 @@ open class CantusException(
 class SourceSystemException(
     message: String,
     cause: Throwable? = null,
-    code: String = "",
+    code: String = "404",
     val sourceSystem: String? = null
 ) : CantusException(message, cause, code)

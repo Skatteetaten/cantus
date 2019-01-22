@@ -35,8 +35,7 @@ class DockerRegistryService(
         "JAVA_VERSION_MAJOR",
         "JAVA_VERSION_MINOR",
         "JAVA_VERSION_BUILD",
-        "NODE_VERSION",
-        "NGINX_VERSION"
+        "NODE_VERSION"
     )
 
     val dockerVersionLabel = "docker_version"
