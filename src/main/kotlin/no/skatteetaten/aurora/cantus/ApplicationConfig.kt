@@ -6,6 +6,8 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory
 import io.netty.handler.timeout.ReadTimeoutHandler
 import no.skatteetaten.aurora.cantus.controller.ImageTagResourceAssembler
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.http.HttpHeaders
@@ -23,15 +25,29 @@ import reactor.netty.tcp.TcpClient
 import java.util.concurrent.TimeUnit
 import kotlin.math.min
 
+enum class ServiceTypes {
+    DOCKER, OPENSHIFT
+}
+
+@Target(AnnotationTarget.TYPE, AnnotationTarget.FUNCTION, AnnotationTarget.FIELD, AnnotationTarget.VALUE_PARAMETER)
+@Retention(AnnotationRetention.RUNTIME)
+@Qualifier
+annotation class TargetService(val value: ServiceTypes)
+
 @Configuration
-class ApplicationConfig {
+class ApplicationConfig (
+    @Value("\${cantus.openshift.url}") val openshiftUrl: String,
+    @Value("\${cantus.docker.url}") val dockerUrl: String
+){
 
     private val logger = LoggerFactory.getLogger(ApplicationConfig::class.java)
 
     @Bean
-    fun imageTagResourceAssembler() = ImageTagResourceAssembler()
+    @TargetService(ServiceTypes.OPENSHIFT)
+    fun webClientOpenShift() = webClientBuilder().baseUrl(openshiftUrl).build()
 
     @Bean
+    @TargetService(ServiceTypes.DOCKER)
     fun webClient() = webClientBuilder().build()
 
     fun webClientBuilder(): WebClient.Builder =

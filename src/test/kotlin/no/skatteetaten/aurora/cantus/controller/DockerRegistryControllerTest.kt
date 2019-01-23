@@ -22,6 +22,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.test.web.servlet.setup.MockMvcBuilders
+/*
 
 @WebMvcTest(
     value = [DockerRegistryController::class, ErrorHandler::class, ImageTagResourceAssembler::class],
@@ -143,3 +144,4 @@ class DockerRegistryControllerTest {
         return jacksonObjectMapper().readTree(classPath.file)
     }
 }
+*/

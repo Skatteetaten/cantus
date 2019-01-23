@@ -1,47 +1,62 @@
 package no.skatteetaten.aurora.cantus.controller.security
 
-import org.springframework.beans.factory.annotation.Autowired
+import com.fasterxml.jackson.databind.JsonNode
+import org.slf4j.LoggerFactory
+import org.slf4j.MDC
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.context.annotation.Configuration
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder
+import org.springframework.context.annotation.Bean
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter
-import org.springframework.security.config.http.SessionCreationPolicy
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
-import org.springframework.security.web.authentication.www.BasicAuthenticationEntryPoint
+import org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationProvider
+import org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationToken
+import org.springframework.security.web.authentication.preauth.RequestHeaderAuthenticationFilter
 import org.springframework.security.web.util.matcher.RequestMatcher
 import javax.servlet.http.HttpServletRequest
 
-@Configuration
 @EnableWebSecurity
 class WebSecurityConfig(
-    @Value("\${management.server.port}") val managementPort: Int,
-    @Value("\${cantus.username}") val userName: String,
-    @Value("\${cantus.password}") val password: String
+    val authenticationManager: BearerAuthenticationManager,
+    @Value("\${management.server.port}") val managementPort: Int
 ) : WebSecurityConfigurerAdapter() {
 
-    private val passwordEncoder = BCryptPasswordEncoder()
-    private val basicAuthenticationEntryPoint = BasicAuthenticationEntryPoint().also { it.realmName = "CANTUS" }
+    private val logger = LoggerFactory.getLogger(WebSecurityConfig::class.java)
 
-    @Autowired
-    @Throws(Exception::class)
-    fun configureGlobalSecurity(auth: AuthenticationManagerBuilder) {
-        auth.inMemoryAuthentication().withUser(userName).password(passwordEncoder.encode(password)).roles("USER")
+    override fun configure(http: HttpSecurity) {
+
+        http.csrf().disable()
+
+        http.authenticationProvider(preAuthenticationProvider())
+            .addFilter(requestHeaderAuthenticationFilter())
+            .authorizeRequests()
+            .requestMatchers(forPort(managementPort)).permitAll()
+            .antMatchers("/v1/clientconfig").permitAll()
+            .antMatchers("/v1/auroraconfignames").permitAll()
+            .anyRequest().authenticated()
     }
 
     private fun forPort(port: Int) = RequestMatcher { request: HttpServletRequest -> port == request.localPort }
 
-    override fun configure(http: HttpSecurity) {
+    @Bean
+    internal fun preAuthenticationProvider() = PreAuthenticatedAuthenticationProvider().apply {
+        setPreAuthenticatedUserDetailsService { it: PreAuthenticatedAuthenticationToken ->
 
-        http.csrf().disable().sessionManagement()
-            .sessionCreationPolicy(SessionCreationPolicy.STATELESS) // We don't need sessions to be created.
+            val principal: JsonNode? = it.principal as JsonNode?
+            val username: String = principal?.openshiftName
+                ?: throw IllegalArgumentException("Unable to determine username from response")
+            val fullName: String? = principal.get("fullName")?.asText()
 
-        http.authorizeRequests()
-            .requestMatchers(forPort(managementPort)).permitAll()
-            .antMatchers("/docs/index.html").permitAll()
-            .antMatchers("/").permitAll()
-            .antMatchers("/api/**").hasRole("USER")
-            .and().httpBasic().authenticationEntryPoint(basicAuthenticationEntryPoint)
+            MDC.put("user", username)
+            User(username, it.credentials as String, fullName, it.authorities).also {
+                logger.info("Logged in user username=$username, name='$fullName' tokenSnippet=${it.tokenSnippet} groups=${it.groupNames}")
+            }
+        }
+    }
+
+    @Bean
+    internal fun requestHeaderAuthenticationFilter() = RequestHeaderAuthenticationFilter().apply {
+        setPrincipalRequestHeader("Authorization")
+        setExceptionIfHeaderMissing(false)
+        setAuthenticationManager(authenticationManager)
     }
 }
