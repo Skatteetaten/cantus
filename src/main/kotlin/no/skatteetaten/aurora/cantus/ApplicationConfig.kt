@@ -26,7 +26,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.math.min
 
 enum class ServiceTypes {
-    DOCKER, OPENSHIFT
+    DOCKER
 }
 
 @Target(AnnotationTarget.TYPE, AnnotationTarget.FUNCTION, AnnotationTarget.FIELD, AnnotationTarget.VALUE_PARAMETER)
@@ -36,15 +36,9 @@ annotation class TargetService(val value: ServiceTypes)
 
 @Configuration
 class ApplicationConfig (
-    @Value("\${cantus.openshift.url}") val openshiftUrl: String,
-    @Value("\${cantus.docker.url}") val dockerUrl: String
 ){
 
     private val logger = LoggerFactory.getLogger(ApplicationConfig::class.java)
-
-    @Bean
-    @TargetService(ServiceTypes.OPENSHIFT)
-    fun webClientOpenShift() = webClientBuilder().baseUrl(openshiftUrl).build()
 
     @Bean
     @TargetService(ServiceTypes.DOCKER)

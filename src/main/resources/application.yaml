@@ -28,14 +28,11 @@ spring:
     profiles: local
 
 
+
+
 cantus:
     username: cantus
     password: cantus
-    openshift:
-        url: https://openshift
-    docker:
-        url: https://docker
-        internalUrls: https://docker
 
 server:
     port: 8090

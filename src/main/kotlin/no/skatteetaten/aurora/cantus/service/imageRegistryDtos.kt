@@ -84,7 +84,8 @@ data class ImageRepoDto(
     val registry: String,
     val namespace: String,
     val name: String,
-    val tag: String? = null
+    val tag: String? = null,
+    val bearerToken: String
 ) {
     val manifestRepo: String
         get() = listOf(namespace, name, tag).joinToString("/")
