@@ -49,9 +49,7 @@ class DockerRegistryService(
         val dockerResponse = getManifestFromRegistry(imageRepoDto, registryMetadata) { webClient ->
             webClient
                 .get()
-                .uri { uriBuilder ->
-                    uriBuilder.createManifestUrl(imageRepoDto, registryMetadata)
-                }
+                .uri ()
                 .headers {
                     it.accept = dockerManfestAccept
                 }

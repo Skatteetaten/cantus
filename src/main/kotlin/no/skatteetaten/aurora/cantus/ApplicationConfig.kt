@@ -4,10 +4,7 @@ import io.netty.channel.ChannelOption
 import io.netty.handler.ssl.SslContextBuilder
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory
 import io.netty.handler.timeout.ReadTimeoutHandler
-import no.skatteetaten.aurora.cantus.controller.ImageTagResourceAssembler
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.http.HttpHeaders
@@ -25,23 +22,12 @@ import reactor.netty.tcp.TcpClient
 import java.util.concurrent.TimeUnit
 import kotlin.math.min
 
-enum class ServiceTypes {
-    DOCKER
-}
-
-@Target(AnnotationTarget.TYPE, AnnotationTarget.FUNCTION, AnnotationTarget.FIELD, AnnotationTarget.VALUE_PARAMETER)
-@Retention(AnnotationRetention.RUNTIME)
-@Qualifier
-annotation class TargetService(val value: ServiceTypes)
-
 @Configuration
-class ApplicationConfig (
-){
+class ApplicationConfig {
 
     private val logger = LoggerFactory.getLogger(ApplicationConfig::class.java)
 
     @Bean
-    @TargetService(ServiceTypes.DOCKER)
     fun webClient() = webClientBuilder().build()
 
     fun webClientBuilder(): WebClient.Builder =

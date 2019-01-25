@@ -55,11 +55,25 @@ fun UriBuilder.createManifestUrl(imageRepoDto: ImageRepoDto, registryMetadata: R
 
     return this.buildUri(
         registryMetadata.apiSchema,
-        "/v2/{namespace}/{name}/manifests/{tag}",
-        imageMap,
+        "/v2/{ooooo}/{ppppp}/manifests/{lllll}",
+        imageRepoDto.namespace,
+        imageRepoDto.name,
+        imageRepoDto.name,
+        imageRepoDto.tag,
         registryAddress = imageRepoDto.registry
     )
 }
+
+fun UriBuilder.buildUri(
+    apiSchema: String,
+    templateUri: String,
+    vararg templateVars: String,
+    registryAddress: String
+) =
+    this.scheme(apiSchema)
+        .host(registryAddress)
+        .path(templateUri)
+        .build(templateVars)
 
 fun UriBuilder.buildUri(
     apiSchema: String,
@@ -71,4 +85,5 @@ fun UriBuilder.buildUri(
         .host(registryAddress)
         .path(templateUri)
         .build(templateVars)
+
 
