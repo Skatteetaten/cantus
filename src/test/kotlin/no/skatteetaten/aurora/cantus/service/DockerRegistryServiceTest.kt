@@ -15,17 +15,21 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.springframework.web.reactive.function.client.WebClient
 
-/*
+
 class DockerRegistryServiceTest {
-
-    private val imageGroup = "no_skatteetaten_aurora_demo"
-    private val imageName = "whoami"
-    private val imageTag = "2"
-
     private val server = MockWebServer()
-    private val url = server.url("/")
-    private val allowedUrls = listOf("docker-registry.no", "internal-docker-registry.no")
-    private val dockerService = DockerRegistryService(WebClient.create(), url.toString(), listOf(url.toString()))
+
+    private val imageRepoDto = ImageRepoDto(
+        registry = "localhost",
+        imageGroup = "no_skatteetaten_aurora_demo",
+        imageName = "whoami",
+        imageTag = "2"
+    )
+
+    private val dockerService = DockerRegistryService(
+        WebClient.create(),
+        DefaultRegistryMetadataResolver(listOf(imageRepoDto.registry))
+    )
 
     @Test
     fun `Verify fetches manifest information for specified image`() {
@@ -33,7 +37,7 @@ class DockerRegistryServiceTest {
             MockResponse().setJsonFileAsBody("dockerManifestV1.json").addHeader("Docker-Content-Digest", "SHA::256")
 
         server.execute(response) {
-            val jsonResponse = dockerService.getImageManifestInformation(imageGroup, imageName, imageTag)
+            val jsonResponse = dockerService.getImageManifestInformation(imageRepoDto)
             assert(jsonResponse).isNotNull {
                 assert(it.actual.dockerDigest).isEqualTo("SHA::256")
                 assert(it.actual.dockerVersion).isEqualTo("1.13.1")
@@ -47,11 +51,7 @@ class DockerRegistryServiceTest {
         val response = MockResponse().setJsonFileAsBody("dockerTagList.json")
 
         server.execute(response) {
-<<<<<<< Updated upstream
-            val jsonResponse: ImageTagsWithTypeDto = dockerService.getImageTags(namespace, name)
-=======
-            val jsonResponse: ImageTagsWithTypeDto = dockerService.getImageTags(imageGroup, imageName)
->>>>>>> Stashed changes
+            val jsonResponse: ImageTagsWithTypeDto = dockerService.getImageTags(imageRepoDto)
             assert(jsonResponse).isNotNull {
                 assert(it.actual.tags.size).isEqualTo(5)
                 assert(it.actual.tags[0].name).isEqualTo("0")
@@ -65,12 +65,13 @@ class DockerRegistryServiceTest {
     @ValueSource(ints = [500, 400])
     fun `Get image manifest given internal server error in docker registry`(statusCode: Int) {
         server.execute(statusCode) {
-            val exception = catch { dockerService.getImageManifestInformation(namespace, name, imageTag) }
+            val exception = catch { dockerService.getImageManifestInformation(imageRepoDto) }
             assert(exception).isNotNull {
                 assert(it.actual::class).isEqualTo(SourceSystemException::class)
             }
         }
     }
+/* TODO: Flytt til controller test
 
     @Test
     fun `Verify that disallowed docker registry url returns bad request error`() {
@@ -78,13 +79,14 @@ class DockerRegistryServiceTest {
 
         server.execute {
             val exception =
-                catch { dockerServiceTestDisallowed.getImageManifestInformation(namespace, name, imageTag) }
+                catch { dockerServiceTestDisallowed.getImageManifestInformation(imageRepoDto) }
             assert(exception).isNotNull {
                 assert(it.actual::class).isEqualTo(BadRequestException::class)
                 assert(it.actual.message).isEqualTo("Invalid Docker Registry URL")
             }
         }
     }
+*/
 
     @Test
     fun `Verify that if V2 content type is set then retrieve manifest with V2 method`() {
@@ -98,11 +100,7 @@ class DockerRegistryServiceTest {
 
         val requests = server.execute(response, response2) {
 
-<<<<<<< Updated upstream
-            val jsonResponse = dockerService.getImageManifestInformation(namespace, name, imageTag)
-=======
-            val jsonResponse = dockerService.getImageManifestInformation(imageGroup, imageName, imageTag)
->>>>>>> Stashed changes
+            val jsonResponse = dockerService.getImageManifestInformation(imageRepoDto)
 
             assert(jsonResponse).isNotNull {
                 assert(it.actual.dockerDigest).isEqualTo("sha256")
@@ -115,4 +113,4 @@ class DockerRegistryServiceTest {
         assert(requests.size).isEqualTo(2)
     }
 }
-*/
+
