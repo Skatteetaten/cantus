@@ -9,6 +9,7 @@ import org.springframework.http.MediaType
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.bodyToMono
+import org.springframework.web.util.UriBuilder
 import reactor.core.publisher.Mono
 import java.util.HashSet
 
@@ -49,12 +50,9 @@ class DockerRegistryService(
         val dockerResponse = getManifestFromRegistry(imageRepoDto, registryMetadata) { webClient ->
             webClient
                 .get()
-                .uri (
-                    "${registryMetadata.fullRegistryUrl}/{imageRepoDto.imageGroup}/{imageRepoDto.imageName}/manifests/{imageRepoDto.imageTag}",
-                    imageRepoDto.imageGroup,
-                    imageRepoDto.imageName,
-                    imageRepoDto.imageTag
-                )
+                .uri{ uriBuilder ->
+                    uriBuilder.createManifestUrl(imageRepoDto, registryMetadata)
+                }
                 .headers {
                     it.accept = dockerManfestAccept
                 }
@@ -195,12 +193,9 @@ class DockerRegistryService(
         return getBodyFromDockerRegistry(imageRepoDto, registryMetadata) { webClient ->
             webClient
                 .get()
-                .uri(
-                    "${registryMetadata.fullRegistryUrl}/{imageRepoDto.imageGroup}/{imageRepoDto.imageName}/blobs/sha256:{configDigest}",
-                    imageRepoDto.imageGroup,
-                    imageRepoDto.imageName,
-                    configDigest
-                )
+                .uri{uriBuilder ->
+                    uriBuilder.createConfigUrl(imageRepoDto, configDigest, registryMetadata)
+                }
                 .headers {
                     it.accept = listOf(MediaType.valueOf("application/json"))
                 }

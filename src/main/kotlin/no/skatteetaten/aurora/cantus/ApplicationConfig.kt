@@ -45,6 +45,7 @@ class ApplicationConfig {
             })
             .clientConnector(clientConnector())
 
+
     private fun exchangeStrategies(): ExchangeStrategies {
         val objectMapper = createObjectMapper()
 

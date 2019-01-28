@@ -4,39 +4,31 @@ import org.springframework.web.util.UriBuilder
 import java.net.URI
 
 fun UriBuilder.createTagsUrl(imageRepoDto: ImageRepoDto, registryMetadata: RegistryMetadata): URI {
-
-    val templateVariables = mapOf(
-        "imageGroup" to imageRepoDto.imageGroup,
-        "imageName" to imageRepoDto.imageName
-    )
+    logger.debug("Retrieving tags from ${registryMetadata.fullRegistryUrl}")
+    logger.debug("Retrieving tags for image ${imageRepoDto.defaultRepo}")
 
     return this.buildUri(
         registryMetadata.apiSchema,
         "/v2/{imageGroup}/{imageName}/tags/list",
-        templateVars = templateVariables,
+        imageRepoDto.mappedTemplateVars,
         registryAddress = imageRepoDto.registry
     )
 }
 
 fun UriBuilder.createConfigUrl(
     imageRepoDto: ImageRepoDto,
-    configDigest: String?,
+    configDigest: String,
     registryMetadata: RegistryMetadata
-): URI? {
-    if (configDigest == null) {
-        return null
-    }
+): URI {
+    val configDigestMap = mapOf("configDigest" to configDigest)
 
-    val templateVariables = listOf(
-        imageRepoDto.imageGroup,
-        imageRepoDto.imageName,
-        configDigest
-    )
+    logger.debug("Retrieving manifest V2 config from ${registryMetadata.fullRegistryUrl}")
+    logger.debug("Retrieving manifest V2 config for image ${imageRepoDto.manifestRepo}")
 
     return this.buildUri(
         registryMetadata.apiSchema,
-        "/v2/{imageGroup}/{imageName}/blobs/sha256:{configdigest}",
-        templateVariables,
+        "/v2/{imageGroup}/{imageName}/blobs/sha256:{configDigest}",
+        imageRepoDto.mappedTemplateVars + configDigestMap,
         registryAddress = imageRepoDto.registry
     )
 }
@@ -45,20 +37,13 @@ fun UriBuilder.createManifestUrl(imageRepoDto: ImageRepoDto, registryMetadata: R
     if (imageRepoDto.imageTag == null) {
         return null
     }
-    logger.debug("Retrieving manifest from ${imageRepoDto.registry}")
-    logger.debug("Retrieving manifest for image ${imageRepoDto.imageGroup}/${imageRepoDto.imageName}:${imageRepoDto.imageTag}")
-
-
-    val templateVariables = listOf(
-        imageRepoDto.imageGroup,
-        imageRepoDto.imageName,
-        imageRepoDto.imageTag
-    )
+    logger.debug("Retrieving manifest from ${registryMetadata.fullRegistryUrl}")
+    logger.debug("Retrieving manifest for image ${imageRepoDto.manifestRepo}")
 
     return this.buildUri(
         registryMetadata.apiSchema,
-        "/v2/{ooooo}/{ppppp}/manifests/{lllll}",
-        templateVariables,
+        "/v2/{imageGroup}/{imageName}/manifests/{imageTag}",
+        imageRepoDto.mappedTemplateVars,
         registryAddress = imageRepoDto.registry
     )
 }
@@ -66,18 +51,7 @@ fun UriBuilder.createManifestUrl(imageRepoDto: ImageRepoDto, registryMetadata: R
 fun UriBuilder.buildUri(
     apiSchema: String,
     templateUri: String,
-    templateVars: List<String>,
-    registryAddress: String
-) =
-    this.scheme(apiSchema)
-        .host(registryAddress)
-        .path(templateUri)
-        .build(templateVars)
-
-fun UriBuilder.buildUri(
-    apiSchema: String,
-    templateUri: String,
-    templateVars: Map<String, String>,
+    templateVars: Map<String, String?>,
     registryAddress: String
 ) =
     this.scheme(apiSchema)

@@ -49,7 +49,7 @@ class DockerRegistryController(
         @PathVariable name: String,
         @RequestParam(required = false) dockerRegistryUrl: String?,
         @RequestHeader(required = false, value = "Authorization") bearerToken: String?
-    ) : AuroraResponse<TagResource>{
+    ): AuroraResponse<TagResource> {
         val imageRepoDto = imageRepoDtoAssembler.toDto(
             overrideRegistryUrl = dockerRegistryUrl,
             name = name,
@@ -70,7 +70,7 @@ class DockerRegistryController(
         @PathVariable name: String,
         @RequestParam(required = false) dockerRegistryUrl: String?,
         @RequestHeader(required = false, value = "Authorization") bearerToken: String?
-    ) {
+    ): AuroraResponse<GroupedTagResource> {
         val imageRepoDto = imageRepoDtoAssembler.toDto(
             overrideRegistryUrl = dockerRegistryUrl,
             name = name,
@@ -106,7 +106,13 @@ class ImageRepoDtoAssembler(
             )
         } else registryUrl
 
-        return ImageRepoDto(registry = validatedRegistryUrl, imageGroup = namespace, imageName = name, imageTag = tag, bearerToken = bearerToken)
+        return ImageRepoDto(
+            registry = validatedRegistryUrl,
+            imageGroup = namespace,
+            imageName = name,
+            imageTag = tag,
+            bearerToken = bearerToken
+        )
     }
 
     private fun validateDockerRegistryUrl(urlToValidate: String, allowedUrls: List<String>): String {

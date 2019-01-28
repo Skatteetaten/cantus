@@ -91,4 +91,10 @@ data class ImageRepoDto(
         get() = listOf(imageGroup, imageName, imageTag).joinToString("/")
     val defaultRepo: String
         get() = listOf(imageGroup, imageName).joinToString("/")
+    val mappedTemplateVars : Map<String, String?>
+        get() = mapOf(
+            "imageGroup" to imageGroup,
+            "imageName" to imageName,
+            "imageTag" to imageTag
+        )
 }
