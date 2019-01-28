@@ -82,13 +82,13 @@ enum class ImageTagType {
 // TODO: burde dette være en DTO eller en domain model?
 data class ImageRepoDto(
     val registry: String,
-    val namespace: String,
-    val name: String,
-    val tag: String? = null,
-    val bearerToken: String
+    val imageGroup: String,
+    val imageName: String,
+    val imageTag: String? = null,
+    val bearerToken: String? = null
 ) {
     val manifestRepo: String
-        get() = listOf(namespace, name, tag).joinToString("/")
+        get() = listOf(imageGroup, imageName, imageTag).joinToString("/")
     val defaultRepo: String
-        get() = listOf(namespace, name).joinToString("/")
+        get() = listOf(imageGroup, imageName).joinToString("/")
 }

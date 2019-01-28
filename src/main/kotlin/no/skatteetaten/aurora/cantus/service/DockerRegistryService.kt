@@ -49,7 +49,12 @@ class DockerRegistryService(
         val dockerResponse = getManifestFromRegistry(imageRepoDto, registryMetadata) { webClient ->
             webClient
                 .get()
-                .uri ("${registryMetadata.fullRegistryUrl}/{imageGroup}/l{imageName}")
+                .uri (
+                    "${registryMetadata.fullRegistryUrl}/{imageRepoDto.imageGroup}/{imageRepoDto.imageName}/manifests/{imageRepoDto.imageTag}",
+                    imageRepoDto.imageGroup,
+                    imageRepoDto.imageName,
+                    imageRepoDto.imageTag
+                )
                 .headers {
                     it.accept = dockerManfestAccept
                 }
@@ -100,7 +105,7 @@ class DockerRegistryService(
     ): T? = fn(webClient)
         .headers{
             if (registryMetadata.authenticationMethod == AuthenticationMethod.KUBERNETES_TOKEN) {
-                it.setBearerAuth(imageRepoDto.bearerToken)
+                it.setBearerAuth(imageRepoDto.bearerToken ?: "")
             }
         }
         .exchange()
@@ -116,7 +121,7 @@ class DockerRegistryService(
     ): ImageManifestResponseDto? = fn(webClient)
         .headers{
             if (registryMetadata.authenticationMethod == AuthenticationMethod.KUBERNETES_TOKEN) {
-                it.setBearerAuth(imageRepoDto.bearerToken)
+                it.setBearerAuth(imageRepoDto.bearerToken ?: "")
             }
         }
         .exchange()
@@ -190,9 +195,12 @@ class DockerRegistryService(
         return getBodyFromDockerRegistry(imageRepoDto, registryMetadata) { webClient ->
             webClient
                 .get()
-                .uri { uriBuilder ->
-                    uriBuilder.createConfigUrl(imageRepoDto, configDigest, registryMetadata)
-                }
+                .uri(
+                    "${registryMetadata.fullRegistryUrl}/{imageRepoDto.imageGroup}/{imageRepoDto.imageName}/blobs/sha256:{configDigest}",
+                    imageRepoDto.imageGroup,
+                    imageRepoDto.imageName,
+                    configDigest
+                )
                 .headers {
                     it.accept = listOf(MediaType.valueOf("application/json"))
                 }

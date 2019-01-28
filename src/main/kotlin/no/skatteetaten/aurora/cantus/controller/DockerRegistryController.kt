@@ -25,7 +25,7 @@ class DockerRegistryController(
         @PathVariable name: String,
         @PathVariable tag: String,
         @RequestParam(required = false) dockerRegistryUrl: String?,
-        @RequestHeader(required = false, value = "Authorization") bearerToken: String
+        @RequestHeader(required = false, value = "Authorization") bearerToken: String?
     ): AuroraResponse<ImageTagResource> {
         val imageRepoDto = imageRepoDtoAssembler.toDto(
             overrideRegistryUrl = dockerRegistryUrl,
@@ -48,24 +48,20 @@ class DockerRegistryController(
         @PathVariable affiliation: String,
         @PathVariable name: String,
         @RequestParam(required = false) dockerRegistryUrl: String?,
-        @RequestHeader(required = false, value = "Authorization") bearerToken: String
+        @RequestHeader(required = false, value = "Authorization") bearerToken: String?
     ) : AuroraResponse<TagResource>{
-        println(bearerToken)
-
         val imageRepoDto = imageRepoDtoAssembler.toDto(
             overrideRegistryUrl = dockerRegistryUrl,
             name = name,
             namespace = affiliation,
             bearerToken = bearerToken
         )
-        val response =  dockerRegistryService.getImageTags(imageRepoDto).let { imageTagsWithTypeDto ->
+        return dockerRegistryService.getImageTags(imageRepoDto).let { imageTagsWithTypeDto ->
             imageTagResourceAssembler.toResource(
                 imageTagsWithTypeDto,
                 "Successfully retrieved tags for image ${imageRepoDto.defaultRepo}"
             )
         }
-
-        return response
     }
 
     @GetMapping("/{affiliation}/{name}/tags/semantic")
@@ -73,7 +69,7 @@ class DockerRegistryController(
         @PathVariable affiliation: String,
         @PathVariable name: String,
         @RequestParam(required = false) dockerRegistryUrl: String?,
-        @RequestHeader(required = false, value = "Authorization") bearerToken: String
+        @RequestHeader(required = false, value = "Authorization") bearerToken: String?
     ) {
         val imageRepoDto = imageRepoDtoAssembler.toDto(
             overrideRegistryUrl = dockerRegistryUrl,
@@ -101,7 +97,7 @@ class ImageRepoDtoAssembler(
         name: String,
         namespace: String,
         tag: String? = null,
-        bearerToken: String
+        bearerToken: String? = null
     ): ImageRepoDto {
         val validatedRegistryUrl = if (overrideRegistryUrl != null) {
             validateDockerRegistryUrl(
@@ -110,7 +106,7 @@ class ImageRepoDtoAssembler(
             )
         } else registryUrl
 
-        return ImageRepoDto(registry = validatedRegistryUrl, namespace = namespace, name = name, tag = tag, bearerToken = bearerToken)
+        return ImageRepoDto(registry = validatedRegistryUrl, imageGroup = namespace, imageName = name, imageTag = tag, bearerToken = bearerToken)
     }
 
     private fun validateDockerRegistryUrl(urlToValidate: String, allowedUrls: List<String>): String {

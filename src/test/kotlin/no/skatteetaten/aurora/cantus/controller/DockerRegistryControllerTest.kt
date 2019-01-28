@@ -116,7 +116,7 @@ class DockerRegistryControllerTest {
         val path = "/no_skatteetaten_aurora_demo/whoami/tags/semantic"
         val tags = ImageTagsWithTypeDto(
             tags = parseJsonFromFile("dockerTagList.json")["tags"].map {
-                ImageTagTypedDto(name = it.asText())
+                ImageTagTypedDto(imageName = it.asText())
             }
         )
         given(
@@ -132,10 +132,10 @@ class DockerRegistryControllerTest {
             .andExpect(jsonPath("$.count").value(4))
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.items[0].group").value("MAJOR"))
-            .andExpect(jsonPath("$.items[0].tagResource[0].name").value("0"))
+            .andExpect(jsonPath("$.items[0].tagResource[0].imageName").value("0"))
             .andExpect(jsonPath("$.items[0].itemsInGroup").value(1))
             .andExpect(jsonPath("$.items[2].group").value("BUGFIX"))
-            .andExpect(jsonPath("$.items[2].tagResource[0].name").value("0.0.0"))
+            .andExpect(jsonPath("$.items[2].tagResource[0].imageName").value("0.0.0"))
             .andExpect(jsonPath("$.items[2].itemsInGroup").value(2))
     }
 
