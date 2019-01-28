@@ -82,6 +82,7 @@ enum class ImageTagType {
 // TODO: burde dette være en DTO eller en domain model?
 data class ImageRepoDto(
     val registry: String,
+    val port: Int? = null,
     val imageGroup: String,
     val imageName: String,
     val imageTag: String? = null,

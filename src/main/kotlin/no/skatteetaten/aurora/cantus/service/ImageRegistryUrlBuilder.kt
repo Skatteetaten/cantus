@@ -11,7 +11,8 @@ fun UriBuilder.createTagsUrl(imageRepoDto: ImageRepoDto, registryMetadata: Regis
         registryMetadata.apiSchema,
         "/v2/{imageGroup}/{imageName}/tags/list",
         imageRepoDto.mappedTemplateVars,
-        registryAddress = imageRepoDto.registry
+        registryAddress = imageRepoDto.registry,
+        port = imageRepoDto.port
     )
 }
 
@@ -29,7 +30,8 @@ fun UriBuilder.createConfigUrl(
         registryMetadata.apiSchema,
         "/v2/{imageGroup}/{imageName}/blobs/sha256:{configDigest}",
         imageRepoDto.mappedTemplateVars + configDigestMap,
-        registryAddress = imageRepoDto.registry
+        registryAddress = imageRepoDto.registry,
+        port = imageRepoDto.port
     )
 }
 
@@ -44,7 +46,8 @@ fun UriBuilder.createManifestUrl(imageRepoDto: ImageRepoDto, registryMetadata: R
         registryMetadata.apiSchema,
         "/v2/{imageGroup}/{imageName}/manifests/{imageTag}",
         imageRepoDto.mappedTemplateVars,
-        registryAddress = imageRepoDto.registry
+        registryAddress = imageRepoDto.registry,
+        port = imageRepoDto.port
     )
 }
 
@@ -52,11 +55,13 @@ fun UriBuilder.buildUri(
     apiSchema: String,
     templateUri: String,
     templateVars: Map<String, String?>,
-    registryAddress: String
+    registryAddress: String,
+    port: Int?
 ) =
     this.scheme(apiSchema)
         .host(registryAddress)
         .path(templateUri)
+        .port(port ?: -1)
         .build(templateVars)
 
 

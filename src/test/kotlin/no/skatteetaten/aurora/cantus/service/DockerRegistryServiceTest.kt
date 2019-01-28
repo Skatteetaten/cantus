@@ -18,12 +18,15 @@ import org.springframework.web.reactive.function.client.WebClient
 
 class DockerRegistryServiceTest {
     private val server = MockWebServer()
+    private val url = server.url("/")
 
     private val imageRepoDto = ImageRepoDto(
-        registry = "localhost",
+        registry = url.host().toString(),
+        port = url.port(),
         imageGroup = "no_skatteetaten_aurora_demo",
         imageName = "whoami",
-        imageTag = "2"
+        imageTag = "2",
+        bearerToken = "bearer token"
     )
 
     private val dockerService = DockerRegistryService(
