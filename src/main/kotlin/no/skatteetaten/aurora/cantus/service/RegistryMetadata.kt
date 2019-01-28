@@ -10,7 +10,10 @@ data class RegistryMetadata(
     val apiSchema: String,
     val authenticationMethod: AuthenticationMethod,
     val isInternal: Boolean
-)
+) {
+    val fullRegistryUrl : String
+        get() = "$apiSchema://$registry"
+}
 
 interface RegistryMetadataResolver {
     fun getMetadataForRegistry(registry: String): RegistryMetadata

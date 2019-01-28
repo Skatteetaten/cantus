@@ -49,7 +49,7 @@ class DockerRegistryService(
         val dockerResponse = getManifestFromRegistry(imageRepoDto, registryMetadata) { webClient ->
             webClient
                 .get()
-                .uri ()
+                .uri ("${registryMetadata.fullRegistryUrl}/{imageGroup}/l{imageName}")
                 .headers {
                     it.accept = dockerManfestAccept
                 }
@@ -99,7 +99,9 @@ class DockerRegistryService(
         fn: (WebClient) -> WebClient.RequestHeadersSpec<*>
     ): T? = fn(webClient)
         .headers{
-            it.setBearerAuth(imageRepoDto.bearerToken)
+            if (registryMetadata.authenticationMethod == AuthenticationMethod.KUBERNETES_TOKEN) {
+                it.setBearerAuth(imageRepoDto.bearerToken)
+            }
         }
         .exchange()
         .flatMap { resp ->
