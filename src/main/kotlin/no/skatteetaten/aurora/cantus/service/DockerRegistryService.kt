@@ -1,6 +1,7 @@
 package no.skatteetaten.aurora.cantus.service
 
 import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.node.NullNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import no.skatteetaten.aurora.cantus.controller.BadRequestException
 import no.skatteetaten.aurora.cantus.controller.SourceSystemException
@@ -10,7 +11,6 @@ import org.springframework.http.MediaType
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.bodyToMono
-import reactor.core.publisher.Mono
 import java.util.HashSet
 
 val logger = LoggerFactory.getLogger(DockerRegistryService::class.java)
@@ -131,20 +131,25 @@ class DockerRegistryService(
         }
         .exchange()
         .flatMap { resp ->
-            val statusCode = resp.rawStatusCode()
-
-            if (statusCode == 404) {
-                resp.bodyToMono<JsonNode>() // Release resource
-                Mono.empty<ImageManifestResponseDto>()
-            } else {
+            if (resp.statusCode().is2xxSuccessful) {
                 val contentType = resp.headers().contentType().get().toString()
-                val dockerContentDigest = resp.headers().header(dockerContentDigestLabel).first()
+                val dockerContentDigest = resp.headers().header(dockerContentDigestLabel).firstOrNull()
+                    ?: throw SourceSystemException(
+                        message = "No docker content digest label present on response",
+                        sourceSystem = imageRepoDto.registry
+                    )
 
                 resp.bodyToMono<JsonNode>().map {
                     ImageManifestResponseDto(contentType, dockerContentDigest, it)
                 }
+            } else {
+                throw SourceSystemException(
+                    message = "Error in response, status:${resp.rawStatusCode()}",
+                    sourceSystem = imageRepoDto.registry,
+                    code = resp.statusCode().name
+                )
             }
-        }.blockAndHandleError(sourceSystem = imageRepoDto.registry)
+        }.block() // TODO legg til timeout
 
     private fun imageManifestResponseToImageManifest(
         imageRepoDto: ImageRepoDto,
@@ -215,6 +220,7 @@ class DockerRegistryService(
 
     private fun JsonNode.getV1CompatibilityFromManifest() =
         jacksonObjectMapper().readTree(this.get("history")?.get(0)?.get("v1Compatibility")?.asText() ?: "")
+            ?: NullNode.instance
 
     private fun JsonNode.getVariableFromManifestBody(label: String) = this.get(label)?.asText() ?: ""
 }

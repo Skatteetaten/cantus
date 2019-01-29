@@ -7,11 +7,14 @@ import assertk.catch
 import no.skatteetaten.aurora.cantus.controller.SourceSystemException
 import no.skatteetaten.aurora.cantus.execute
 import no.skatteetaten.aurora.cantus.setJsonFileAsBody
+import okhttp3.Headers
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import org.springframework.http.HttpHeaders
+import org.springframework.http.MediaType
 import org.springframework.web.reactive.function.client.WebClient
 
 class DockerRegistryServiceTest {
@@ -65,7 +68,13 @@ class DockerRegistryServiceTest {
     @ParameterizedTest
     @ValueSource(ints = [500, 400, 404])
     fun `Get image manifest given internal server error in docker registry`(statusCode: Int) {
-        server.execute(statusCode) {
+        val headers = Headers.of(
+            mapOf(
+                HttpHeaders.CONTENT_TYPE to MediaType.APPLICATION_JSON_VALUE,
+                "Docker-Content-Digest" to "abc123"
+            )
+        )
+        server.execute(status = statusCode, headers = headers) {
             val exception = catch { dockerService.getImageManifestInformation(imageRepoDto) }
             assert(exception).isNotNull {
                 assert(it.actual::class).isEqualTo(SourceSystemException::class)
@@ -75,11 +84,12 @@ class DockerRegistryServiceTest {
 
     @Test
     fun `Verify that empty tag list throws SourceSystemException`() {
-        server.execute(ImageTagsResponseDto(listOf("2"))) {
+        server.execute(ImageTagsResponseDto(emptyList())) {
             val exception = catch { dockerService.getImageTags(imageRepoDto) }
 
             assert(exception).isNotNull {
                 assert(it.actual::class).isEqualTo(SourceSystemException::class)
+                assert(it.actual.message).isEqualTo("Tags not found for image ${imageRepoDto.defaultRepo}")
             }
         }
     }
