@@ -2,6 +2,7 @@ package no.skatteetaten.aurora.cantus.service
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import no.skatteetaten.aurora.cantus.controller.BadRequestException
 import no.skatteetaten.aurora.cantus.controller.SourceSystemException
 import no.skatteetaten.aurora.cantus.controller.blockAndHandleError
 import org.slf4j.LoggerFactory
@@ -103,7 +104,7 @@ class DockerRegistryService(
     ): T? = fn(webClient)
         .headers{
             if (registryMetadata.authenticationMethod == AuthenticationMethod.KUBERNETES_TOKEN) {
-                it.setBearerAuth(imageRepoDto.bearerToken ?: "")
+                it.setBearerAuth(imageRepoDto.bearerToken ?: throw BadRequestException(message = "Authorization bearer token is not present"))
             }
         }
         .exchange()
@@ -119,7 +120,7 @@ class DockerRegistryService(
     ): ImageManifestResponseDto? = fn(webClient)
         .headers{
             if (registryMetadata.authenticationMethod == AuthenticationMethod.KUBERNETES_TOKEN) {
-                it.setBearerAuth(imageRepoDto.bearerToken ?: "")
+                it.setBearerAuth(imageRepoDto.bearerToken ?: throw BadRequestException(message = "Authorization bearer token is not present"))
             }
         }
         .exchange()

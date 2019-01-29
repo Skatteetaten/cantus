@@ -6,6 +6,7 @@ import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.anyOrNull
 import no.skatteetaten.aurora.cantus.service.DockerRegistryService
 import no.skatteetaten.aurora.cantus.service.ImageManifestDto
+import no.skatteetaten.aurora.cantus.service.ImageRepoDto
 import no.skatteetaten.aurora.cantus.service.ImageTagTypedDto
 import no.skatteetaten.aurora.cantus.service.ImageTagsWithTypeDto
 import org.junit.Before
@@ -16,18 +17,23 @@ import org.mockito.BDDMockito.given
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.boot.test.mock.mockito.MockBean
+import org.springframework.context.annotation.ComponentScan
+import org.springframework.context.annotation.FilterType
+import org.springframework.context.annotation.Import
 import org.springframework.core.io.ClassPathResource
+import org.springframework.integration.annotation.Filter
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.test.web.servlet.setup.MockMvcBuilders
-/*
+
 
 @WebMvcTest(
-    value = [DockerRegistryController::class, ErrorHandler::class, ImageTagResourceAssembler::class],
+    value = [DockerRegistryController::class],
     secure = false
 )
+@Import(ErrorHandler::class, ImageTagResourceAssembler::class, ImageRepoDtoAssembler::class)
 class DockerRegistryControllerTest {
     @MockBean
     private lateinit var dockerService: DockerRegistryService
@@ -35,10 +41,23 @@ class DockerRegistryControllerTest {
     @Autowired
     private lateinit var mockMvc: MockMvc
 
+    @Autowired
+    private lateinit var imageRepoDtoAssembler: ImageRepoDtoAssembler
+
     @Before
     fun setup() {
         mockMvc = MockMvcBuilders.standaloneSetup(dockerService).setControllerAdvice(ErrorHandler()).build()
+        imageRepoDtoAssembler = ImageRepoDtoAssembler("docker.com", listOf("docker.com"))
     }
+
+    private val imageRepoDto = ImageRepoDto(
+        registry = "docker.com",
+        port = null,
+        imageGroup = "no_skatteetaten_aurora_demo",
+        imageName = "whoami",
+        imageTag = "2",
+        bearerToken = "token"
+    )
 
     @ParameterizedTest
     @ValueSource(
@@ -53,15 +72,11 @@ class DockerRegistryControllerTest {
         val manifest =
             ImageManifestDto(auroraVersion = "2", dockerVersion = "2", dockerDigest = "sah", appVersion = "2")
 
-        given(dockerService.getImageManifestInformation(any(), any(), any(), anyOrNull())).willReturn(manifest)
-        given(dockerService.getImageTags(any(), any(), anyOrNull())).willReturn(tags)
+        given(dockerService.getImageManifestInformation(imageRepoDto)).willReturn(manifest)
+        given(dockerService.getImageTags(imageRepoDto)).willReturn(tags)
 
         given(
-            dockerService.getImageTags(
-                any(),
-                any(),
-                anyOrNull()
-            )
+            dockerService.getImageTags(imageRepoDto)
         ).willReturn(tags)
         mockMvc.perform(get(path))
             .andExpect(status().isOk)
@@ -71,23 +86,22 @@ class DockerRegistryControllerTest {
     @ParameterizedTest
     @ValueSource(
         strings = [
-            "/no_skatteetaten/test/tags",
-            "/no_skatteetaten/test/0/manifest",
-            "/no_skatteetaten/test/0/manifest"
+            "/no_skatteetaten_aurora_demo/whoami/tags",
+            "/no_skatteetaten_aurora_demo/whoami/2/manifest",
+            "/no_skatteetaten_aurora_demo/whoami/2/manifest"
         ]
     )
     fun `Get docker registry image info given missing resource`(path: String) {
-        val dockerUrl = "https://localhost.no"
 
-        given(dockerService.getImageTags(any(), any(), anyOrNull())).willThrow(
+        given(dockerService.getImageTags(imageRepoDto)).willThrow(
             SourceSystemException(
                 message = "Tags not found for image no_skatteetaten/test",
                 code = "404",
-                sourceSystem = "https://docker"
+                sourceSystem = "https://docker.com"
             )
         )
 
-        given(dockerService.getImageManifestInformation(any(), any(), any(), anyOrNull())).willThrow(
+        given(dockerService.getImageManifestInformation(imageRepoDto)).willThrow(
             SourceSystemException(
                 message = "Manifest not found for image no_skatteetaten/test:0",
                 code = "404",
@@ -95,7 +109,7 @@ class DockerRegistryControllerTest {
             )
         )
 
-        given(dockerService.getImageManifestInformation(any(), any(), any(), anyOrNull())).willThrow(
+        given(dockerService.getImageManifestInformation(imageRepoDto)).willThrow(
             SourceSystemException(
                 message = "Unable to retrieve V2 manifest from https:/docker/v2/no_skatteetaten/test/blobs/sha256:2456",
                 code = "404",
@@ -116,15 +130,11 @@ class DockerRegistryControllerTest {
         val path = "/no_skatteetaten_aurora_demo/whoami/tags/semantic"
         val tags = ImageTagsWithTypeDto(
             tags = parseJsonFromFile("dockerTagList.json")["tags"].map {
-                ImageTagTypedDto(imageName = it.asText())
+                ImageTagTypedDto(name = it.asText())
             }
         )
         given(
-            dockerService.getImageTags(
-                any(),
-                any(),
-                anyOrNull()
-            )
+            dockerService.getImageTags(imageRepoDto)
         ).willReturn(tags)
 
         mockMvc.perform(get(path))
@@ -144,4 +154,4 @@ class DockerRegistryControllerTest {
         return jacksonObjectMapper().readTree(classPath.file)
     }
 }
-*/
+
