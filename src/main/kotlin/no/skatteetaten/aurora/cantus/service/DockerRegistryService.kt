@@ -11,6 +11,7 @@ import org.springframework.http.MediaType
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.bodyToMono
+import java.time.Duration
 import java.util.HashSet
 
 val logger = LoggerFactory.getLogger(DockerRegistryService::class.java)
@@ -110,10 +111,8 @@ class DockerRegistryService(
                 )
             }
         }
-        .exchange()
-        .flatMap { resp ->
-            resp.bodyToMono(T::class.java)
-        }
+        .retrieve()
+        .bodyToMono<T>()
         .blockAndHandleError(sourceSystem = imageRepoDto.registry)
 
     private fun getManifestFromRegistry(
@@ -149,7 +148,7 @@ class DockerRegistryService(
                     code = resp.statusCode().name
                 )
             }
-        }.block() // TODO legg til timeout
+        }.block(Duration.ofSeconds(30))
 
     private fun imageManifestResponseToImageManifest(
         imageRepoDto: ImageRepoDto,
