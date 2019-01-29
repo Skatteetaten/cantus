@@ -4,7 +4,6 @@ import assertk.assert
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import assertk.catch
-import no.skatteetaten.aurora.cantus.controller.BadRequestException
 import no.skatteetaten.aurora.cantus.controller.SourceSystemException
 import no.skatteetaten.aurora.cantus.execute
 import no.skatteetaten.aurora.cantus.setJsonFileAsBody
@@ -14,7 +13,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.springframework.web.reactive.function.client.WebClient
-
 
 class DockerRegistryServiceTest {
     private val server = MockWebServer()
@@ -65,7 +63,7 @@ class DockerRegistryServiceTest {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = [500, 400])
+    @ValueSource(ints = [500, 400, 404])
     fun `Get image manifest given internal server error in docker registry`(statusCode: Int) {
         server.execute(statusCode) {
             val exception = catch { dockerService.getImageManifestInformation(imageRepoDto) }
@@ -74,6 +72,18 @@ class DockerRegistryServiceTest {
             }
         }
     }
+
+    @Test
+    fun `Verify that empty tag list throws SourceSystemException`() {
+        server.execute(ImageTagsResponseDto(listOf("2"))) {
+            val exception = catch { dockerService.getImageTags(imageRepoDto) }
+
+            assert(exception).isNotNull {
+                assert(it.actual::class).isEqualTo(SourceSystemException::class)
+            }
+        }
+    }
+
 /* TODO: Flytt til controller test
 
     @Test
@@ -112,8 +122,6 @@ class DockerRegistryServiceTest {
                 assert(it.actual.java?.major).isEqualTo("8")
             }
         }
-
         assert(requests.size).isEqualTo(2)
     }
 }
-

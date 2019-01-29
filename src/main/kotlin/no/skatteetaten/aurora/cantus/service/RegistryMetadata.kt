@@ -11,7 +11,7 @@ data class RegistryMetadata(
     val authenticationMethod: AuthenticationMethod,
     val isInternal: Boolean
 ) {
-    val fullRegistryUrl : String
+    val fullRegistryUrl: String
         get() = "$apiSchema://$registry/v2"
 }
 

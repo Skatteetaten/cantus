@@ -63,5 +63,3 @@ fun UriBuilder.buildUri(
         .path(templateUri)
         .port(port ?: -1)
         .build(templateVars)
-
-

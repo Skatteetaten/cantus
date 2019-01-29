@@ -10,7 +10,6 @@ import org.springframework.http.MediaType
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.bodyToMono
-import org.springframework.web.util.UriBuilder
 import reactor.core.publisher.Mono
 import java.util.HashSet
 
@@ -51,7 +50,7 @@ class DockerRegistryService(
         val dockerResponse = getManifestFromRegistry(imageRepoDto, registryMetadata) { webClient ->
             webClient
                 .get()
-                .uri{ uriBuilder ->
+                .uri { uriBuilder ->
                     uriBuilder.createManifestUrl(imageRepoDto, registryMetadata)
                 }
                 .headers {
@@ -75,14 +74,15 @@ class DockerRegistryService(
 
         val registryMetadata = registryMetadataResolver.getMetadataForRegistry(url)
 
-        val tagsResponse: ImageTagsResponseDto? = getBodyFromDockerRegistry(imageRepoDto, registryMetadata) { webClient ->
-            logger.debug("Retrieving tags from $url")
-            webClient
-                .get()
-                .uri { uriBuilder ->
-                    uriBuilder.createTagsUrl(imageRepoDto, registryMetadata)
-                }
-        }
+        val tagsResponse: ImageTagsResponseDto? =
+            getBodyFromDockerRegistry(imageRepoDto, registryMetadata) { webClient ->
+                logger.debug("Retrieving tags from $url")
+                webClient
+                    .get()
+                    .uri { uriBuilder ->
+                        uriBuilder.createTagsUrl(imageRepoDto, registryMetadata)
+                    }
+            }
 
         if (tagsResponse == null || tagsResponse.tags.isEmpty()) {
             throw SourceSystemException(
@@ -102,9 +102,12 @@ class DockerRegistryService(
         registryMetadata: RegistryMetadata,
         fn: (WebClient) -> WebClient.RequestHeadersSpec<*>
     ): T? = fn(webClient)
-        .headers{
+        .headers {
             if (registryMetadata.authenticationMethod == AuthenticationMethod.KUBERNETES_TOKEN) {
-                it.setBearerAuth(imageRepoDto.bearerToken ?: throw BadRequestException(message = "Authorization bearer token is not present"))
+                it.setBearerAuth(
+                    imageRepoDto.bearerToken
+                        ?: throw BadRequestException(message = "Authorization bearer token is not present")
+                )
             }
         }
         .exchange()
@@ -118,9 +121,12 @@ class DockerRegistryService(
         registryMetadata: RegistryMetadata,
         fn: (WebClient) -> WebClient.RequestHeadersSpec<*>
     ): ImageManifestResponseDto? = fn(webClient)
-        .headers{
+        .headers {
             if (registryMetadata.authenticationMethod == AuthenticationMethod.KUBERNETES_TOKEN) {
-                it.setBearerAuth(imageRepoDto.bearerToken ?: throw BadRequestException(message = "Authorization bearer token is not present"))
+                it.setBearerAuth(
+                    imageRepoDto.bearerToken
+                        ?: throw BadRequestException(message = "Authorization bearer token is not present")
+                )
             }
         }
         .exchange()
@@ -194,7 +200,7 @@ class DockerRegistryService(
         return getBodyFromDockerRegistry(imageRepoDto, registryMetadata) { webClient ->
             webClient
                 .get()
-                .uri{uriBuilder ->
+                .uri { uriBuilder ->
                     uriBuilder.createConfigUrl(imageRepoDto, configDigest, registryMetadata)
                 }
                 .headers {
