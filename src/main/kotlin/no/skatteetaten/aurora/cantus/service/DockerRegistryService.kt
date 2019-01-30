@@ -21,7 +21,8 @@ val logger = LoggerFactory.getLogger(DockerRegistryService::class.java)
 @Service
 class DockerRegistryService(
     val webClient: WebClient,
-    val registryMetadataResolver: RegistryMetadataResolver
+    val registryMetadataResolver: RegistryMetadataResolver,
+    val imageRegistryUrlBuilder: ImageRegistryUrlBuilder
 ) {
     val dockerManfestAccept: List<MediaType> = listOf(
         MediaType.valueOf("application/vnd.docker.distribution.manifest.v2+json"),
@@ -53,9 +54,10 @@ class DockerRegistryService(
         val dockerResponse = getManifestFromRegistry(imageRepoCommand, registryMetadata) { webClient ->
             webClient
                 .get()
-                .uri { uriBuilder ->
-                    uriBuilder.createManifestUrl(imageRepoCommand, registryMetadata)
-                }
+                .uri(
+                    imageRegistryUrlBuilder.createManifestUrl(imageRepoCommand, registryMetadata),
+                    imageRepoCommand.mappedTemplateVars
+                )
                 .headers {
                     it.accept = dockerManfestAccept
                 }
@@ -82,9 +84,10 @@ class DockerRegistryService(
                 logger.debug("Retrieving tags from $url")
                 webClient
                     .get()
-                    .uri { uriBuilder ->
-                        uriBuilder.createTagsUrl(imageRepoCommand, registryMetadata)
-                    }
+                    .uri(
+                        imageRegistryUrlBuilder.createTagsUrl(imageRepoCommand, registryMetadata),
+                        imageRepoCommand.mappedTemplateVars
+                    )
             }
 
         if (tagsResponse == null || tagsResponse.tags.isEmpty()) {
@@ -208,14 +211,23 @@ class DockerRegistryService(
         imageRepoCommand: ImageRepoCommand,
         registryMetadata: RegistryMetadata
     ): JsonNode {
-        val configDigest = this.at("/config").get("digest").asText().replace("\\s".toRegex(), "").split(":").last()
+        val configDigest = listOf(
+            this.at("/config").get("digest").asText().replace(
+                regex = "\\s".toRegex(),
+                replacement = ""
+            ).split(":").last()
+        ).associate { "configDigest" to it }
 
         return getBodyFromDockerRegistry(imageRepoCommand, registryMetadata) { webClient ->
             webClient
                 .get()
-                .uri { uriBuilder ->
-                    uriBuilder.createConfigUrl(imageRepoCommand, configDigest, registryMetadata)
-                }
+                .uri(
+                    imageRegistryUrlBuilder.createConfigUrl(
+                        imageRepoCommand = imageRepoCommand,
+                        registryMetadata = registryMetadata
+                    ),
+                    imageRepoCommand.mappedTemplateVars + configDigest
+                )
                 .headers {
                     it.accept = listOf(MediaType.valueOf("application/json"))
                 }

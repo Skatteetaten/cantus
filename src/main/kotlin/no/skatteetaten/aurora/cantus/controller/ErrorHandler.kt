@@ -15,6 +15,7 @@ import uk.q3c.rest.hal.HalResource
 import java.time.Duration
 
 val blockTimeout: Long = 30
+
 @ControllerAdvice
 class ErrorHandler : ResponseEntityExceptionHandler() {
 

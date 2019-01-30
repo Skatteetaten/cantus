@@ -55,5 +55,6 @@ fun MockResponse.setJsonFileAsBody(fileName: String): MockResponse {
     val classPath = ClassPathResource("/$fileName")
     val json = classPath.file.readText()
     this.addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_UTF8_VALUE)
+    this.setResponseCode(200)
     return this.setBody(json)
 }

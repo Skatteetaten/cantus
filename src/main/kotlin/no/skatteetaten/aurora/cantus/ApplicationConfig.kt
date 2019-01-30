@@ -84,7 +84,8 @@ class ApplicationConfig {
             .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, connectTimeout)
             .secure(sslProvider)
             .doOnConnected { connection ->
-                connection.addHandlerLast(ReadTimeoutHandler(readTimeout, TimeUnit.MILLISECONDS))
+                connection
+                    .addHandlerLast(ReadTimeoutHandler(readTimeout, TimeUnit.MILLISECONDS))
                     .addHandlerLast(WriteTimeoutHandler(writeTimeout, TimeUnit.MILLISECONDS))
             }
     }

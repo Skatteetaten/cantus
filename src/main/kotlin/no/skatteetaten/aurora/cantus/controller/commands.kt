@@ -6,7 +6,6 @@ import org.springframework.stereotype.Component
 // TODO: burde dette være en DTO eller en domain model?
 data class ImageRepoCommand(
     val registry: String,
-    val port: Int? = null,
     val imageGroup: String,
     val imageName: String,
     val imageTag: String? = null,
@@ -45,8 +44,8 @@ class ImageRepoDtoAssembler(
 
         return ImageRepoCommand(
             registry = validatedRegistryUrl,
-            imageGroup = namespace,
             imageName = name,
+            imageGroup = namespace,
             imageTag = tag,
             bearerToken = bearerToken
         )

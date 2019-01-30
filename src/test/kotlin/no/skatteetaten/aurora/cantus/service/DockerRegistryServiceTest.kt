@@ -23,8 +23,7 @@ class DockerRegistryServiceTest {
     private val url = server.url("/")
 
     private val imageRepoDto = ImageRepoCommand(
-        registry = url.host().toString(),
-        port = url.port(),
+        registry = "${url.host()}:${url.port()}",
         imageGroup = "no_skatteetaten_aurora_demo",
         imageName = "whoami",
         imageTag = "2",
@@ -33,7 +32,8 @@ class DockerRegistryServiceTest {
 
     private val dockerService = DockerRegistryService(
         WebClient.create(),
-        RegistryMetadataResolver(listOf(imageRepoDto.registry))
+        RegistryMetadataResolver(listOf(imageRepoDto.registry)),
+        ImageRegistryUrlBuilder()
     )
 
     @Test
