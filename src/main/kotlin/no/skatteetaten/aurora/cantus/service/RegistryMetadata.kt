@@ -15,15 +15,13 @@ data class RegistryMetadata(
         get() = "$apiSchema://$registry/v2"
 }
 
-interface RegistryMetadataResolver {
-    fun getMetadataForRegistry(registry: String): RegistryMetadata
-}
 
 @Component
-class DefaultRegistryMetadataResolver(@Value("\${cantus.docker.internal.urls}") val internalRegistryAddresses: List<String>) :
-    RegistryMetadataResolver {
+class RegistryMetadataResolver(
+    @Value("\${cantus.docker.internal.urls}") val internalRegistryAddresses: List<String>
+) {
 
-    override fun getMetadataForRegistry(registry: String): RegistryMetadata {
+    fun getMetadataForRegistry(registry: String): RegistryMetadata {
 
         val isInternalRegistry = internalRegistryAddresses.any { internalAddress -> registry == internalAddress }
         val authMethod = if (isInternalRegistry) AuthenticationMethod.KUBERNETES_TOKEN else AuthenticationMethod.NONE

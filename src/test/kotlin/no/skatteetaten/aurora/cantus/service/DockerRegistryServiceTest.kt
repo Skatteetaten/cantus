@@ -4,6 +4,7 @@ import assertk.assert
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import assertk.catch
+import no.skatteetaten.aurora.cantus.controller.ImageRepoCommand
 import no.skatteetaten.aurora.cantus.controller.SourceSystemException
 import no.skatteetaten.aurora.cantus.execute
 import no.skatteetaten.aurora.cantus.setJsonFileAsBody
@@ -21,7 +22,7 @@ class DockerRegistryServiceTest {
     private val server = MockWebServer()
     private val url = server.url("/")
 
-    private val imageRepoDto = ImageRepoDto(
+    private val imageRepoDto = ImageRepoCommand(
         registry = url.host().toString(),
         port = url.port(),
         imageGroup = "no_skatteetaten_aurora_demo",
@@ -32,7 +33,7 @@ class DockerRegistryServiceTest {
 
     private val dockerService = DockerRegistryService(
         WebClient.create(),
-        DefaultRegistryMetadataResolver(listOf(imageRepoDto.registry))
+        RegistryMetadataResolver(listOf(imageRepoDto.registry))
     )
 
     @Test

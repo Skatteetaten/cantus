@@ -4,8 +4,10 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.NullNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import no.skatteetaten.aurora.cantus.controller.BadRequestException
+import no.skatteetaten.aurora.cantus.controller.ImageRepoCommand
 import no.skatteetaten.aurora.cantus.controller.SourceSystemException
 import no.skatteetaten.aurora.cantus.controller.blockAndHandleError
+import no.skatteetaten.aurora.cantus.controller.blockTimeout
 import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Service
@@ -42,52 +44,52 @@ class DockerRegistryService(
     val createdLabel = "created"
 
     fun getImageManifestInformation(
-        imageRepoDto: ImageRepoDto
+        imageRepoCommand: ImageRepoCommand
     ): ImageManifestDto {
-        val url = imageRepoDto.registry
+        val url = imageRepoCommand.registry
 
         val registryMetadata = registryMetadataResolver.getMetadataForRegistry(url)
 
-        val dockerResponse = getManifestFromRegistry(imageRepoDto, registryMetadata) { webClient ->
+        val dockerResponse = getManifestFromRegistry(imageRepoCommand, registryMetadata) { webClient ->
             webClient
                 .get()
                 .uri { uriBuilder ->
-                    uriBuilder.createManifestUrl(imageRepoDto, registryMetadata)
+                    uriBuilder.createManifestUrl(imageRepoCommand, registryMetadata)
                 }
                 .headers {
                     it.accept = dockerManfestAccept
                 }
         } ?: throw SourceSystemException(
-            "Manifest not found for image ${imageRepoDto.manifestRepo}",
+            message = "Manifest not found for image ${imageRepoCommand.manifestRepo}",
             code = "404",
             sourceSystem = url
         )
 
         return imageManifestResponseToImageManifest(
-            imageRepoDto = imageRepoDto,
+            imageRepoCommand = imageRepoCommand,
             imageManifestResponse = dockerResponse,
             imageRegistryMetadata = registryMetadata
         )
     }
 
-    fun getImageTags(imageRepoDto: ImageRepoDto): ImageTagsWithTypeDto {
-        val url = imageRepoDto.registry
+    fun getImageTags(imageRepoCommand: ImageRepoCommand): ImageTagsWithTypeDto {
+        val url = imageRepoCommand.registry
 
         val registryMetadata = registryMetadataResolver.getMetadataForRegistry(url)
 
         val tagsResponse: ImageTagsResponseDto? =
-            getBodyFromDockerRegistry(imageRepoDto, registryMetadata) { webClient ->
+            getBodyFromDockerRegistry(imageRepoCommand, registryMetadata) { webClient ->
                 logger.debug("Retrieving tags from $url")
                 webClient
                     .get()
                     .uri { uriBuilder ->
-                        uriBuilder.createTagsUrl(imageRepoDto, registryMetadata)
+                        uriBuilder.createTagsUrl(imageRepoCommand, registryMetadata)
                     }
             }
 
         if (tagsResponse == null || tagsResponse.tags.isEmpty()) {
             throw SourceSystemException(
-                message = "Tags not found for image ${imageRepoDto.defaultRepo}",
+                message = "Tags not found for image ${imageRepoCommand.defaultRepo}",
                 code = "404",
                 sourceSystem = url
             )
@@ -99,59 +101,63 @@ class DockerRegistryService(
     }
 
     private final inline fun <reified T : Any> getBodyFromDockerRegistry(
-        imageRepoDto: ImageRepoDto,
+        imageRepoCommand: ImageRepoCommand,
         registryMetadata: RegistryMetadata,
         fn: (WebClient) -> WebClient.RequestHeadersSpec<*>
     ): T? = fn(webClient)
         .headers {
             if (registryMetadata.authenticationMethod == AuthenticationMethod.KUBERNETES_TOKEN) {
                 it.setBearerAuth(
-                    imageRepoDto.bearerToken
+                    imageRepoCommand.bearerToken
                         ?: throw BadRequestException(message = "Authorization bearer token is not present")
                 )
             }
         }
         .retrieve()
         .bodyToMono<T>()
-        .blockAndHandleError(sourceSystem = imageRepoDto.registry)
+        .blockAndHandleError(sourceSystem = imageRepoCommand.registry)
 
     private fun getManifestFromRegistry(
-        imageRepoDto: ImageRepoDto,
+        imageRepoCommand: ImageRepoCommand,
         registryMetadata: RegistryMetadata,
         fn: (WebClient) -> WebClient.RequestHeadersSpec<*>
     ): ImageManifestResponseDto? = fn(webClient)
         .headers {
             if (registryMetadata.authenticationMethod == AuthenticationMethod.KUBERNETES_TOKEN) {
                 it.setBearerAuth(
-                    imageRepoDto.bearerToken
+                    imageRepoCommand.bearerToken
                         ?: throw BadRequestException(message = "Authorization bearer token is not present")
                 )
             }
         }
         .exchange()
         .flatMap { resp ->
-            if (resp.statusCode().is2xxSuccessful) {
-                val contentType = resp.headers().contentType().get().toString()
-                val dockerContentDigest = resp.headers().header(dockerContentDigestLabel).firstOrNull()
-                    ?: throw SourceSystemException(
-                        message = "No docker content digest label present on response",
-                        sourceSystem = imageRepoDto.registry
-                    )
 
+            val dockerContentDigest = resp.headers().header(dockerContentDigestLabel).firstOrNull()
+            if (resp.statusCode().is2xxSuccessful && dockerContentDigest != null) {
                 resp.bodyToMono<JsonNode>().map {
+                    val contentType = resp.headers().contentType().get().toString()
                     ImageManifestResponseDto(contentType, dockerContentDigest, it)
                 }
             } else {
-                throw SourceSystemException(
-                    message = "Error in response, status:${resp.rawStatusCode()}",
-                    sourceSystem = imageRepoDto.registry,
-                    code = resp.statusCode().name
-                )
+                resp.bodyToMono<String>().map {
+                    val message = if (dockerContentDigest == null) {
+                        // TODO: Should this be an empty mono?
+                        "No docker content digest label present on response"
+                    } else {
+                        "Error in response, status=${resp.rawStatusCode()} body=$it"
+                    }
+                    throw SourceSystemException(
+                        message = message,
+                        sourceSystem = imageRepoCommand.registry,
+                        code = resp.statusCode().name
+                    )
+                }
             }
-        }.block(Duration.ofSeconds(30))
+        }.block(Duration.ofSeconds(blockTimeout))
 
     private fun imageManifestResponseToImageManifest(
-        imageRepoDto: ImageRepoDto,
+        imageRepoCommand: ImageRepoCommand,
         imageManifestResponse: ImageManifestResponseDto,
         imageRegistryMetadata: RegistryMetadata
     ): ImageManifestDto {
@@ -159,7 +165,7 @@ class DockerRegistryService(
         val manifestBody = imageManifestResponse
             .manifestBody.checkSchemaCompatibility(
             contentType = imageManifestResponse.contentType,
-            imageRepoDto = imageRepoDto,
+            imageRepoCommand = imageRepoCommand,
             imageRegistryMetadata = imageRegistryMetadata
         )
 
@@ -187,33 +193,36 @@ class DockerRegistryService(
 
     private fun JsonNode.checkSchemaCompatibility(
         contentType: String,
-        imageRepoDto: ImageRepoDto,
+        imageRepoCommand: ImageRepoCommand,
         imageRegistryMetadata: RegistryMetadata
     ): JsonNode =
         when (contentType) {
             "application/vnd.docker.distribution.manifest.v2+json" ->
-                this.getV2Information(imageRepoDto, imageRegistryMetadata)
+                this.getV2Information(imageRepoCommand, imageRegistryMetadata)
             else -> {
                 this.getV1CompatibilityFromManifest()
             }
         }
 
-    private fun JsonNode.getV2Information(imageRepoDto: ImageRepoDto, registryMetadata: RegistryMetadata): JsonNode {
+    private fun JsonNode.getV2Information(
+        imageRepoCommand: ImageRepoCommand,
+        registryMetadata: RegistryMetadata
+    ): JsonNode {
         val configDigest = this.at("/config").get("digest").asText().replace("\\s".toRegex(), "").split(":").last()
 
-        return getBodyFromDockerRegistry(imageRepoDto, registryMetadata) { webClient ->
+        return getBodyFromDockerRegistry(imageRepoCommand, registryMetadata) { webClient ->
             webClient
                 .get()
                 .uri { uriBuilder ->
-                    uriBuilder.createConfigUrl(imageRepoDto, configDigest, registryMetadata)
+                    uriBuilder.createConfigUrl(imageRepoCommand, configDigest, registryMetadata)
                 }
                 .headers {
                     it.accept = listOf(MediaType.valueOf("application/json"))
                 }
         } ?: throw SourceSystemException(
-            message = "Unable to retrieve V2 manifest for ${imageRepoDto.defaultRepo}/sha256:$configDigest",
+            message = "Unable to retrieve V2 manifest for ${imageRepoCommand.defaultRepo}/sha256:$configDigest",
             code = "404",
-            sourceSystem = imageRepoDto.registry
+            sourceSystem = imageRepoCommand.registry
         )
     }
 
