@@ -28,11 +28,10 @@ class ApplicationConfig {
     private val logger = LoggerFactory.getLogger(ApplicationConfig::class.java)
 
     @Bean
-    fun webClient() = webClientBuilder().build()
+    fun webClient(builder: WebClient.Builder) = webClientBuilder(builder).build()
 
-    fun webClientBuilder(): WebClient.Builder =
-        WebClient
-            .builder()
+    fun webClientBuilder(builder: WebClient.Builder): WebClient.Builder =
+        builder
             .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
             .exchangeStrategies(exchangeStrategies())
             .filter(ExchangeFilterFunction.ofRequestProcessor {
