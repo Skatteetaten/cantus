@@ -3,7 +3,6 @@ package no.skatteetaten.aurora.cantus.controller
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 
-// TODO: burde dette være en DTO eller en domain model?
 data class ImageRepoCommand(
     val registry: String,
     val imageGroup: String,
