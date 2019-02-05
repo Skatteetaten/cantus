@@ -72,21 +72,21 @@ class ApplicationConfig {
 
     @Bean
     fun tcpClient(
-        @Value("\${cantus.httpclient.readTimeout:30000}") readTimeout: Long,
-        @Value("\${cantus.httpclient.writeTimeout:30000}") writeTimeout: Long,
-        @Value("\${cantus.httpclient.connectTimeout:30000}") connectTimeout: Int
+        @Value("\${cantus.httpclient.readTimeout:5000}") readTimeout: Long,
+        @Value("\${cantus.httpclient.writeTimeout:5000}") writeTimeout: Long,
+        @Value("\${cantus.httpclient.connectTimeout:5000}") connectTimeout: Int
     ): TcpClient {
         val sslProvider = SslProvider.builder().sslContext(
             SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE)
-        ).defaultConfiguration(SslProvider.DefaultConfigurationType.NONE).build()
+        ).defaultConfiguration(SslProvider.DefaultConfigurationType.NONE).handshakeTimeoutMillis(3000.toLong()).build()
 
         return TcpClient.create()
-            .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, connectTimeout)
+            .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5000)
             .secure(sslProvider)
             .doOnConnected { connection ->
                 connection
-                    .addHandlerLast(ReadTimeoutHandler(readTimeout, TimeUnit.MILLISECONDS))
-                    .addHandlerLast(WriteTimeoutHandler(writeTimeout, TimeUnit.MILLISECONDS))
+                    .addHandlerLast(ReadTimeoutHandler(5000, TimeUnit.MILLISECONDS))
+                    .addHandlerLast(WriteTimeoutHandler(5000, TimeUnit.MILLISECONDS))
             }
     }
 }

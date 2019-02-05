@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.ControllerAdvice
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.context.request.WebRequest
+import org.springframework.web.reactive.function.client.ClientResponse
 import org.springframework.web.reactive.function.client.WebClientResponseException
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler
 import reactor.core.publisher.Mono
@@ -68,3 +69,77 @@ private fun <T> Mono<T>.handleError(sourceSystem: String?) =
             else -> throw CantusException("Unknown error in response or request", it)
         }
     }
+
+fun ClientResponse.handleError(sourceSystem: String?, dockerContentDigest: String?): Throwable {
+    val statusCode = this.statusCode()
+
+    if (dockerContentDigest == null) {
+        throw CantusException(
+            message = "The docker content digest for the specified manifest could not be found",
+            code = "404"
+        )
+    }
+
+    val message = when {
+        statusCode.is4xxClientError -> {
+            when (statusCode.value()) {
+                404 -> "Resource could not be found"
+                400 -> "Invalid request"
+                403 -> if (this is Throwable) throw this else "Forbidden"
+                else -> "There has occurred a client error"
+            }
+        }
+        statusCode.is5xxServerError -> {
+            when (statusCode.value()) {
+                500 -> "An error occurred with the server when processing the request"
+                else -> "A server error has occurred"
+            }
+        }
+
+        else ->
+            if (this is Throwable) throw CantusException(
+                message = "Unknown error occurred status = ${statusCode.value()} message=${statusCode.reasonPhrase}",
+                code = statusCode.value().toString(),
+                cause = this
+            ) else "Unknown error occurred"
+    }
+
+    throw SourceSystemException(
+        message = "$message status=${statusCode.value()} message=${statusCode.reasonPhrase}",
+        sourceSystem = sourceSystem,
+        code = statusCode.value().toString()
+    )
+
+    /*this.bodyToMono<JsonNode>().let {
+        val exception = it as Throwable
+        val message = when (it) {
+            is WebClientResponseException -> {
+                throw it
+            }
+            is RuntimeException -> throw it
+            else -> {
+                if (dockerContentDigest == null) {
+                    "No docker content digest present on response"
+                } else {
+                    if (it is Throwable) {
+                        throw CantusException(
+                            message = "Error in response status=${statusCode.value()} message=${statusCode.reasonPhrase}",
+                            cause = it,
+                            code = statusCode.value().toString()
+                        )
+                    }else {
+                        throw CantusException (
+                            message = "Error in response status=${statusCode.value()} message=${statusCode.reasonPhrase}",
+                            code = statusCode.value().toString(),
+                            cause = null
+                        )
+                    }
+                }
+            }
+        }
+
+
+    }*/
+}
+
+

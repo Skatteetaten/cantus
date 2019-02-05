@@ -1,6 +1,8 @@
 package no.skatteetaten.aurora.cantus
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import okhttp3.Headers
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -8,6 +10,7 @@ import okhttp3.mockwebserver.RecordedRequest
 import org.springframework.core.io.ClassPathResource
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
+import org.springframework.web.reactive.function.client.WebClientResponseException
 
 fun MockWebServer.enqueueJson(status: Int = 200, body: Any) {
     val json = body as? String ?: ObjectMapper().writeValueAsString(body)
