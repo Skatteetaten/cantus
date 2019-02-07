@@ -78,15 +78,15 @@ class ApplicationConfig {
     ): TcpClient {
         val sslProvider = SslProvider.builder().sslContext(
             SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE)
-        ).defaultConfiguration(SslProvider.DefaultConfigurationType.NONE).handshakeTimeoutMillis(3000.toLong()).build()
+        ).defaultConfiguration(SslProvider.DefaultConfigurationType.NONE).build()
 
         return TcpClient.create()
-            .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5000)
+            .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, connectTimeout)
             .secure(sslProvider)
             .doOnConnected { connection ->
                 connection
-                    .addHandlerLast(ReadTimeoutHandler(5000, TimeUnit.MILLISECONDS))
-                    .addHandlerLast(WriteTimeoutHandler(5000, TimeUnit.MILLISECONDS))
+                    .addHandlerLast(ReadTimeoutHandler(readTimeout, TimeUnit.MILLISECONDS))
+                    .addHandlerLast(WriteTimeoutHandler(writeTimeout, TimeUnit.MILLISECONDS))
             }
     }
 }

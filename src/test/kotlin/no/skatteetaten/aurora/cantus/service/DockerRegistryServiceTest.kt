@@ -1,9 +1,12 @@
 package no.skatteetaten.aurora.cantus.service
 
+import assertk.Assert
 import assertk.assert
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import assertk.catch
+import no.skatteetaten.aurora.cantus.ApplicationConfig
+import no.skatteetaten.aurora.cantus.controller.BadRequestException
 import no.skatteetaten.aurora.cantus.controller.CantusException
 import no.skatteetaten.aurora.cantus.controller.ImageRepoCommand
 import no.skatteetaten.aurora.cantus.controller.SourceSystemException
@@ -33,8 +36,10 @@ class DockerRegistryServiceTest {
         bearerToken = "bearer token"
     )
 
+    private val applicationConfig = ApplicationConfig()
+
     private val dockerService = DockerRegistryService(
-        WebClient.create(),
+        applicationConfig.webClient(WebClient.builder(), applicationConfig.tcpClient(100, 100, 100)),
         RegistryMetadataResolver(listOf(imageRepoCommand.registry)),
         ImageRegistryUrlBuilder()
     )
@@ -70,16 +75,18 @@ class DockerRegistryServiceTest {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = [500, 400, 404])
+    @ValueSource(ints = [500, 400, 404, 403, 501, 401, 418])
     fun `Get image manifest given internal server error in docker registry`(statusCode: Int) {
         val headers = Headers.of(
             mapOf(
-                HttpHeaders.CONTENT_TYPE to MediaType.APPLICATION_JSON_VALUE
+                HttpHeaders.CONTENT_TYPE to MediaType.APPLICATION_JSON_VALUE,
+                dockerService.dockerContentDigestLabel to "sha256"
             )
         )
         server.execute(status = statusCode, headers = headers) {
             val exception = catch { dockerService.getImageManifestInformation(imageRepoCommand) }
             assert(exception).isNotNull {
+                println(it.actual.message)
                 assert(it.actual::class).isEqualTo(SourceSystemException::class)
             }
         }
@@ -97,45 +104,139 @@ class DockerRegistryServiceTest {
         }
     }
 
+    @Test
+    fun `Verify that empty manifest response throws SourceSystemException`() {
+        val response = MockResponse().addHeader(dockerService.dockerContentDigestLabel, "sha::256")
+
+        server.execute(response) {
+            val exception = catch { dockerService.getImageManifestInformation(imageRepoCommand) }
+
+            println(exception)
+            assert(exception).isNotNull {
+                assert(it.actual::class).isEqualTo(SourceSystemException::class)
+            }
+        }
+    }
+
+    @Test
+    fun `Verify that empty body throws SourceSystemException`() {
+        val response = MockResponse()
+            .setJsonFileAsBody("emptyDockerManifestV1.json")
+            .addHeader("Docker-Content-Digest", "SHA::256")
+
+        server.execute(response) {
+            val exception = catch { dockerService.getImageManifestInformation(imageRepoCommand) }
+
+            assert(exception).isNotNull {
+                assert(it.actual::class).isEqualTo(SourceSystemException::class)
+            }
+        }
+    }
+
+    @Test
+    fun `Verify that non existing Docker-Content-Digest throws SourceSystemException`() {
+        val response = MockResponse()
+            .setJsonFileAsBody("dockerManifestV1.json")
+
+        server.execute(response) {
+            val exception = catch { dockerService.getImageManifestInformation(imageRepoCommand) }
+
+            assert(exception).isNotNull {
+                assert(it.actual::class).isEqualTo(SourceSystemException::class)
+                assert(it.actual).beginsWith("Response did not contain")
+            }
+        }
+    }
+
     @ParameterizedTest
     @EnumSource(
         value = SocketPolicy::class,
-        names = [ "SHUTDOWN_INPUT_AT_END", "SHUTDOWN_OUTPUT_AT_END", "EXPECT_CONTINUE"],
-        mode = EnumSource.Mode.EXCLUDE
+        names = ["DISCONNECT_AFTER_REQUEST", "DISCONNECT_DURING_RESPONSE_BODY", "NO_RESPONSE"],
+        mode = EnumSource.Mode.INCLUDE
     )
-    fun `Handle failure from ApplicationService`(socketPolicy: SocketPolicy) {
+    fun `Handle connection failure in retrieve that throws exception`(socketPolicy: SocketPolicy) {
 
-        val response = MockResponse().setJsonFileAsBody("dockerTagList.json")
-        /*val failureResponse = MockResponse()
-            .setJsonFileAsBody("dockerManifestV1.json")
-            .addHeader("Docker-Content-Digest", "SHA::256")
-            .addHeader("ContentType", "application/json")
-        */    .apply { this.socketPolicy = socketPolicy }
+        val response = MockResponse()
+            .setJsonFileAsBody("dockerTagList.json")
+            .apply { this.socketPolicy = socketPolicy }
 
         server.execute(response) {
-            val result = dockerService.getImageTags(imageRepoCommand)
-            assert(result).isNotNull {
+            val exception = catch { dockerService.getImageTags(imageRepoCommand) }
+            assert(exception).isNotNull {
+                println(exception)
                 assert(it.actual::class).isEqualTo(CantusException::class)
             }
         }
     }
 
-/* TODO: Flytt til controller test
+    @ParameterizedTest
+    @EnumSource(
+        value = SocketPolicy::class,
+        names = ["DISCONNECT_AFTER_REQUEST", "DISCONNECT_DURING_RESPONSE_BODY", "NO_RESPONSE"],
+        mode = EnumSource.Mode.INCLUDE
+    )
+    fun `Handle connection failure in exchange that throws exception`(socketPolicy: SocketPolicy) {
 
-    @Test
-    fun `Verify that disallowed docker registry url returns bad request error`() {
-        val dockerServiceTestDisallowed = DockerRegistryService(WebClient.create(), url.toString(), allowedUrls)
+        val response = MockResponse()
+            .setJsonFileAsBody("dockerManifestV1.json")
+            .addHeader(dockerService.dockerContentDigestLabel, "SHA::256")
+            .apply { this.socketPolicy = socketPolicy }
 
-        server.execute {
-            val exception =
-                catch { dockerServiceTestDisallowed.getImageManifestInformation(imageRepoCommand) }
+        server.execute(response) {
+            val exception = catch { dockerService.getImageManifestInformation(imageRepoCommand) }
             assert(exception).isNotNull {
-                assert(it.actual::class).isEqualTo(BadRequestException::class)
-                assert(it.actual.message).isEqualTo("Invalid Docker Registry URL")
+                println(exception)
+                assert(it.actual::class).isEqualTo(CantusException::class)
             }
         }
     }
-*/
+
+    @ParameterizedTest
+    @EnumSource(
+        value = SocketPolicy::class,
+        names = ["KEEP_OPEN", "DISCONNECT_AT_END", "UPGRADE_TO_SSL_AT_END"],
+        mode = EnumSource.Mode.INCLUDE
+    )
+    fun `Handle connection failure that returns response`(socketPolicy: SocketPolicy) {
+
+        val response = MockResponse()
+            .setJsonFileAsBody("dockerTagList.json")
+            .apply { this.socketPolicy = socketPolicy }
+
+        server.execute(response) {
+            val result = dockerService.getImageTags(imageRepoCommand)
+            assert(result).isNotNull()
+        }
+    }
+
+    @Test
+    fun `Verify that missing authorization token returns bad request given authentication mode set to kubernetes token`() {
+
+        val dockerServiceNoBearer = DockerRegistryService(
+            WebClient.create(),
+            RegistryMetadataResolver(listOf("noBearerToken.com")),
+            ImageRegistryUrlBuilder()
+        )
+
+        val imageRepoCommandNoToken =
+            ImageRepoCommand("noBearerToken.com", "no_skatteetaten_aurora_demo", "whoami", "2")
+
+        server.execute {
+            val exception = catch { dockerServiceNoBearer.getImageTags(imageRepoCommandNoToken) }
+            assert(exception).isNotNull {
+                assert(it.actual::class).isEqualTo(BadRequestException::class)
+                assert(it.actual.message).isEqualTo("Authorization bearer token is not present")
+            }
+        }
+
+        server.execute {
+            val exception = catch { dockerServiceNoBearer.getImageManifestInformation(imageRepoCommandNoToken) }
+            assert(exception).isNotNull {
+                assert(it.actual::class).isEqualTo(BadRequestException::class)
+                assert(it.actual.message).isEqualTo("Authorization bearer token is not present")
+            }
+        }
+    }
 
     @Test
     fun `Verify that if V2 content type is set then retrieve manifest with V2 method`() {
@@ -160,4 +261,24 @@ class DockerRegistryServiceTest {
         }
         assert(requests.size).isEqualTo(2)
     }
+
+    @Test
+    fun `Verify that V2 manifest not found is handled`() {
+        val response = MockResponse()
+            .setJsonFileAsBody("dockerManifestV2.json")
+            .setHeader("Content-Type", "application/vnd.docker.distribution.manifest.v2+json")
+            .addHeader("Docker-Content-Digest", "sha256")
+        val response2 = MockResponse()
+
+        val requests = server.execute(response, response2) {
+            val exception = catch { dockerService.getImageManifestInformation(imageRepoCommand) }
+
+            assert(exception).isNotNull {
+                assert(it.actual::class).isEqualTo(SourceSystemException::class)
+                assert(it.actual).beginsWith("Unable to retrieve Vl1 manifest")
+            }
+        }
+    }
+
+    private fun Assert<Throwable>.beginsWith(subString: String) = actual.message?.startsWith(subString)
 }

@@ -110,7 +110,7 @@ class DockerRegistryControllerTest {
         )
 
         mockMvc.perform(get(path))
-            .andExpect(status().`is`(500))
+            .andExpect(status().`is`(200))
             .andExpect(jsonPath("$.items").isEmpty)
             .andExpect(jsonPath("$.success").value(false))
             .andExpect(jsonPath("$.exception.code").value("404"))
@@ -139,6 +139,42 @@ class DockerRegistryControllerTest {
             .andExpect(jsonPath("$.items[2].group").value("BUGFIX"))
             .andExpect(jsonPath("$.items[2].tagResource[0].name").value("0.0.0"))
             .andExpect(jsonPath("$.items[2].itemsInGroup").value(2))
+    }
+
+    @Test
+    fun `Verify that allowed override docker registry url is validated as allowed`() {
+        val path = "/no_skatteetaten_aurora_demo/whoami/tags?dockerRegistryUrl=allowedurl.no"
+
+        val tags = ImageTagsWithTypeDto(
+            tags = parseJsonFromFile("dockerTagList.json")["tags"].map {
+                ImageTagTypedDto(name = it.asText())
+            }
+        )
+        given(
+            dockerService.getImageTags(any())
+        ).willReturn(tags)
+
+        mockMvc.perform(get(path))
+            .andExpect(status().`is`(200))
+            .andExpect(jsonPath("$.success").value(true))
+    }
+
+    @Test
+    fun `Verify that disallowed docker registry url returns bad request error`() {
+        val path = "/no_skatteetaten_aurora_demo/whoami/tags?dockerRegistryUrl=vg.no"
+
+        val tags = ImageTagsWithTypeDto(
+            tags = parseJsonFromFile("dockerTagList.json")["tags"].map {
+                ImageTagTypedDto(name = it.asText())
+            }
+        )
+        given(
+            dockerService.getImageTags(any())
+        ).willReturn(tags)
+
+        mockMvc.perform(get(path))
+            .andExpect(status().`is`(400))
+            .andExpect(jsonPath("$.success").value(false))
     }
 
     fun parseJsonFromFile(fileName: String): JsonNode {

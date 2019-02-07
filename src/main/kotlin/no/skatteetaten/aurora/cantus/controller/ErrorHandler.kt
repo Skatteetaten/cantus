@@ -30,12 +30,16 @@ class ErrorHandler : ResponseEntityExceptionHandler() {
         return handleException(e, request, HttpStatus.BAD_REQUEST)
     }
 
+    @ExceptionHandler(SourceSystemException::class)
+    fun handleSourceSystem(e: SourceSystemException, request: WebRequest): ResponseEntity<Any>? {
+        return handleException(e, request, HttpStatus.OK)
+    }
+
     private fun handleException(e: Exception, request: WebRequest, httpStatus: HttpStatus): ResponseEntity<Any>? {
         val auroraResponse = AuroraResponse<HalResource>(
             success = false,
-            message = e.message ?: "Cantus error",
+            message = e.message ?: "",
             exception = e
-
         )
         val headers = HttpHeaders().apply { contentType = MediaType.APPLICATION_JSON }
         logger.debug("Handle exception", e)
@@ -43,20 +47,13 @@ class ErrorHandler : ResponseEntityExceptionHandler() {
     }
 }
 
-fun <T> Mono<T>.blockNonNullAndHandleError(
-    duration: Duration = Duration.ofSeconds(blockTimeout),
-    sourceSystem: String? = null
-) =
-    this.switchIfEmpty(SourceSystemException("Empty response", sourceSystem = sourceSystem).toMono())
-        .blockAndHandleError(duration, sourceSystem)!!
-
 fun <T> Mono<T>.blockAndHandleError(
     duration: Duration = Duration.ofSeconds(blockTimeout),
     sourceSystem: String? = null
 ) =
     this.handleError(sourceSystem).toMono().block(duration)
 
-private fun <T> Mono<T>.handleError(sourceSystem: String?) =
+fun <T> Mono<T>.handleError(sourceSystem: String?) =
     this.doOnError {
         when (it) {
             is WebClientResponseException -> throw SourceSystemException(
@@ -70,44 +67,33 @@ private fun <T> Mono<T>.handleError(sourceSystem: String?) =
         }
     }
 
-fun ClientResponse.handleError(sourceSystem: String?, dockerContentDigest: String?): Throwable {
+fun ClientResponse.handleStatusCodeError(sourceSystem: String?): Throwable {
     val statusCode = this.statusCode()
-
-    if (dockerContentDigest == null) {
-        throw CantusException(
-            message = "The docker content digest for the specified manifest could not be found",
-            code = "404"
-        )
-    }
 
     val message = when {
         statusCode.is4xxClientError -> {
             when (statusCode.value()) {
                 404 -> "Resource could not be found"
                 400 -> "Invalid request"
-                403 -> if (this is Throwable) throw this else "Forbidden"
+                403 -> "Forbidden"
                 else -> "There has occurred a client error"
             }
         }
         statusCode.is5xxServerError -> {
             when (statusCode.value()) {
-                500 -> "An error occurred with the server when processing the request"
+                500 -> "An internal server error has occurred in the docker registry"
                 else -> "A server error has occurred"
             }
         }
 
         else ->
-            if (this is Throwable) throw CantusException(
-                message = "Unknown error occurred status = ${statusCode.value()} message=${statusCode.reasonPhrase}",
-                code = statusCode.value().toString(),
-                cause = this
-            ) else "Unknown error occurred"
+            "Unknown error occurred"
     }
 
     throw SourceSystemException(
         message = "$message status=${statusCode.value()} message=${statusCode.reasonPhrase}",
         sourceSystem = sourceSystem,
-        code = statusCode.value().toString()
+        code = "200"
     )
 
     /*this.bodyToMono<JsonNode>().let {
@@ -141,5 +127,3 @@ fun ClientResponse.handleError(sourceSystem: String?, dockerContentDigest: Strin
 
     }*/
 }
-
-
