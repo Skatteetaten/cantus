@@ -95,35 +95,4 @@ fun ClientResponse.handleStatusCodeError(sourceSystem: String?): Throwable {
         sourceSystem = sourceSystem,
         code = "200"
     )
-
-    /*this.bodyToMono<JsonNode>().let {
-        val exception = it as Throwable
-        val message = when (it) {
-            is WebClientResponseException -> {
-                throw it
-            }
-            is RuntimeException -> throw it
-            else -> {
-                if (dockerContentDigest == null) {
-                    "No docker content digest present on response"
-                } else {
-                    if (it is Throwable) {
-                        throw CantusException(
-                            message = "Error in response status=${statusCode.value()} message=${statusCode.reasonPhrase}",
-                            cause = it,
-                            code = statusCode.value().toString()
-                        )
-                    }else {
-                        throw CantusException (
-                            message = "Error in response status=${statusCode.value()} message=${statusCode.reasonPhrase}",
-                            code = statusCode.value().toString(),
-                            cause = null
-                        )
-                    }
-                }
-            }
-        }
-
-
-    }*/
 }
