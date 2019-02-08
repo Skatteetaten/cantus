@@ -21,19 +21,20 @@ val blockTimeout: Long = 30
 class ErrorHandler : ResponseEntityExceptionHandler() {
 
     @ExceptionHandler(RuntimeException::class)
-    fun handleGenericError(e: RuntimeException, request: WebRequest): ResponseEntity<Any>? {
-        return handleException(e, request, HttpStatus.INTERNAL_SERVER_ERROR)
-    }
+    fun handleGenericError(e: RuntimeException, request: WebRequest) =
+        handleException(e, request, HttpStatus.INTERNAL_SERVER_ERROR)
+
+    @ExceptionHandler(ForbiddenException::class)
+    fun handleForbiddenRequest(e: ForbiddenException, request: WebRequest) =
+        handleException(e, request, HttpStatus.FORBIDDEN)
 
     @ExceptionHandler(BadRequestException::class)
-    fun handleBadRequest(e: BadRequestException, request: WebRequest): ResponseEntity<Any>? {
-        return handleException(e, request, HttpStatus.BAD_REQUEST)
-    }
+    fun handleBadRequest(e: BadRequestException, request: WebRequest) =
+        handleException(e, request, HttpStatus.BAD_REQUEST)
 
     @ExceptionHandler(SourceSystemException::class)
-    fun handleSourceSystem(e: SourceSystemException, request: WebRequest): ResponseEntity<Any>? {
-        return handleException(e, request, HttpStatus.OK)
-    }
+    fun handleSourceSystem(e: SourceSystemException, request: WebRequest) =
+        handleException(e, request, HttpStatus.OK)
 
     private fun handleException(e: Exception, request: WebRequest, httpStatus: HttpStatus): ResponseEntity<Any>? {
         val auroraResponse = AuroraResponse<HalResource>(
@@ -59,16 +60,20 @@ fun <T> Mono<T>.handleError(sourceSystem: String?) =
             is WebClientResponseException -> throw SourceSystemException(
                 message = "Error in response, status:${it.statusCode} message:${it.statusText}",
                 cause = it,
-                sourceSystem = sourceSystem,
-                code = it.statusCode.name
+                sourceSystem = sourceSystem
             )
             is SourceSystemException -> throw it
             else -> throw CantusException("Unknown error in response or request", it)
         }
     }
 
-fun ClientResponse.handleStatusCodeError(sourceSystem: String?): Throwable {
+fun ClientResponse.handleStatusCodeError(sourceSystem: String?) {
+
     val statusCode = this.statusCode()
+
+    if (statusCode.is2xxSuccessful) {
+        return
+    }
 
     val message = when {
         statusCode.is4xxClientError -> {
@@ -92,7 +97,6 @@ fun ClientResponse.handleStatusCodeError(sourceSystem: String?): Throwable {
 
     throw SourceSystemException(
         message = "$message status=${statusCode.value()} message=${statusCode.reasonPhrase}",
-        sourceSystem = sourceSystem,
-        code = "200"
+        sourceSystem = sourceSystem
     )
 }

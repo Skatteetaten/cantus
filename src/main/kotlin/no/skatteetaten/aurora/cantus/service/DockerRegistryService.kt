@@ -2,7 +2,7 @@ package no.skatteetaten.aurora.cantus.service
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import no.skatteetaten.aurora.cantus.controller.BadRequestException
+import no.skatteetaten.aurora.cantus.controller.ForbiddenException
 import no.skatteetaten.aurora.cantus.controller.ImageRepoCommand
 import no.skatteetaten.aurora.cantus.controller.SourceSystemException
 import no.skatteetaten.aurora.cantus.controller.blockAndHandleError
@@ -63,7 +63,6 @@ class DockerRegistryService(
                 }
         } ?: throw SourceSystemException(
             message = "Manifest not found for image ${imageRepoCommand.manifestRepo}",
-            code = "404",
             sourceSystem = url
         )
 
@@ -93,7 +92,6 @@ class DockerRegistryService(
         if (tagsResponse == null || tagsResponse.tags.isEmpty()) {
             throw SourceSystemException(
                 message = "Tags not found for image ${imageRepoCommand.defaultRepo}",
-                code = "404",
                 sourceSystem = url
             )
         }
@@ -112,7 +110,7 @@ class DockerRegistryService(
             if (registryMetadata.authenticationMethod == AuthenticationMethod.KUBERNETES_TOKEN) {
                 it.setBearerAuth(
                     imageRepoCommand.bearerToken
-                        ?: throw BadRequestException(message = "Authorization bearer token is not present")
+                        ?: throw ForbiddenException("Authorization bearer token is not present")
                 )
             }
         }
@@ -129,18 +127,19 @@ class DockerRegistryService(
             if (registryMetadata.authenticationMethod == AuthenticationMethod.KUBERNETES_TOKEN) {
                 it.setBearerAuth(
                     imageRepoCommand.bearerToken
-                        ?: throw BadRequestException(message = "Authorization bearer token is not present")
+                        ?: throw ForbiddenException("Authorization bearer token is not present")
                 )
             }
         }
         .exchange()
         .flatMap { resp ->
-            if (!resp.statusCode().is2xxSuccessful) {
-                resp.handleStatusCodeError(imageRepoCommand.registry)
-            }
+            resp.handleStatusCodeError(imageRepoCommand.registry)
 
             val dockerContentDigest = resp.headers().header(dockerContentDigestLabel).firstOrNull()
-                ?: throw SourceSystemException(message = "Response did not contain ${this.dockerContentDigestLabel} header")
+                ?: throw SourceSystemException(
+                    message = "Response did not contain ${this.dockerContentDigestLabel} header",
+                    sourceSystem = imageRepoCommand.registry
+                )
 
             resp.bodyToMono<JsonNode>().map {
                 val contentType = resp.headers().contentType().get().toString()
@@ -148,7 +147,7 @@ class DockerRegistryService(
             }
         }
         .handleError(imageRepoCommand.registry)
-        .block(Duration.ofSeconds(30.toLong()))
+        .block(Duration.ofSeconds(5))
 
     private fun imageManifestResponseToImageManifest(
         imageRepoCommand: ImageRepoCommand,
@@ -225,18 +224,19 @@ class DockerRegistryService(
                 }
         } ?: throw SourceSystemException(
             message = "Unable to retrieve V2 manifest for ${imageRepoCommand.defaultRepo}/sha256:$configDigest",
-            code = "404",
             sourceSystem = imageRepoCommand.registry
         )
     }
 
-    private fun JsonNode.getV1CompatibilityFromManifest(imageRepoCommand: ImageRepoCommand) =
-        jacksonObjectMapper().readTree(this.get("history")?.get(0)?.get("v1Compatibility")?.asText() ?: "")
-            ?: throw SourceSystemException(
+    private fun JsonNode.getV1CompatibilityFromManifest(imageRepoCommand: ImageRepoCommand): JsonNode {
+        val v1Compatibility =
+            this.get("history")?.get(0)?.get("v1Compatibility")?.asText() ?: throw SourceSystemException(
                 message = "Body of v1 manifest is empty for image ${imageRepoCommand.manifestRepo}",
-                code = "404",
                 sourceSystem = imageRepoCommand.registry
             )
+
+        return jacksonObjectMapper().readTree(v1Compatibility)
+    }
 
     private fun JsonNode.getVariableFromManifestBody(label: String) = this.get(label)?.asText() ?: ""
 }
