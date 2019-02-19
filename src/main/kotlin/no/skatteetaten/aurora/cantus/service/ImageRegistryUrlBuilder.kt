@@ -1,7 +1,10 @@
 package no.skatteetaten.aurora.cantus.service
 
+import mu.KotlinLogging
 import no.skatteetaten.aurora.cantus.controller.ImageRepoCommand
 import org.springframework.stereotype.Component
+
+private val logger = KotlinLogging.logger {}
 
 @Component
 class ImageRegistryUrlBuilder {
