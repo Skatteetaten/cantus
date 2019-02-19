@@ -1,14 +1,18 @@
 package no.skatteetaten.aurora.cantus
 
 import io.netty.channel.ChannelOption
+import io.netty.handler.ssl.SslContext
 import io.netty.handler.ssl.SslContextBuilder
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory
 import io.netty.handler.timeout.ReadTimeoutHandler
 import io.netty.handler.timeout.WriteTimeoutHandler
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Primary
+import org.springframework.context.annotation.Profile
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.http.client.reactive.ReactorClientHttpConnector
@@ -21,6 +25,11 @@ import reactor.core.publisher.toMono
 import reactor.netty.http.client.HttpClient
 import reactor.netty.tcp.SslProvider
 import reactor.netty.tcp.TcpClient
+import java.io.FileInputStream
+import java.security.KeyStore
+import java.security.PrivateKey
+import java.security.cert.CertificateFactory
+import java.security.cert.X509Certificate
 import java.util.concurrent.TimeUnit
 import kotlin.math.min
 
@@ -74,10 +83,16 @@ class ApplicationConfig {
     fun tcpClient(
         @Value("\${cantus.httpclient.readTimeout:5000}") readTimeout: Long,
         @Value("\${cantus.httpclient.writeTimeout:5000}") writeTimeout: Long,
-        @Value("\${cantus.httpclient.connectTimeout:5000}") connectTimeout: Int
+        @Value("\${cantus.httpclient.connectTimeout:5000}") connectTimeout: Int,
+        @Value("\${cantus.ssl.key-store-password") keyStorePass: String,
+        @Value("\${cantus.ssl.key-alias") keyAlias: String,
+        trustStore: KeyStore?
     ): TcpClient {
         val sslProvider = SslProvider.builder().sslContext(
-            SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE)
+            SslContextBuilder.forClient()
+                .keyManager(trustStore?.getKey(keyAlias, keyStorePass.toCharArray()) as PrivateKey)
+            .trustManager( trustStore.getCertificateChain(keyAlias) )
+            .build()
         ).defaultConfiguration(SslProvider.DefaultConfigurationType.NONE).build()
 
         return TcpClient.create()
@@ -89,4 +104,21 @@ class ApplicationConfig {
                     .addHandlerLast(WriteTimeoutHandler(writeTimeout, TimeUnit.MILLISECONDS))
             }
     }
+
+    @ConditionalOnMissingBean(KeyStore::class)
+    @Bean
+    fun localKeyStore(): KeyStore? = null
+
+    @Profile("openshift")
+    @Primary
+    @Bean
+    fun openshiftSSLContext(@Value("\${trust.store}") trustStoreLocation: String): KeyStore? =
+        KeyStore.getInstance(KeyStore.getDefaultType())?.let { ks ->
+            ks.load(FileInputStream(trustStoreLocation), "changeit".toCharArray())
+            val fis = FileInputStream("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
+            CertificateFactory.getInstance("X509").generateCertificates(fis).forEach {
+                ks.setCertificateEntry((it as X509Certificate).subjectX500Principal.name, it)
+            }
+            ks
+        }
 }
