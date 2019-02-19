@@ -28,7 +28,7 @@ class ImageRegistryUrlBuilder {
         imageRepoCommand: ImageRepoCommand,
         registryMetadata: RegistryMetadata
     ): String {
-        logger.debug("Retrieving type=config from schemaVersion=v1 url=${registryMetadata.fullRegistryUrl} image=${imageRepoCommand.manifestRepo}")
+        logger.debug("Retrieving type=manifest from schemaVersion=v1 url=${registryMetadata.fullRegistryUrl} image=${imageRepoCommand.manifestRepo}")
         return "${registryMetadata.fullRegistryUrl}/{imageGroup}/{imageName}/manifests/{imageTag}"
     }
 }
