@@ -41,7 +41,7 @@ class RegistryMetadataResolver(
             "^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9]):[0-9]{1,4}\$".toRegex()
 
         val isInternal =
-            internalRegistryAddresses.any { it == registry} || registry.matches(ipV4WithPortRegex)
+            internalRegistryAddresses.any { it == registry } || registry.matches(ipV4WithPortRegex)
 
         return if (isInternal) {
             this.http(registry)
@@ -50,5 +50,3 @@ class RegistryMetadataResolver(
         }
     }
 }
-
-
