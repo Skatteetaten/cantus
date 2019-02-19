@@ -17,10 +17,10 @@ import uk.q3c.rest.hal.HalResource
 import java.time.Duration
 
 private val blockTimeout: Long = 30
+private val errorLogger = KotlinLogging.logger {}
 
 @ControllerAdvice
 class ErrorHandler : ResponseEntityExceptionHandler() {
-    private val errorLogger = KotlinLogging.logger {}
 
     @ExceptionHandler(RuntimeException::class)
     fun handleGenericError(e: RuntimeException, request: WebRequest) =
