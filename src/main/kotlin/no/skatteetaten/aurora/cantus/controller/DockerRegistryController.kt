@@ -20,27 +20,31 @@ class DockerRegistryController(
         @RequestHeader(required = false, value = "Authorization") bearerToken: String?
     ): AuroraResponse<ImageTagResource> {
 
-        val imageTagResources = tagUrl.map{ tagUrl ->
+        val imageTagResources = tagUrl.map { tagUrl ->
             val parts = tagUrl.split("/")
 
             // TODO: Feilhåndtering skal diskuteres under teammøte
-            if(parts.size != 4) throw BadRequestException(message = "En eller flere av manifestene feilet")
+            val registryUrl =
+                when {
+                    parts.size != 4 -> throw BadRequestException(message = "En eller flere av manifestene feilet")
+                    parts[0].isEmpty() -> null
+                    else -> parts[0]
+                }
 
-
-        val imageRepoCommand = imageRepoDtoAssembler.createAndValidateCommand(
-            overrideRegistryUrl = parts[0],
-            name = parts[1],
-            namespace = parts[2],
-            tag = parts[3],
-            bearerToken = bearerToken
-        )
-         dockerRegistryService
-            .getImageManifestInformation(imageRepoCommand).let { manifestDto ->
-                imageTagResourceAssembler.toResource(
-                    manifestDto,
-                    requestUrl = tagUrl
-                )
-            }
+            val imageRepoCommand = imageRepoDtoAssembler.createAndValidateCommand(
+                overrideRegistryUrl = registryUrl,
+                namespace = parts[1],
+                name = parts[2],
+                tag = parts[3],
+                bearerToken = bearerToken
+            )
+            dockerRegistryService
+                .getImageManifestInformation(imageRepoCommand).let { manifestDto ->
+                    imageTagResourceAssembler.toResource(
+                        manifestDto,
+                        requestUrl = tagUrl
+                    )
+                }
         }
 
         return imageTagResourceAssembler.toAuroraResponse(imageTagResources, "Successfully retrieved manifests")
