@@ -22,7 +22,8 @@ data class ImageTagResource(
     val dockerVersion: String,
     val dockerDigest: String,
     val java: JavaImage? = null,
-    val node: NodeJsImage? = null
+    val node: NodeJsImage? = null,
+    val requsestUrl: String
 ) : HalResource()
 
 data class JavaImage(
@@ -102,21 +103,11 @@ data class AuroraResponse<T : HalResource>(
 
 @Component
 class ImageTagResourceAssembler {
-    fun toResource(manifestDto: ImageManifestDto, message: String): AuroraResponse<ImageTagResource> =
+    fun toAuroraResponse(resources: List<ImageTagResource>, message: String) =
         AuroraResponse(
             success = true,
             message = message,
-            items = listOf(
-                ImageTagResource(
-                    java = JavaImage.fromDto(manifestDto),
-                    dockerDigest = manifestDto.dockerDigest,
-                    dockerVersion = manifestDto.dockerVersion,
-                    appVersion = manifestDto.appVersion,
-                    auroraVersion = manifestDto.auroraVersion,
-                    timeline = ImageBuildTimeline.fromDto(manifestDto),
-                    node = NodeJsImage.fromDto(manifestDto)
-                )
-            )
+            items = resources
         )
 
     fun toResource(tags: ImageTagsWithTypeDto, message: String): AuroraResponse<TagResource> =
@@ -147,5 +138,17 @@ class ImageTagResourceAssembler {
                     }
                 )
             }
+        )
+
+    fun toResource(manifestDto: ImageManifestDto, requestUrl: String) =
+        ImageTagResource(
+            java = JavaImage.fromDto(manifestDto),
+            dockerDigest = manifestDto.dockerDigest,
+            dockerVersion = manifestDto.dockerVersion,
+            appVersion = manifestDto.appVersion,
+            auroraVersion = manifestDto.auroraVersion,
+            timeline = ImageBuildTimeline.fromDto(manifestDto),
+            node = NodeJsImage.fromDto(manifestDto),
+            requsestUrl = requestUrl
         )
 }

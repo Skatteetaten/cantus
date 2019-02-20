@@ -14,7 +14,39 @@ class DockerRegistryController(
     val imageRepoDtoAssembler: ImageRepoDtoAssembler
 ) {
 
-    @GetMapping("/{affiliation}/{name}/{tag}/manifest")
+    @GetMapping("/manifest")
+    fun getManifestInformationList(
+        @RequestParam tagUrl: List<String>,
+        @RequestHeader(required = false, value = "Authorization") bearerToken: String?
+    ): AuroraResponse<ImageTagResource> {
+
+        val imageTagResources = tagUrl.map{ tagUrl ->
+            val parts = tagUrl.split("/")
+
+            // TODO: Feilhåndtering skal diskuteres under teammøte
+            if(parts.size != 4) throw BadRequestException(message = "En eller flere av manifestene feilet")
+
+
+        val imageRepoCommand = imageRepoDtoAssembler.createAndValidateCommand(
+            overrideRegistryUrl = parts[0],
+            name = parts[1],
+            namespace = parts[2],
+            tag = parts[3],
+            bearerToken = bearerToken
+        )
+         dockerRegistryService
+            .getImageManifestInformation(imageRepoCommand).let { manifestDto ->
+                imageTagResourceAssembler.toResource(
+                    manifestDto,
+                    requestUrl = tagUrl
+                )
+            }
+        }
+
+        return imageTagResourceAssembler.toAuroraResponse(imageTagResources, "Successfully retrieved manifests")
+    }
+
+    /*@GetMapping("/{affiliation}/{name}/{tag}/manifest")
     fun getManifestInformation(
         @PathVariable affiliation: String,
         @PathVariable name: String,
@@ -36,7 +68,7 @@ class DockerRegistryController(
                     "Successfully retrieved manifest information for image ${imageRepoCommand.manifestRepo}"
                 )
             }
-    }
+    }*/
 
     @GetMapping("/{affiliation}/{name}/tags")
     fun getImageTags(
