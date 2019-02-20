@@ -18,10 +18,12 @@ class DockerRegistryController(
     fun getManifestInformationList(
         @RequestParam tagUrl: List<String>,
         @RequestHeader(required = false, value = "Authorization") bearerToken: String?
-    ): AuroraResponse<ImageTagResource> {
+    ): AuroraResponse<ImageTagResource, CantusFailure> {
 
-        val imageTagResources = tagUrl.map { tagUrl ->
-            val parts = tagUrl.split("/")
+        val responses: List<Try<ImageTagResource, CantusFailure>> = tagUrl.map { tagUrl ->
+            try {
+
+                val parts = tagUrl.split("/")
 
             // TODO: Feilhåndtering skal diskuteres under teammøte
             val registryUrl =
@@ -38,16 +40,21 @@ class DockerRegistryController(
                 tag = parts[3],
                 bearerToken = bearerToken
             )
-            dockerRegistryService
-                .getImageManifestInformation(imageRepoCommand).let { manifestDto ->
+                Try.Success(dockerRegistryService
+                    .getImageManifestInformation(imageRepoCommand).let { manifestDto ->
                     imageTagResourceAssembler.toResource(
                         manifestDto,
                         requestUrl = tagUrl
                     )
-                }
+                })
+            } catch(e:Throwable) {
+                Try.Failure(CantusFailure(tagUrl, e))
+            }
         }
 
-        return imageTagResourceAssembler.toAuroraResponse(imageTagResources, "Successfully retrieved manifests")
+        val itemsAndFailure = responses.getSuccessAndFailures()
+
+        return imageTagResourceAssembler.toAuroraResponse(itemsAndFailure.first, itemsAndFailure.second)
     }
 
     /*@GetMapping("/{affiliation}/{name}/{tag}/manifest")
@@ -80,19 +87,24 @@ class DockerRegistryController(
         @PathVariable name: String,
         @RequestParam(required = false) dockerRegistryUrl: String?,
         @RequestHeader(required = false, value = "Authorization") bearerToken: String?
-    ): AuroraResponse<TagResource> {
+    ): AuroraResponse<TagResource, CantusFailure> {
         val imageRepoCommand = imageRepoDtoAssembler.createAndValidateCommand(
             overrideRegistryUrl = dockerRegistryUrl,
             name = name,
             namespace = affiliation,
             bearerToken = bearerToken
         )
-        return dockerRegistryService.getImageTags(imageRepoCommand).let { imageTagsWithTypeDto ->
-            imageTagResourceAssembler.toResource(
-                imageTagsWithTypeDto,
-                "Successfully retrieved tags for image ${imageRepoCommand.defaultRepo}"
-            )
-        }
+        val response =
+            try {
+                Try.Success(dockerRegistryService.getImageTags(imageRepoCommand).let { imageTagsWithTypeDto ->
+                    imageTagResourceAssembler.toResource(
+                        imageTagsWithTypeDto,
+                        "Successfully retrieved tags for image ${imageRepoCommand.defaultRepo}"
+                    )
+                })
+            } catch (e: Throwable) {
+                Try.Failure(CantusFailure(imageRepoCommand.manifestRepo, e))
+            }
     }
 
     @GetMapping("/{affiliation}/{name}/tags/semantic")
@@ -101,7 +113,7 @@ class DockerRegistryController(
         @PathVariable name: String,
         @RequestParam(required = false) dockerRegistryUrl: String?,
         @RequestHeader(required = false, value = "Authorization") bearerToken: String?
-    ): AuroraResponse<GroupedTagResource> {
+    ): AuroraResponse<GroupedTagResource, CantusFailure> {
         val imageRepoCommand = imageRepoDtoAssembler.createAndValidateCommand(
             overrideRegistryUrl = dockerRegistryUrl,
             name = name,

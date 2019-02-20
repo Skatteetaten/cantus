@@ -84,47 +84,55 @@ data class NodeJsImage(
     }
 }
 
-data class AuroraResponse<T : HalResource>(
+data class CantusFailure(val url: String, val error:Throwable)
+
+sealed class Try<out A, out B> {
+    class Success<A>(val value: A): Try<A, Nothing>()
+    class Failure<B>(val value: B): Try<Nothing, B>()
+}
+
+inline fun <reified S: Any, reified T: Any> List<Try<S,T>>.getSuccessAndFailures(): Pair<List<S>, List<T>>{
+    val items= this.mapNotNull {if(it is Try.Success) {
+        it.value
+    } else null }
+
+    val failure= this.mapNotNull {if(it is Try.Failure) {
+        it.value
+    } else null }
+
+    return Pair(items, failure)
+}
+
+data class AuroraResponse<T : HalResource, F>(
     val items: List<T> = emptyList(),
+    val failure: List<F> = emptyList(),
     val success: Boolean = true,
     val message: String = "OK",
-    val exception: Throwable? = null,
-    val count: Int = items.size
-) : HalResource() {
-    // TODO: trenger vi denne?
-    val item: T?
-        get() {
-            if (count == 1) {
-                return items.first()
-            }
-            return null
-        }
-}
+    val failureCount: Int = failure.size,
+    val successCount:Int = items.size,
+    val count: Int = failureCount + successCount
+) : HalResource()
 
 @Component
 class ImageTagResourceAssembler {
-    fun toAuroraResponse(resources: List<ImageTagResource>, message: String) =
+    fun toAuroraResponse(resources: List<ImageTagResource>, failures: List<CantusFailure>) =
         AuroraResponse(
-            success = true,
-            message = message,
-            items = resources
+            success = failures.isEmpty(),
+            message = if(failures.isEmpty()) failures.first().error.message ?: "" else "Success",
+            items = resources,
+            failure = failures
         )
 
-    fun toResource(tags: ImageTagsWithTypeDto, message: String): AuroraResponse<TagResource> =
-        AuroraResponse(
-            success = true,
-            message = message,
-            items = tags.tags.map {
-                TagResource(
-                    name = it.name
-                )
-            }
-        )
+    fun toTagResource(tags: ImageTagsWithTypeDto, message: String) =
+        tags.tags.map {
+            TagResource(it.name)
+        }
 
-    fun toGroupedResource(tags: ImageTagsWithTypeDto, message: String): AuroraResponse<GroupedTagResource> =
+    fun toGroupedResource(tags: ImageTagsWithTypeDto, message: String, failure: List<CantusFailure>): AuroraResponse<GroupedTagResource, CantusFailure> =
         AuroraResponse(
-            success = true,
+            success = failure.isEmpty(),
             message = message,
+            failure = failure,
             items = tags.tags.groupBy {
                 it.type
             }.map { groupedTag ->
