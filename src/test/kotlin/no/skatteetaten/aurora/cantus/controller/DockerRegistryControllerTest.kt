@@ -42,7 +42,7 @@ class DockerRegistryControllerTest {
     @ParameterizedTest
     @ValueSource(
         strings = [
-            "/no_skatteetaten_aurora_demo/whoami/2/manifest",
+            "/manifest?tagUrl=/no_skatteetaten_aurora_demo/whoami/2",
             "/no_skatteetaten_aurora_demo/whoami/tags",
             "/no_skatteetaten_aurora_demo/whoami/tags/semantic"
         ]
@@ -78,7 +78,7 @@ class DockerRegistryControllerTest {
     @ValueSource(
         strings = [
             "/no_skatteetaten_aurora_demo/whoami/tags",
-            "/no_skatteetaten_aurora_demo/whoami/2/manifest"
+            "/manifest?tagUrl=docker.com/no_skatteetaten_aurora_demo/whoami/2"
         ]
     )
     fun `Get docker registry image info given missing resource`(path: String) {
@@ -108,7 +108,7 @@ class DockerRegistryControllerTest {
     @ValueSource(
         strings = [
             "/no_skatteetaten_aurora_demo/whoami/tags",
-            "/no_skatteetaten_aurora_demo/whoami/2/manifest"
+            "/manifest?tagUrl=/no_skatteetaten_aurora_demo/whoami/2"
         ]
     )
     fun `Get request given no authorization token throw ForbiddenException`(path: String) {
@@ -131,7 +131,7 @@ class DockerRegistryControllerTest {
         strings = [
             "/no_skatteetaten_aurora_demo/whoami/tags",
             "/no_skatteetaten_aurora_demo/whoami/tags/semantic",
-            "/no_skatteetaten_aurora_demo/whoami/2/manifest"
+            "/manifest?tagUrl=/no_skatteetaten_aurora_demo/whoami/2"
         ]
     )
     fun `Get request given throw IllegalStateException`(path: String) {
