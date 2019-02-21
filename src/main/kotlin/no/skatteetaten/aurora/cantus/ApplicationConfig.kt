@@ -24,6 +24,7 @@ import reactor.netty.http.client.HttpClient
 import reactor.netty.tcp.SslProvider
 import reactor.netty.tcp.TcpClient
 import java.io.FileInputStream
+import java.io.FileNotFoundException
 import java.security.KeyStore
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
@@ -112,10 +113,16 @@ class ApplicationConfig {
     @Bean
     fun openshiftSSLContext(@Value("\${trust.store}") trustStoreLocation: String): KeyStore? =
         KeyStore.getInstance(KeyStore.getDefaultType())?.let { ks ->
-            ks.load(FileInputStream(trustStoreLocation), "changeit".toCharArray())
-            val fis = FileInputStream("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
-            CertificateFactory.getInstance("X509").generateCertificates(fis).forEach {
-                ks.setCertificateEntry((it as X509Certificate).subjectX500Principal.name, it)
+            try {
+                ks.load(FileInputStream(trustStoreLocation), "changeit".toCharArray())
+                val fis = FileInputStream("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
+                CertificateFactory.getInstance("X509").generateCertificates(fis).forEach {
+                    ks.setCertificateEntry((it as X509Certificate).subjectX500Principal.name, it)
+                }
+                logger.debug("SSLContext successfully loaded")
+            } catch(e: Exception){
+                logger.debug("SSLContext failed to load")
+                throw e
             }
             ks
         }
