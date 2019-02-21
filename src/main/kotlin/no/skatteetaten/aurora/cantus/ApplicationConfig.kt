@@ -4,7 +4,7 @@ import io.netty.channel.ChannelOption
 import io.netty.handler.ssl.SslContextBuilder
 import io.netty.handler.timeout.ReadTimeoutHandler
 import io.netty.handler.timeout.WriteTimeoutHandler
-import org.slf4j.LoggerFactory
+import mu.KotlinLogging
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean
@@ -32,10 +32,10 @@ import java.util.concurrent.TimeUnit
 import javax.net.ssl.TrustManagerFactory
 import kotlin.math.min
 
+private val logger = KotlinLogging.logger {}
+
 @Configuration
 class ApplicationConfig {
-
-    private val logger = LoggerFactory.getLogger(ApplicationConfig::class.java)
 
     @Bean
     fun webClient(builder: WebClient.Builder, tcpClient: TcpClient) =
@@ -47,7 +47,7 @@ class ApplicationConfig {
                     val t = token.substring(0, min(token.length, 11)).replace("Bearer", "")
                     "bearer=$t"
                 } ?: ""
-                logger.debug("HttpRequest method=${it.method()} url=${it.url()} $bearer")
+                logger.debug("HttpRequest method=${it.method()} url=${it.url()} token=$bearer")
                 it.toMono()
             })
             .clientConnector(ReactorClientHttpConnector(HttpClient.from(tcpClient).compress(true))).build()
