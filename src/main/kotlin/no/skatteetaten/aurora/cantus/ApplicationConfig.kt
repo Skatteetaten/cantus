@@ -24,7 +24,6 @@ import reactor.netty.http.client.HttpClient
 import reactor.netty.tcp.SslProvider
 import reactor.netty.tcp.TcpClient
 import java.io.FileInputStream
-import java.io.FileNotFoundException
 import java.security.KeyStore
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
@@ -121,7 +120,7 @@ class ApplicationConfig {
                 }
                 logger.debug("SSLContext successfully loaded")
             } catch(e: Exception){
-                logger.debug("SSLContext failed to load")
+                logger.debug(e){"SSLContext failed to load"}
                 throw e
             }
             ks
