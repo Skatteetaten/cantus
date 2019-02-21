@@ -107,7 +107,14 @@ inline fun <reified S : Any, reified T : Any> List<Try<S, T>>.getSuccessAndFailu
     return Pair(items, failure)
 }
 
-data class AuroraResponse<T : HalResource, F>(
+inline fun <reified S : Any, reified T : Any> Try<S, T>.getSuccessAndFailures(): Pair<List<S>, List<T>> {
+    val item = if (this is Try.Success) { listOf(this.value) } else emptyList()
+    val failure = if (this is Try.Failure) { listOf(this.value) } else emptyList()
+
+    return Pair(item, failure)
+}
+
+data class AuroraResponse<T: HalResource?, F: CantusFailure?>(
     val items: List<T> = emptyList(),
     val failure: List<F> = emptyList(),
     val success: Boolean = true,
@@ -119,7 +126,7 @@ data class AuroraResponse<T : HalResource, F>(
 
 @Component
 class ImageTagResourceAssembler {
-    final inline fun <reified T: HalResource, List<HalResource>> toAuroraResponse(resources: List<T>, failures: List<CantusFailure>) =
+    final inline fun <reified T: HalResource> toAuroraResponse(resources: List<T>, failures: List<CantusFailure>) =
         AuroraResponse(
             success = failures.isEmpty(),
             message = if (failures.isEmpty()) failures.first().error.message ?: "" else "Success",
@@ -127,7 +134,22 @@ class ImageTagResourceAssembler {
             failure = failures
         )
 
-    fun toTagResource(tags: ImageTagsWithTypeDto, message: String) =
+    fun toAuroraResponseFailure(failure: CantusFailure) =
+        AuroraResponse<HalResource, CantusFailure>(
+            success = false,
+            message = failure.error.message ?: "",
+            failure = listOf(failure)
+        )
+/*
+    final inline fun <reified S: List<HalResource>> toAuroraResponse(resources: List<S>, failures: List<CantusFailure>) =
+        AuroraResponse(
+            success = failures.isEmpty(),
+            message = if (failures.isEmpty()) failures.first().error.message ?: "" else "Success",
+            items = resources,
+            failure = failures
+        )*/
+
+    fun toTagResource(tags: ImageTagsWithTypeDto) =
         tags.tags.map {
             TagResource(it.name)
         }
