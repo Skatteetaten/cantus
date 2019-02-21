@@ -20,34 +20,31 @@ class DockerRegistryController(
         @RequestHeader(required = false, value = "Authorization") bearerToken: String?
     ): AuroraResponse<ImageTagResource, CantusFailure> {
 
-        val responses: List<Try<ImageTagResource, CantusFailure>> = tagUrl.map { tagUrl ->
+        val responses = tagUrl.map { tagUrl ->
             try {
 
                 val parts = tagUrl.split("/")
 
-            // TODO: Feilhåndtering skal diskuteres under teammøte
-            val registryUrl =
-                when {
-                    parts.size != 4 -> throw BadRequestException(message = "En eller flere av manifestene feilet")
-                    parts[0].isEmpty() -> null
-                    else -> parts[0]
-                }
+                // TODO: Feilhåndtering skal diskuteres under teammøte
+                val registryUrl =
+                    when {
+                        parts.size != 4 -> throw BadRequestException(message = "En eller flere av manifestene feilet")
+                        parts[0].isEmpty() -> null
+                        else -> parts[0]
+                    }
 
-            val imageRepoCommand = imageRepoDtoAssembler.createAndValidateCommand(
-                overrideRegistryUrl = registryUrl,
-                namespace = parts[1],
-                name = parts[2],
-                tag = parts[3],
-                bearerToken = bearerToken
-            )
+                val imageRepoCommand = imageRepoDtoAssembler.createAndValidateCommand(
+                    overrideRegistryUrl = registryUrl,
+                    namespace = parts[1],
+                    name = parts[2],
+                    tag = parts[3],
+                    bearerToken = bearerToken
+                )
                 Try.Success(dockerRegistryService
-                    .getImageManifestInformation(imageRepoCommand).let { manifestDto ->
-                    imageTagResourceAssembler.toResource(
-                        manifestDto,
-                        requestUrl = tagUrl
-                    )
-                })
-            } catch(e:Throwable) {
+                    .getImageManifestInformation(imageRepoCommand)
+                    .let { imageTagResourceAssembler.toImageTagResource(manifestDto = it, requestUrl = tagUrl) }
+                )
+            } catch (e: Throwable) {
                 Try.Failure(CantusFailure(tagUrl, e))
             }
         }
@@ -74,7 +71,7 @@ class DockerRegistryController(
         )
         return dockerRegistryService
             .getImageManifestInformation(imageRepoCommand).let { manifestDto ->
-                imageTagResourceAssembler.toResource(
+                imageTagResourceAssembler.toImageTagResource(
                     manifestDto,
                     "Successfully retrieved manifest information for image ${imageRepoCommand.manifestRepo}"
                 )
@@ -97,7 +94,7 @@ class DockerRegistryController(
         val response =
             try {
                 Try.Success(dockerRegistryService.getImageTags(imageRepoCommand).let { imageTagsWithTypeDto ->
-                    imageTagResourceAssembler.toResource(
+                    imageTagResourceAssembler.toTagResource(
                         imageTagsWithTypeDto,
                         "Successfully retrieved tags for image ${imageRepoCommand.defaultRepo}"
                     )
@@ -121,11 +118,19 @@ class DockerRegistryController(
             bearerToken = bearerToken
         )
 
-        return dockerRegistryService.getImageTags(imageRepoCommand).let { imageTagsWithTypeDto ->
-            imageTagResourceAssembler.toGroupedResource(
-                imageTagsWithTypeDto,
-                "Successfully retrieved tags grouped by semantic version for image ${imageRepoCommand.defaultRepo}"
-            )
-        }
+        val response = listOf(
+            try {
+                Try.Success(dockerRegistryService
+                    .getImageTags(imageRepoCommand)
+                    .let { imageTagResourceAssembler.toGroupedTagResource(it, imageRepoCommand.defaultRepo) }
+                )
+            } catch (e: Throwable) {
+                Try.Failure(CantusFailure(imageRepoCommand.defaultRepo, e))
+            }
+        )
+        val itemAndFailure = response.getSuccessAndFailures()
+
+        return imageTagResourceAssembler.toAuroraResponse(resources = itemAndFailure.first, failures = itemAndFailure.second)
     }
+}
 }

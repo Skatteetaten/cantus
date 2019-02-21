@@ -30,13 +30,13 @@ open class TagresourceBase : ContractBase() {
                 )
             )
             given(
-                resourceAssembler.toResource(
+                resourceAssembler.toImageTagResource(
                     any<ImageTagsWithTypeDto>(),
                     any()
                 )
             ).willReturn(it.response("TagResource"))
 
-            given(resourceAssembler.toGroupedResource(any(), any())).willReturn(it.response("GroupedTagResource"))
+            given(resourceAssembler.toGroupedTagResource(any(), any())).willReturn(it.response("GroupedTagResource"))
         }
     }
 }
