@@ -77,7 +77,11 @@ class DockerRegistryController(
 
         if (parts.size != 3) Try.Failure(CantusFailure(repoUrl, BadRequestException(message = "Invalid repo url")))
 
-        val dockerRegistryUrl = parts[0]
+        val dockerRegistryUrl =
+            when {
+                parts[0].isEmpty() -> null
+                else -> parts[0]
+            }
         val namespace = parts[1]
         val name = parts[2]
 
@@ -96,7 +100,7 @@ class DockerRegistryController(
         try {
 
             val parts = urlToTag.split("/")
-
+                
             val registryUrl =
                 when {
                     parts.size != 4 -> return Try.Failure(

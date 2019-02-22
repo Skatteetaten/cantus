@@ -39,10 +39,10 @@ class ErrorHandler : ResponseEntityExceptionHandler() {
         handleException(e, request, HttpStatus.OK)
 
     private fun handleException(e: Exception, request: WebRequest, httpStatus: HttpStatus): ResponseEntity<Any>? {
-        val auroraResponse = AuroraResponse<HalResource>(
+        val auroraResponse = AuroraResponse<HalResource, CantusFailure>(
             success = false,
             message = e.message ?: "",
-            exception = e
+            failure = listOf(CantusFailure("", e))
         )
         val headers = HttpHeaders().apply { contentType = MediaType.APPLICATION_JSON }
 

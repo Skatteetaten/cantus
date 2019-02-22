@@ -133,7 +133,7 @@ class ImageTagResourceAssembler {
 
         return AuroraResponse(
             success = failures.isEmpty(),
-            message = if (failures.isEmpty()) failures.first().error.message ?: "" else "Success",
+            message = if (failures.isNotEmpty()) failures.first().error.message ?: "" else "Success",
             items = items,
             failure = failures
         )
@@ -141,12 +141,12 @@ class ImageTagResourceAssembler {
 
     final inline fun <reified T: HalResource> toAuroraResponse(responses: Try<List<T>, CantusFailure>): AuroraResponse<T, CantusFailure> {
         val itemsAndFailure = responses.getSuccessAndFailures()
-        val items = itemsAndFailure.first.first()
+        val items = itemsAndFailure.first.firstOrNull() ?: emptyList()
         val failures = itemsAndFailure.second
 
         return AuroraResponse(
             success = failures.isEmpty(),
-            message = if (failures.isEmpty()) failures.first().error.message ?: "" else "Success",
+            message = if (failures.isNotEmpty()) failures.first().error.message ?: "" else "Success",
             items = items,
             failure = failures
         )

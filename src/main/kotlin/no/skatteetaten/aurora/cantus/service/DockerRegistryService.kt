@@ -37,7 +37,7 @@ class DockerRegistryService(
         "JAVA_VERSION_MAJOR",
         "JAVA_VERSION_MINOR",
         "JAVA_VERSION_BUILD",
-        "NODE_VERSION"
+        "NODEJS_VERSION"
     )
 
     val dockerVersionLabel = "docker_version"
@@ -166,8 +166,9 @@ class DockerRegistryService(
         val environmentVariables = manifestBody.getEnvironmentVariablesFromManifest()
 
         val imageManifestEnvInformation = environmentVariables
-            .filter { manifestEnvLabels.contains(it.key) }
             .mapKeys { it.key.toUpperCase() }
+            .filter { manifestEnvLabels.contains(it.key) }
+
 
         val dockerVersion = manifestBody.getVariableFromManifestBody(dockerVersionLabel)
         val created = manifestBody.getVariableFromManifestBody(createdLabel)
@@ -177,7 +178,7 @@ class DockerRegistryService(
             dockerDigest = imageManifestResponse.dockerContentDigest,
             buildEnded = created,
             auroraVersion = imageManifestEnvInformation["AURORA_VERSION"],
-            nodeVersion = imageManifestEnvInformation["NODE_VERSION"],
+            nodeVersion = imageManifestEnvInformation["NODEJS_VERSION"],
             appVersion = imageManifestEnvInformation["APP_VERSION"],
             buildStarted = imageManifestEnvInformation["IMAGE_BUILD_TIME"],
             java = JavaImageDto.fromEnvMap(imageManifestEnvInformation),
