@@ -119,8 +119,8 @@ class ApplicationConfig {
                     ks.setCertificateEntry((it as X509Certificate).subjectX500Principal.name, it)
                 }
                 logger.debug("SSLContext successfully loaded")
-            } catch(e: Exception){
-                logger.debug(e){"SSLContext failed to load"}
+            } catch (e: Exception) {
+                logger.debug(e) { "SSLContext failed to load" }
                 throw e
             }
             ks
