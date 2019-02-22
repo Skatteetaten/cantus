@@ -2,7 +2,11 @@ package no.skatteetaten.aurora.cantus.contracts
 
 import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.given
+import no.skatteetaten.aurora.cantus.controller.CantusFailure
+import no.skatteetaten.aurora.cantus.controller.GroupedTagResource
 import no.skatteetaten.aurora.cantus.controller.ImageTagResourceAssembler
+import no.skatteetaten.aurora.cantus.controller.TagResource
+import no.skatteetaten.aurora.cantus.controller.Try
 import no.skatteetaten.aurora.cantus.service.DockerRegistryService
 import no.skatteetaten.aurora.cantus.service.ImageTagTypedDto
 import no.skatteetaten.aurora.cantus.service.ImageTagsWithTypeDto
@@ -29,14 +33,11 @@ open class TagresourceBase : ContractBase() {
                     )
                 )
             )
-            given(
-                resourceAssembler.toImageTagResource(
-                    any<ImageTagsWithTypeDto>(),
-                    any()
-                )
-            ).willReturn(it.response("TagResource"))
+            given(resourceAssembler.toAuroraResponse(any<Try<List<TagResource>, CantusFailure>>()))
+                .willReturn(it.response("TagResource"))
 
-            given(resourceAssembler.toGroupedTagResource(any(), any())).willReturn(it.response("GroupedTagResource"))
+            given(resourceAssembler.toAuroraResponse(any<Try<List<GroupedTagResource>, CantusFailure>>()))
+                .willReturn(it.response("GroupedTagResource"))
         }
     }
 }

@@ -30,8 +30,12 @@ class DockerRegistryController(
         @RequestParam repoUrl: String,
         @RequestHeader(required = false, value = "Authorization") bearerToken: String?
     ): AuroraResponse<TagResource, CantusFailure> {
+        val repoUrlParts = repoUrl.split("/")
 
-        val imageRepoCommand = getTagRepoUrl(repoUrl, bearerToken)
+        if (repoUrlParts.size != 3) return imageTagResourceAssembler.toAuroraResponseFailure(
+            repoUrl, BadRequestException(message = "Invalid repo url"))
+
+        val imageRepoCommand = getTagRepoUrl(repoUrlParts, bearerToken)
 
         val response =
             getResponse(repoUrl) { dockerService ->
@@ -48,8 +52,12 @@ class DockerRegistryController(
         @RequestParam repoUrl: String,
         @RequestHeader(required = false, value = "Authorization") bearerToken: String?
     ): AuroraResponse<GroupedTagResource, CantusFailure> {
+        val repoUrlParts = repoUrl.split("/")
 
-        val imageRepoCommand = getTagRepoUrl(repoUrl, bearerToken)
+        if (repoUrlParts.size != 3) return imageTagResourceAssembler.toAuroraResponseFailure(
+            repoUrl, BadRequestException(message = "Invalid repo url"))
+
+        val imageRepoCommand = getTagRepoUrl(repoUrlParts, bearerToken)
 
         val response = getResponse(repoUrl) { dockerService ->
             dockerService.getImageTags(imageRepoCommand)
@@ -70,20 +78,17 @@ class DockerRegistryController(
         }
 
     private fun getTagRepoUrl(
-        repoUrl: String,
+        repoUrlParts: List<String>,
         bearerToken: String?
     ): ImageRepoCommand {
-        val parts = repoUrl.split("/")
-
-        if (parts.size != 3) Try.Failure(CantusFailure(repoUrl, BadRequestException(message = "Invalid repo url")))
 
         val dockerRegistryUrl =
             when {
-                parts[0].isEmpty() -> null
-                else -> parts[0]
+                repoUrlParts[0].isEmpty() -> null
+                else -> repoUrlParts[0]
             }
-        val namespace = parts[1]
-        val name = parts[2]
+        val namespace = repoUrlParts[1]
+        val name = repoUrlParts[2]
 
         return imageRepoDtoAssembler.createAndValidateCommand(
             overrideRegistryUrl = dockerRegistryUrl,
@@ -98,9 +103,9 @@ class DockerRegistryController(
         bearerToken: String?
     ): Try<ImageTagResource, CantusFailure> {
         try {
-
+            //TODO: move this to function?
             val parts = urlToTag.split("/")
-                
+
             val registryUrl =
                 when {
                     parts.size != 4 -> return Try.Failure(

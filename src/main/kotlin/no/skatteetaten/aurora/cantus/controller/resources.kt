@@ -152,11 +152,11 @@ class ImageTagResourceAssembler {
         )
     }
 
-    fun toAuroraResponseFailure(failure: CantusFailure) =
-        AuroraResponse<HalResource, CantusFailure>(
+    final inline fun <reified T: HalResource> toAuroraResponseFailure(url: String, exception: Throwable) =
+        AuroraResponse<T, CantusFailure>(
             success = false,
-            message = failure.error.message ?: "",
-            failure = listOf(failure)
+            message = exception.message ?: "",
+            failure = listOf(CantusFailure(url, exception))
         )
 /*
     final inline fun <reified S: List<HalResource>> toAuroraResponse(resources: List<S>, failures: List<CantusFailure>) =

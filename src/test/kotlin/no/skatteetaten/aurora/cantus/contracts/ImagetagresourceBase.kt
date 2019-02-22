@@ -2,7 +2,10 @@ package no.skatteetaten.aurora.cantus.contracts
 
 import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.given
+import no.skatteetaten.aurora.cantus.controller.CantusFailure
+import no.skatteetaten.aurora.cantus.controller.ImageTagResource
 import no.skatteetaten.aurora.cantus.controller.ImageTagResourceAssembler
+import no.skatteetaten.aurora.cantus.controller.Try
 import no.skatteetaten.aurora.cantus.service.DockerRegistryService
 import no.skatteetaten.aurora.cantus.service.ImageManifestDto
 import org.junit.jupiter.api.BeforeEach
@@ -25,7 +28,7 @@ open class ImagetagresourceBase : ContractBase() {
                     dockerDigest = ""
                 )
             )
-            given(resourceAssembler.toAuroraResponse(any(), any())).willReturn(it.response())
+            given(resourceAssembler.toAuroraResponse(any<List<Try<ImageTagResource, CantusFailure>>>())).willReturn(it.response())
         }
     }
 }
