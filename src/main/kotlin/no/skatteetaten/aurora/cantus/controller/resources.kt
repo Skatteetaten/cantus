@@ -126,13 +126,31 @@ data class AuroraResponse<T: HalResource?, F: CantusFailure?>(
 
 @Component
 class ImageTagResourceAssembler {
-    final inline fun <reified T: HalResource> toAuroraResponse(resources: List<T>, failures: List<CantusFailure>) =
-        AuroraResponse(
+    final inline fun <reified T: HalResource> toAuroraResponse(responses: List<Try<T, CantusFailure>>): AuroraResponse<T, CantusFailure> {
+        val itemsAndFailure = responses.getSuccessAndFailures()
+        val items = itemsAndFailure.first
+        val failures = itemsAndFailure.second
+
+        return AuroraResponse(
             success = failures.isEmpty(),
             message = if (failures.isEmpty()) failures.first().error.message ?: "" else "Success",
-            items = resources,
+            items = items,
             failure = failures
         )
+    }
+
+    final inline fun <reified T: HalResource> toAuroraResponse(responses: Try<List<T>, CantusFailure>): AuroraResponse<T, CantusFailure> {
+        val itemsAndFailure = responses.getSuccessAndFailures()
+        val items = itemsAndFailure.first.first()
+        val failures = itemsAndFailure.second
+
+        return AuroraResponse(
+            success = failures.isEmpty(),
+            message = if (failures.isEmpty()) failures.first().error.message ?: "" else "Success",
+            items = items,
+            failure = failures
+        )
+    }
 
     fun toAuroraResponseFailure(failure: CantusFailure) =
         AuroraResponse<HalResource, CantusFailure>(
