@@ -108,13 +108,17 @@ inline fun <reified S : Any, reified T : Any> List<Try<S, T>>.getSuccessAndFailu
 }
 
 inline fun <reified S : Any, reified T : Any> Try<S, T>.getSuccessAndFailures(): Pair<List<S>, List<T>> {
-    val item = if (this is Try.Success) { listOf(this.value) } else emptyList()
-    val failure = if (this is Try.Failure) { listOf(this.value) } else emptyList()
+    val item = if (this is Try.Success) {
+        listOf(this.value)
+    } else emptyList()
+    val failure = if (this is Try.Failure) {
+        listOf(this.value)
+    } else emptyList()
 
     return Pair(item, failure)
 }
 
-data class AuroraResponse<T: HalResource?, F: CantusFailure?>(
+data class AuroraResponse<T : HalResource?, F : CantusFailure?>(
     val items: List<T> = emptyList(),
     val failure: List<F> = emptyList(),
     val success: Boolean = true,
@@ -126,7 +130,7 @@ data class AuroraResponse<T: HalResource?, F: CantusFailure?>(
 
 @Component
 class ImageTagResourceAssembler {
-    final inline fun <reified T: HalResource> toAuroraResponse(responses: List<Try<T, CantusFailure>>): AuroraResponse<T, CantusFailure> {
+    final inline fun <reified T : HalResource> toAuroraResponse(responses: List<Try<T, CantusFailure>>): AuroraResponse<T, CantusFailure> {
         val itemsAndFailure = responses.getSuccessAndFailures()
         val items = itemsAndFailure.first
         val failures = itemsAndFailure.second
@@ -139,7 +143,7 @@ class ImageTagResourceAssembler {
         )
     }
 
-    final inline fun <reified T: HalResource> toAuroraResponse(responses: Try<List<T>, CantusFailure>): AuroraResponse<T, CantusFailure> {
+    final inline fun <reified T : HalResource> toAuroraResponse(responses: Try<List<T>, CantusFailure>): AuroraResponse<T, CantusFailure> {
         val itemsAndFailure = responses.getSuccessAndFailures()
         val items = itemsAndFailure.first.firstOrNull() ?: emptyList()
         val failures = itemsAndFailure.second
@@ -152,7 +156,7 @@ class ImageTagResourceAssembler {
         )
     }
 
-    final inline fun <reified T: HalResource> toAuroraResponseFailure(url: String, exception: Throwable) =
+    final inline fun <reified T : HalResource> toAuroraResponseFailure(url: String, exception: Throwable) =
         AuroraResponse<T, CantusFailure>(
             success = false,
             message = exception.message ?: "",

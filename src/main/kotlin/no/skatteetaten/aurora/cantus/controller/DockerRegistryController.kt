@@ -33,7 +33,8 @@ class DockerRegistryController(
         val repoUrlParts = repoUrl.split("/")
 
         if (repoUrlParts.size != 3) return imageTagResourceAssembler.toAuroraResponseFailure(
-            repoUrl, BadRequestException(message = "Invalid repo url"))
+            repoUrl, BadRequestException(message = "Invalid repo url")
+        )
 
         val imageRepoCommand = getTagRepoUrl(repoUrlParts, bearerToken)
 
@@ -44,8 +45,7 @@ class DockerRegistryController(
                 }
             }
 
-        val controllerResponse = imageTagResourceAssembler.toAuroraResponse(response)
-        return controllerResponse
+        return imageTagResourceAssembler.toAuroraResponse(response)
     }
 
     @GetMapping("/tags/semantic")
@@ -56,7 +56,8 @@ class DockerRegistryController(
         val repoUrlParts = repoUrl.split("/")
 
         if (repoUrlParts.size != 3) return imageTagResourceAssembler.toAuroraResponseFailure(
-            repoUrl, BadRequestException(message = "Invalid repo url"))
+            repoUrl, BadRequestException(message = "Invalid repo url")
+        )
 
         val imageRepoCommand = getTagRepoUrl(repoUrlParts, bearerToken)
 
@@ -136,4 +137,5 @@ class DockerRegistryController(
         }
     }
 }
+
 
