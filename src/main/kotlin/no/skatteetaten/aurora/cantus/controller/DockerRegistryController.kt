@@ -44,7 +44,8 @@ class DockerRegistryController(
                 }
             }
 
-        return imageTagResourceAssembler.toAuroraResponse(response)
+        val controllerResponse = imageTagResourceAssembler.toAuroraResponse(response)
+        return controllerResponse
     }
 
     @GetMapping("/tags/semantic")

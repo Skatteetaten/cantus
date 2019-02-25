@@ -8,6 +8,7 @@ import no.skatteetaten.aurora.cantus.service.ImageManifestDto
 import no.skatteetaten.aurora.cantus.service.ImageTagTypedDto
 import no.skatteetaten.aurora.cantus.service.ImageTagsWithTypeDto
 import no.skatteetaten.aurora.cantus.service.JavaImageDto
+import org.hamcrest.Matcher
 import org.junit.Before
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -17,8 +18,11 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.core.io.ClassPathResource
+import org.springframework.http.HttpStatus
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.ResultMatcher
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.test.web.servlet.setup.MockMvcBuilders
@@ -83,16 +87,18 @@ class DockerRegistryControllerTest {
     )
     fun `Get docker registry image info given missing resource`(path: String) {
 
+        val notFoundStatus = HttpStatus.NOT_FOUND
+
         given(dockerService.getImageTags(any())).willThrow(
             SourceSystemException(
-                message = "Tags not found for image no_skatteetaten/test",
+                message = "Resource could not be found status=${notFoundStatus.value()} message=${notFoundStatus.reasonPhrase}",
                 sourceSystem = "https://docker.com"
             )
         )
 
         given(dockerService.getImageManifestInformation(any())).willThrow(
             SourceSystemException(
-                message = "Manifest not found for image no_skatteetaten/test:0",
+                message = "Resource could not be found status=${notFoundStatus.value()} message=${notFoundStatus.reasonPhrase}",
                 sourceSystem = "https://docker.com"
             )
         )
@@ -101,7 +107,8 @@ class DockerRegistryControllerTest {
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.items").isEmpty)
             .andExpect(jsonPath("$.success").value(false))
-            .andExpect(jsonPath("$.exception.sourceSystem").value("https://docker.com"))
+            .andExpect(jsonPath("$.failure[0].error.sourceSystem").value("https://docker.com"))
+            .andExpect (jsonPath("$.failure[0].error.message").value("Resource could not be found status=${notFoundStatus.value()} message=${notFoundStatus.reasonPhrase}"))
     }
 
     @ParameterizedTest
@@ -116,10 +123,11 @@ class DockerRegistryControllerTest {
             .willThrow(ForbiddenException("Authorization bearer token is not present"))
 
         given(dockerService.getImageManifestInformation(any()))
-            .willThrow(ForbiddenException("Authorization bearer token is not present"))
+            .willThrow(ForbiddenException("Authorization bearer token is not present status="))
 
         mockMvc.perform(get(path))
-            .andExpect(status().isForbidden)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.failure[0].error.message").value(HttpStatus.FORBIDDEN.name))
             .andExpect(jsonPath("$.items").isEmpty)
             .andExpect(jsonPath("$.success").value(false))
     }
@@ -140,7 +148,8 @@ class DockerRegistryControllerTest {
             .willThrow(IllegalStateException("An error has occurred"))
 
         mockMvc.perform(get(path))
-            .andExpect(status().isInternalServerError)
+            .andDo {print(it)}
+            .andExpect(jsonPath("$.failure[0].error").isNotEmpty)
             .andExpect(jsonPath("$.items").isEmpty)
             .andExpect(jsonPath("$.success").value(false))
     }
@@ -171,7 +180,7 @@ class DockerRegistryControllerTest {
 
     @Test
     fun `Verify that allowed override docker registry url is validated as allowed`() {
-        val path = "/tags?repooUrl=allowedurl.no/no_skatteetaten_aurora_demo/whoami"
+        val path = "/tags?repoUrl=allowedurl.no/no_skatteetaten_aurora_demo/whoami"
 
         val tags = ImageTagsWithTypeDto(
             tags = parseJsonFromFile("dockerTagList.json")["tags"].map {

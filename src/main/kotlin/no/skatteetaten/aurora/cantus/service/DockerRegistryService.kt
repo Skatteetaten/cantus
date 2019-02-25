@@ -9,6 +9,7 @@ import no.skatteetaten.aurora.cantus.controller.SourceSystemException
 import no.skatteetaten.aurora.cantus.controller.blockAndHandleError
 import no.skatteetaten.aurora.cantus.controller.handleError
 import no.skatteetaten.aurora.cantus.controller.handleStatusCodeError
+import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient
@@ -91,7 +92,7 @@ class DockerRegistryService(
 
         if (tagsResponse == null || tagsResponse.tags.isEmpty()) {
             throw SourceSystemException(
-                message = "Tags not found for image ${imageRepoCommand.defaultRepo}",
+                message = "Resource could not be found status=${HttpStatus.NOT_FOUND.value()} message=${HttpStatus.NOT_FOUND.reasonPhrase}",
                 sourceSystem = url
             )
         }

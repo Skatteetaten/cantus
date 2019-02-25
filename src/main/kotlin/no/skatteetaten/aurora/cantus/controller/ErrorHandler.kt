@@ -61,7 +61,7 @@ fun <T> Mono<T>.handleError(sourceSystem: String?) =
     this.doOnError {
         when (it) {
             is WebClientResponseException -> throw SourceSystemException(
-                message = "Error in response, status:${it.statusCode} message:${it.statusText}",
+                message = "Error in response, status=${it.statusCode} message=${it.statusText}",
                 cause = it,
                 sourceSystem = sourceSystem
             )
