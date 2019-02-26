@@ -88,6 +88,7 @@ class DockerRegistryControllerTest {
     fun `Get docker registry image info given missing resource`(path: String) {
 
         val notFoundStatus = HttpStatus.NOT_FOUND
+        val repoUrl = path.split("=")[1]
 
         given(dockerService.getImageTags(any())).willThrow(
             SourceSystemException(
@@ -107,8 +108,8 @@ class DockerRegistryControllerTest {
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.items").isEmpty)
             .andExpect(jsonPath("$.success").value(false))
-            .andExpect(jsonPath("$.failure[0].error.sourceSystem").value("https://docker.com"))
-            .andExpect (jsonPath("$.failure[0].error.message").value("Resource could not be found status=${notFoundStatus.value()} message=${notFoundStatus.reasonPhrase}"))
+            .andExpect(jsonPath("$.failure[0].url").value(repoUrl))
+            .andExpect (jsonPath("$.failure[0].errorMessage").value("Resource could not be found status=${notFoundStatus.value()} message=${notFoundStatus.reasonPhrase}"))
     }
 
     @ParameterizedTest
@@ -123,11 +124,11 @@ class DockerRegistryControllerTest {
             .willThrow(ForbiddenException("Authorization bearer token is not present"))
 
         given(dockerService.getImageManifestInformation(any()))
-            .willThrow(ForbiddenException("Authorization bearer token is not present status="))
+            .willThrow(ForbiddenException("Authorization bearer token is not present"))
 
         mockMvc.perform(get(path))
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.failure[0].error.message").value(HttpStatus.FORBIDDEN.name))
+            .andExpect(jsonPath("$.failure[0].errorMessage").value("Authorization bearer token is not present"))
             .andExpect(jsonPath("$.items").isEmpty)
             .andExpect(jsonPath("$.success").value(false))
     }
@@ -148,8 +149,8 @@ class DockerRegistryControllerTest {
             .willThrow(IllegalStateException("An error has occurred"))
 
         mockMvc.perform(get(path))
-            .andDo {print(it)}
-            .andExpect(jsonPath("$.failure[0].error").isNotEmpty)
+            .andDo {print(it.response.contentAsString)}
+            .andExpect(jsonPath("$.failure[0].errorMessage").value("An error has occurred"))
             .andExpect(jsonPath("$.items").isEmpty)
             .andExpect(jsonPath("$.success").value(false))
     }
@@ -197,19 +198,22 @@ class DockerRegistryControllerTest {
 
     @Test
     fun `Verify that disallowed docker registry url returns bad request error`() {
-        val path = "/tags?repoUrl=vg.no/no_skatteetaten_aurora_demo/whoami"
+        val repoUrl = "vg.no/no_skatteetaten_aurora_demo/whoami"
+        val path = "/tags?repoUrl=$repoUrl"
 
         val tags = ImageTagsWithTypeDto(
             tags = parseJsonFromFile("dockerTagList.json")["tags"].map {
                 ImageTagTypedDto(name = it.asText())
             }
         )
+
         given(
             dockerService.getImageTags(any())
         ).willReturn(tags)
 
         mockMvc.perform(get(path))
-            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.failure[0].errorMessage").value("Invalid Docker Registry URL url=vg.no"))
+            .andExpect (jsonPath("$.failure[0].url").value(repoUrl))
             .andExpect(jsonPath("$.success").value(false))
     }
 

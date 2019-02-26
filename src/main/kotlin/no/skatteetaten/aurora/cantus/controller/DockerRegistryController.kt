@@ -30,16 +30,19 @@ class DockerRegistryController(
         @RequestParam repoUrl: String,
         @RequestHeader(required = false, value = "Authorization") bearerToken: String?
     ): AuroraResponse<TagResource, CantusFailure> {
+
         val repoUrlParts = repoUrl.split("/")
 
         if (repoUrlParts.size != 3) return imageTagResourceAssembler.toAuroraResponseFailure(
             repoUrl, BadRequestException(message = "Invalid repo url")
         )
 
-        val imageRepoCommand = getTagRepoUrl(repoUrlParts, bearerToken)
-
         val response =
             getResponse(repoUrl) { dockerService ->
+                val imageRepoCommand = getTagRepoUrl(repoUrlParts, bearerToken)
+
+
+
                 dockerService.getImageTags(imageRepoCommand).let { tags ->
                     imageTagResourceAssembler.toTagResource(tags)
                 }
@@ -55,13 +58,15 @@ class DockerRegistryController(
     ): AuroraResponse<GroupedTagResource, CantusFailure> {
         val repoUrlParts = repoUrl.split("/")
 
-        if (repoUrlParts.size != 3) return imageTagResourceAssembler.toAuroraResponseFailure(
-            repoUrl, BadRequestException(message = "Invalid repo url")
-        )
-
-        val imageRepoCommand = getTagRepoUrl(repoUrlParts, bearerToken)
-
+        if (repoUrlParts.size != 3)
+            return imageTagResourceAssembler.toAuroraResponseFailure(
+                url = repoUrl,
+                exception = BadRequestException(message = "Invalid repo url")
+            )
+dd *
         val response = getResponse(repoUrl) { dockerService ->
+            val imageRepoCommand = getTagRepoUrl(repoUrlParts, bearerToken)
+
             dockerService.getImageTags(imageRepoCommand)
                 .let { tags -> imageTagResourceAssembler.toGroupedTagResource(tags, imageRepoCommand.defaultRepo) }
         }

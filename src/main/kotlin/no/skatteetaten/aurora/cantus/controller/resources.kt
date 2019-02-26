@@ -1,5 +1,6 @@
 package no.skatteetaten.aurora.cantus.controller
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import no.skatteetaten.aurora.cantus.service.ImageManifestDto
 import no.skatteetaten.aurora.cantus.service.ImageTagType
 import no.skatteetaten.aurora.cantus.service.ImageTagsWithTypeDto
@@ -84,7 +85,12 @@ data class NodeJsImage(
     }
 }
 
-data class CantusFailure(val url: String, val error: Throwable)
+data class CantusFailure(
+    val url: String,
+    @JsonIgnore val error: Throwable
+) {
+    val errorMessage: String = error.message ?: "Unknown error (${error::class.simpleName})"
+}
 
 sealed class Try<out A, out B> {
     class Success<A>(val value: A) : Try<A, Nothing>()
@@ -131,13 +137,11 @@ data class AuroraResponse<T : HalResource?, F : CantusFailure?>(
 @Component
 class ImageTagResourceAssembler {
     final inline fun <reified T : HalResource> toAuroraResponse(responses: List<Try<T, CantusFailure>>): AuroraResponse<T, CantusFailure> {
-        val itemsAndFailure = responses.getSuccessAndFailures()
-        val items = itemsAndFailure.first
-        val failures = itemsAndFailure.second
+        val (items, failures) = responses.getSuccessAndFailures()
 
         return AuroraResponse(
             success = failures.isEmpty(),
-            message = if (failures.isNotEmpty()) failures.first().error.message ?: "" else "Success",
+            message = if (failures.isNotEmpty()) failures.first().errorMessage else "Success",
             items = items,
             failure = failures
         )
@@ -156,20 +160,13 @@ class ImageTagResourceAssembler {
         )
     }
 
+    //TODO: exception.message ?: ""
     final inline fun <reified T : HalResource> toAuroraResponseFailure(url: String, exception: Throwable) =
         AuroraResponse<T, CantusFailure>(
             success = false,
             message = exception.message ?: "",
             failure = listOf(CantusFailure(url, exception))
         )
-/*
-    final inline fun <reified S: List<HalResource>> toAuroraResponse(resources: List<S>, failures: List<CantusFailure>) =
-        AuroraResponse(
-            success = failures.isEmpty(),
-            message = if (failures.isEmpty()) failures.first().error.message ?: "" else "Success",
-            items = resources,
-            failure = failures
-        )*/
 
     fun toTagResource(tags: ImageTagsWithTypeDto) =
         tags.tags.map {

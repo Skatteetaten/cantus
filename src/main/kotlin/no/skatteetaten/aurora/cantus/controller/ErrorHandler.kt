@@ -19,7 +19,7 @@ import java.time.Duration
 private val blockTimeout: Long = 30
 private val errorLogger = KotlinLogging.logger {}
 
-@ControllerAdvice
+
 class ErrorHandler : ResponseEntityExceptionHandler() {
 
     @ExceptionHandler(RuntimeException::class)
