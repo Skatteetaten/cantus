@@ -170,7 +170,6 @@ class DockerRegistryService(
             .mapKeys { it.key.toUpperCase() }
             .filter { manifestEnvLabels.contains(it.key) }
 
-
         val dockerVersion = manifestBody.getVariableFromManifestBody(dockerVersionLabel)
         val created = manifestBody.getVariableFromManifestBody(createdLabel)
 

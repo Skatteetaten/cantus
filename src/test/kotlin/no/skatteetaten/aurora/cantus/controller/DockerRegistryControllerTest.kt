@@ -25,7 +25,13 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.test.web.servlet.setup.MockMvcBuilders
 
 @WebMvcTest(
-    value = [DockerRegistryController::class, ErrorHandler::class, ImageTagResourceAssembler::class, ImageRepoCommandAssembler::class],
+    value = [
+        DockerRegistryController::class,
+        ErrorHandler::class,
+        ImageTagResourceAssembler::class,
+        AuroraResponseAssembler::class,
+        ImageRepoCommandAssembler::class
+    ],
     secure = false
 )
 class DockerRegistryControllerTest {
@@ -106,28 +112,26 @@ class DockerRegistryControllerTest {
             .andExpect(jsonPath("$.items").isEmpty)
             .andExpect(jsonPath("$.success").value(false))
             .andExpect(jsonPath("$.failure[0].url").value(repoUrl))
-            .andExpect (jsonPath("$.failure[0].errorMessage").value("Resource could not be found status=${notFoundStatus.value()} message=${notFoundStatus.reasonPhrase}"))
+            .andExpect(jsonPath("$.failure[0].errorMessage").value("Resource could not be found status=${notFoundStatus.value()} message=${notFoundStatus.reasonPhrase}"))
     }
 
     @ParameterizedTest
     @ValueSource(
         strings = [
-        "/tags?repoUrl=no_skatteetaten_aurora_demo/whaomi",
-        "/manifest?tagUrl=/no_skatteetaten_aurora_demo/whoami",
-        "/tags/semantic?repoUrl=/no_skatteetaten_aurora"
+            "/tags?repoUrl=no_skatteetaten_aurora_demo/whaomi",
+            "/manifest?tagUrl=/no_skatteetaten_aurora_demo/whoami",
+            "/tags/semantic?repoUrl=/no_skatteetaten_aurora"
         ]
     )
     fun `Get request given invalid repoUrl and tagUrl throw BadRequestException`(path: String) {
 
         val repoUrl = path.split("=")[1]
         mockMvc.perform(get(path))
-            .andExpect (status().isOk)
+            .andExpect(status().isOk)
             .andExpect(jsonPath("$.items").isEmpty)
-            .andExpect (jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.success").value(false))
             .andExpect(jsonPath("$.failure[0].url").value(repoUrl))
-            .andExpect (jsonPath("$.failure[0].errorMessage").value("Invalid url=$repoUrl"))
-
-
+            .andExpect(jsonPath("$.failure[0].errorMessage").value("Invalid url=$repoUrl"))
     }
 
     @ParameterizedTest
@@ -167,7 +171,7 @@ class DockerRegistryControllerTest {
             .willThrow(IllegalStateException("An error has occurred"))
 
         mockMvc.perform(get(path))
-            .andDo {print(it.response.contentAsString)}
+            .andDo { print(it.response.contentAsString) }
             .andExpect(jsonPath("$.failure[0].errorMessage").value("An error has occurred"))
             .andExpect(jsonPath("$.items").isEmpty)
             .andExpect(jsonPath("$.success").value(false))
@@ -231,7 +235,7 @@ class DockerRegistryControllerTest {
 
         mockMvc.perform(get(path))
             .andExpect(jsonPath("$.failure[0].errorMessage").value("Invalid Docker Registry URL url=vg.no"))
-            .andExpect (jsonPath("$.failure[0].url").value(repoUrl))
+            .andExpect(jsonPath("$.failure[0].url").value(repoUrl))
             .andExpect(jsonPath("$.success").value(false))
     }
 

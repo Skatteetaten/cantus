@@ -5,7 +5,6 @@ import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.ControllerAdvice
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.context.request.WebRequest
 import org.springframework.web.reactive.function.client.ClientResponse
@@ -18,7 +17,6 @@ import java.time.Duration
 
 private val blockTimeout: Long = 30
 private val errorLogger = KotlinLogging.logger {}
-
 
 class ErrorHandler : ResponseEntityExceptionHandler() {
 
@@ -39,7 +37,7 @@ class ErrorHandler : ResponseEntityExceptionHandler() {
         handleException(e, request, HttpStatus.OK)
 
     private fun handleException(e: Exception, request: WebRequest, httpStatus: HttpStatus): ResponseEntity<Any>? {
-        val auroraResponse = AuroraResponse<HalResource, CantusFailure>(
+        val auroraResponse = AuroraResponse<HalResource>(
             success = false,
             message = e.message ?: "",
             failure = listOf(CantusFailure("", e))

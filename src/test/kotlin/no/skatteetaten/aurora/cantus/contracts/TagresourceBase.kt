@@ -2,6 +2,7 @@ package no.skatteetaten.aurora.cantus.contracts
 
 import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.given
+import no.skatteetaten.aurora.cantus.controller.AuroraResponseAssembler
 import no.skatteetaten.aurora.cantus.controller.CantusFailure
 import no.skatteetaten.aurora.cantus.controller.GroupedTagResource
 import no.skatteetaten.aurora.cantus.controller.ImageTagResourceAssembler
@@ -19,25 +20,19 @@ open class TagresourceBase : ContractBase() {
     private lateinit var dockerRegistryService: DockerRegistryService
 
     @MockBean
-    private lateinit var resourceAssembler: ImageTagResourceAssembler
+    private lateinit var imageTagResourceAssembler: ImageTagResourceAssembler
 
     @BeforeEach
     fun setUp() {
         withContractResponses(this) {
-            given(dockerRegistryService.getImageTags(any())).willReturn(
-                ImageTagsWithTypeDto(
-                    listOf(
-                        ImageTagTypedDto(
-                            ""
-                        )
-                    )
-                )
-            )
-            given(resourceAssembler.toAuroraResponse(any<Try<List<TagResource>, CantusFailure>>()))
-                .willReturn(it.response("TagResource"))
+            given(dockerRegistryService.getImageTags(any()))
+                .willReturn(ImageTagsWithTypeDto(listOf(ImageTagTypedDto(""))))
 
-            given(resourceAssembler.toAuroraResponse(any<Try<List<GroupedTagResource>, CantusFailure>>()))
+            given(imageTagResourceAssembler.groupedTagResourceToAuroraResponse(any()))
                 .willReturn(it.response("GroupedTagResource"))
+
+            given(imageTagResourceAssembler.tagResourceToAuroraResponse(any()))
+                .willReturn(it.response("TagResource"))
         }
     }
 }
