@@ -23,7 +23,14 @@ class DockerRegistryController(
         @RequestHeader(required = false, value = "Authorization") bearerToken: String?
     ): AuroraResponse<ImageTagResource> {
 
-        val responses = tagUrl.map { getImageTagResponse(it, bearerToken) }
+        val responses = tagUrl.map {
+            getResponse(bearerToken, it) { dockerService, imageRepoCommand ->
+                dockerService
+                    .getImageManifestInformation(imageRepoCommand)
+                    .let { imageManifestDto ->
+                        imageTagResourceAssembler.toImageTagResource(manifestDto = imageManifestDto, requestUrl = it) }
+            }
+        }
 
         return imageTagResourceAssembler.imageTagResourceToAuroraResponse(responses)
     }
@@ -34,14 +41,8 @@ class DockerRegistryController(
         @RequestHeader(required = false, value = "Authorization") bearerToken: String?
     ): AuroraResponse<TagResource> {
 
-        val repoUrlParts = repoUrl.split("/")
-
-        if (repoUrlParts.size != 3) return imageTagResourceAssembler.toBadRequestResponse(repoUrl)
-
         val response =
-            getResponse(repoUrl) { dockerService ->
-                val imageRepoCommand = getTagRepoUrl(repoUrlParts, bearerToken)
-
+            getResponse(bearerToken, repoUrl) { dockerService, imageRepoCommand ->
                 dockerService.getImageTags(imageRepoCommand).let { tags ->
                     val tagResponse = imageTagResourceAssembler.toTagResource(tags)
                     tagResponse
@@ -56,14 +57,8 @@ class DockerRegistryController(
         @RequestParam repoUrl: String,
         @RequestHeader(required = false, value = "Authorization") bearerToken: String?
     ): AuroraResponse<GroupedTagResource> {
-        val repoUrlParts = repoUrl.split("/")
 
-        if (repoUrlParts.size != 3)
-            return imageTagResourceAssembler.toBadRequestResponse(repoUrl)
-
-        val response = getResponse(repoUrl) { dockerService ->
-            val imageRepoCommand = getTagRepoUrl(repoUrlParts, bearerToken)
-
+        val response = getResponse(bearerToken, repoUrl) { dockerService, imageRepoCommand ->
             dockerService.getImageTags(imageRepoCommand)
                 .let { tags -> imageTagResourceAssembler.toGroupedTagResource(tags, imageRepoCommand.defaultRepo) }
         }
@@ -71,71 +66,18 @@ class DockerRegistryController(
         return imageTagResourceAssembler.groupedTagResourceToAuroraResponse(response)
     }
 
-    private final inline fun <reified T : HalResource> getResponse(
+    private final inline fun <reified T : Any> getResponse(
+        bearerToken: String?,
         repoUrl: String,
-        fn: (DockerRegistryService) -> List<T>
-    ): Try<List<T>, CantusFailure> =
+        fn: (DockerRegistryService, ImageRepoCommand) -> T
+    ): Try<T, CantusFailure> {
         try {
-            Try.Success(fn(dockerRegistryService))
+            val imageRepoCommand = imageRepoCommandAssembler.createAndValidateCommand(repoUrl, bearerToken)
+                ?: return Try.Failure(CantusFailure(repoUrl, BadRequestException("Invalid repoUrl or tagUrl")))
+
+            return Try.Success(fn(dockerRegistryService, imageRepoCommand))
         } catch (e: Throwable) {
-            Try.Failure(CantusFailure(repoUrl, e))
-        }
-
-    private fun getTagRepoUrl(
-        repoUrlParts: List<String>,
-        bearerToken: String?
-    ): ImageRepoCommand {
-
-        val dockerRegistryUrl =
-            when {
-                repoUrlParts[0].isEmpty() -> null
-                else -> repoUrlParts[0]
-            }
-        val namespace = repoUrlParts[1]
-        val name = repoUrlParts[2]
-
-        return imageRepoCommandAssembler.createAndValidateCommand(
-            overrideRegistryUrl = dockerRegistryUrl,
-            name = name,
-            namespace = namespace,
-            bearerToken = bearerToken
-        )
-    }
-
-    private fun getImageTagResponse(
-        urlToTag: String,
-        bearerToken: String?
-    ): Try<ImageTagResource, CantusFailure> {
-        try {
-            // TODO: move this to function?
-            val parts = urlToTag.split("/")
-
-            val registryUrl =
-                when {
-                    parts.size != 4 -> return Try.Failure(
-                        CantusFailure(
-                            urlToTag,
-                            BadRequestException(message = "Invalid url=$urlToTag")
-                        )
-                    )
-                    parts[0].isEmpty() -> null
-                    else -> parts[0]
-                }
-
-            val imageRepoCommand = imageRepoCommandAssembler.createAndValidateCommand(
-                overrideRegistryUrl = registryUrl,
-                namespace = parts[1],
-                name = parts[2],
-                tag = parts[3],
-                bearerToken = bearerToken
-            )
-
-            return Try.Success(dockerRegistryService
-                .getImageManifestInformation(imageRepoCommand)
-                .let { imageTagResourceAssembler.toImageTagResource(manifestDto = it, requestUrl = urlToTag) }
-            )
-        } catch (e: Throwable) {
-            return Try.Failure(CantusFailure(urlToTag, e))
+            return Try.Failure(CantusFailure(repoUrl, e))
         }
     }
 }

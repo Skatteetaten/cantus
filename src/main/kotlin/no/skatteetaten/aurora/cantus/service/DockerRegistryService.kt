@@ -3,6 +3,7 @@ package no.skatteetaten.aurora.cantus.service
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import mu.KotlinLogging
+import no.skatteetaten.aurora.cantus.controller.BadRequestException
 import no.skatteetaten.aurora.cantus.controller.ForbiddenException
 import no.skatteetaten.aurora.cantus.controller.ImageRepoCommand
 import no.skatteetaten.aurora.cantus.controller.SourceSystemException
@@ -49,6 +50,8 @@ class DockerRegistryService(
         imageRepoCommand: ImageRepoCommand
     ): ImageManifestDto {
         val url = imageRepoCommand.registry
+
+        if (imageRepoCommand.imageTag.isNullOrEmpty()) throw BadRequestException("Tag in tagUrl is required to get manifest of an image")
 
         val registryMetadata = registryMetadataResolver.getMetadataForRegistry(url)
 

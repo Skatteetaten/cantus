@@ -28,18 +28,22 @@ class ImageRepoCommandAssembler(
     @Value("\${cantus.docker.urlsallowed}") val allowedRegistryUrls: List<String>
 ) {
     fun createAndValidateCommand(
-        overrideRegistryUrl: String?,
-        name: String,
-        namespace: String,
-        tag: String? = null,
+        url: String,
         bearerToken: String? = null
-    ): ImageRepoCommand {
-        val validatedRegistryUrl = if (overrideRegistryUrl != null) {
-            validateDockerRegistryUrl(
-                urlToValidate = overrideRegistryUrl,
-                allowedUrls = allowedRegistryUrls
-            )
-        } else registryUrl
+    ): ImageRepoCommand? {
+
+        val (overrideRegistryUrl, namespace, name, tag) = url.splitCheckNull()
+
+        if (namespace.isNullOrEmpty() || name.isNullOrEmpty()) return null
+
+        val validatedRegistryUrl =
+            if (overrideRegistryUrl.isNullOrEmpty()) registryUrl
+            else {
+                validateDockerRegistryUrl(
+                    urlToValidate = overrideRegistryUrl,
+                    allowedUrls = allowedRegistryUrls
+                )
+            }
 
         return ImageRepoCommand(
             registry = validatedRegistryUrl,
@@ -56,5 +60,14 @@ class ImageRepoCommandAssembler(
         } else {
             throw BadRequestException("Invalid Docker Registry URL url=$urlToValidate")
         }
+    }
+
+    private fun String.splitCheckNull(): List<String?> {
+        val repoVariables = this.split("/")
+        val repoVariablesSize = repoVariables.size
+
+        if (repoVariablesSize < 3 || repoVariablesSize > 4) return listOf(null)
+
+        return repoVariables
     }
 }
