@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RestController
 class DockerRegistryControllerOld(
     val dockerRegistryService: DockerRegistryService,
     val imageTagResourceAssembler: ImageTagResourceAssemblerOld,
-    val imageRepoDtoAssembler: ImageRepoDtoAssembler
+    val imageRepoCommandAssembler: ImageRepoCommandAssembler
 ) {
 
     @GetMapping("/{affiliation}/{name}/{tag}/manifest")
@@ -22,7 +22,7 @@ class DockerRegistryControllerOld(
         @RequestParam(required = false) dockerRegistryUrl: String?,
         @RequestHeader(required = false, value = "Authorization") bearerToken: String?
     ): AuroraResponseOld<ImageTagResource> {
-        val imageRepoCommand = imageRepoDtoAssembler.createAndValidateCommand(
+        val imageRepoCommand = imageRepoCommandAssembler.createAndValidateCommand(
             overrideRegistryUrl = dockerRegistryUrl,
             name = name,
             namespace = affiliation,
@@ -45,7 +45,7 @@ class DockerRegistryControllerOld(
         @RequestParam(required = false) dockerRegistryUrl: String?,
         @RequestHeader(required = false, value = "Authorization") bearerToken: String?
     ): AuroraResponseOld<TagResource> {
-        val imageRepoCommand = imageRepoDtoAssembler.createAndValidateCommand(
+        val imageRepoCommand = imageRepoCommandAssembler.createAndValidateCommand(
             overrideRegistryUrl = dockerRegistryUrl,
             name = name,
             namespace = affiliation,
@@ -66,7 +66,7 @@ class DockerRegistryControllerOld(
         @RequestParam(required = false) dockerRegistryUrl: String?,
         @RequestHeader(required = false, value = "Authorization") bearerToken: String?
     ): AuroraResponseOld<GroupedTagResource> {
-        val imageRepoCommand = imageRepoDtoAssembler.createAndValidateCommand(
+        val imageRepoCommand = imageRepoCommandAssembler.createAndValidateCommand(
             overrideRegistryUrl = dockerRegistryUrl,
             name = name,
             namespace = affiliation,

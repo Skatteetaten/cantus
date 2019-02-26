@@ -23,7 +23,7 @@ data class ImageRepoCommand(
 }
 
 @Component
-class ImageRepoDtoAssembler(
+class ImageRepoCommandAssembler(
     @Value("\${cantus.docker.url}") val registryUrl: String,
     @Value("\${cantus.docker.urlsallowed}") val allowedRegistryUrls: List<String>
 ) {

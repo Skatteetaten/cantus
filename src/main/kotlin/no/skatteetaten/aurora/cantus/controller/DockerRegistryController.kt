@@ -11,7 +11,7 @@ import uk.q3c.rest.hal.HalResource
 class DockerRegistryController(
     val dockerRegistryService: DockerRegistryService,
     val imageTagResourceAssembler: ImageTagResourceAssembler,
-    val imageRepoDtoAssembler: ImageRepoDtoAssembler
+    val imageRepoCommandAssembler: ImageRepoCommandAssembler
 ) {
 
     @GetMapping("/manifest")
@@ -34,7 +34,7 @@ class DockerRegistryController(
         val repoUrlParts = repoUrl.split("/")
 
         if (repoUrlParts.size != 3) return imageTagResourceAssembler.toAuroraResponseFailure(
-            repoUrl, BadRequestException(message = "Invalid repo url")
+            repoUrl, BadRequestException(message = "Invalid url=$repoUrl")
         )
 
         val response =
@@ -61,9 +61,9 @@ class DockerRegistryController(
         if (repoUrlParts.size != 3)
             return imageTagResourceAssembler.toAuroraResponseFailure(
                 url = repoUrl,
-                exception = BadRequestException(message = "Invalid repo url")
+                exception = BadRequestException(message = "Invalid url=$repoUrl")
             )
-dd *
+
         val response = getResponse(repoUrl) { dockerService ->
             val imageRepoCommand = getTagRepoUrl(repoUrlParts, bearerToken)
 
@@ -97,7 +97,7 @@ dd *
         val namespace = repoUrlParts[1]
         val name = repoUrlParts[2]
 
-        return imageRepoDtoAssembler.createAndValidateCommand(
+        return imageRepoCommandAssembler.createAndValidateCommand(
             overrideRegistryUrl = dockerRegistryUrl,
             name = name,
             namespace = namespace,
@@ -118,14 +118,14 @@ dd *
                     parts.size != 4 -> return Try.Failure(
                         CantusFailure(
                             urlToTag,
-                            BadRequestException(message = "Ugyldig urlToTag")
+                            BadRequestException(message = "Invalid url=$urlToTag")
                         )
                     )
                     parts[0].isEmpty() -> null
                     else -> parts[0]
                 }
 
-            val imageRepoCommand = imageRepoDtoAssembler.createAndValidateCommand(
+            val imageRepoCommand = imageRepoCommandAssembler.createAndValidateCommand(
                 overrideRegistryUrl = registryUrl,
                 namespace = parts[1],
                 name = parts[2],

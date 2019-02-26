@@ -8,7 +8,6 @@ import no.skatteetaten.aurora.cantus.service.ImageManifestDto
 import no.skatteetaten.aurora.cantus.service.ImageTagTypedDto
 import no.skatteetaten.aurora.cantus.service.ImageTagsWithTypeDto
 import no.skatteetaten.aurora.cantus.service.JavaImageDto
-import org.hamcrest.Matcher
 import org.junit.Before
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -20,15 +19,13 @@ import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.core.io.ClassPathResource
 import org.springframework.http.HttpStatus
 import org.springframework.test.web.servlet.MockMvc
-import org.springframework.test.web.servlet.ResultMatcher
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.test.web.servlet.setup.MockMvcBuilders
 
 @WebMvcTest(
-    value = [DockerRegistryController::class, ErrorHandler::class, ImageTagResourceAssembler::class, ImageRepoDtoAssembler::class],
+    value = [DockerRegistryController::class, ErrorHandler::class, ImageTagResourceAssembler::class, ImageRepoCommandAssembler::class],
     secure = false
 )
 class DockerRegistryControllerTest {
@@ -110,6 +107,27 @@ class DockerRegistryControllerTest {
             .andExpect(jsonPath("$.success").value(false))
             .andExpect(jsonPath("$.failure[0].url").value(repoUrl))
             .andExpect (jsonPath("$.failure[0].errorMessage").value("Resource could not be found status=${notFoundStatus.value()} message=${notFoundStatus.reasonPhrase}"))
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+        strings = [
+        "/tags?repoUrl=no_skatteetaten_aurora_demo/whaomi",
+        "/manifest?tagUrl=/no_skatteetaten_aurora_demo/whoami",
+        "/tags/semantic?repoUrl=/no_skatteetaten_aurora"
+        ]
+    )
+    fun `Get request given invalid repoUrl and tagUrl throw BadRequestException`(path: String) {
+
+        val repoUrl = path.split("=")[1]
+        mockMvc.perform(get(path))
+            .andExpect (status().isOk)
+            .andExpect(jsonPath("$.items").isEmpty)
+            .andExpect (jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.failure[0].url").value(repoUrl))
+            .andExpect (jsonPath("$.failure[0].errorMessage").value("Invalid url=$repoUrl"))
+
+
     }
 
     @ParameterizedTest
