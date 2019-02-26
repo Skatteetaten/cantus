@@ -1,3 +1,4 @@
+/*
 package no.skatteetaten.aurora.cantus.controller
 
 import no.skatteetaten.aurora.cantus.service.DockerRegistryService
@@ -81,3 +82,4 @@ class DockerRegistryControllerOld(
         }
     }
 }
+*/
