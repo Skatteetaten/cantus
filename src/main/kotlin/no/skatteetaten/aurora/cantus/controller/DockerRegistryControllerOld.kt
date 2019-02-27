@@ -1,4 +1,3 @@
-/*
 package no.skatteetaten.aurora.cantus.controller
 
 import no.skatteetaten.aurora.cantus.service.DockerRegistryService
@@ -12,7 +11,7 @@ import org.springframework.web.bind.annotation.RestController
 class DockerRegistryControllerOld(
     val dockerRegistryService: DockerRegistryService,
     val imageTagResourceAssembler: ImageTagResourceAssemblerOld,
-    val imageRepoCommandAssembler: ImageRepoCommandAssembler
+    val imageRepoCommandAssembler: ImageRepoDtoAssembler
 ) {
 
     @GetMapping("/{affiliation}/{name}/{tag}/manifest")
@@ -82,5 +81,3 @@ class DockerRegistryControllerOld(
         }
     }
 }
-
-*/

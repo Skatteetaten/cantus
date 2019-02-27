@@ -24,6 +24,8 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPat
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.test.web.servlet.setup.MockMvcBuilders
 
+private const val defaultTestRegistry: String = "docker.com"
+
 @WebMvcTest(
     value = [
         DockerRegistryController::class,
@@ -48,9 +50,9 @@ class DockerRegistryControllerTest {
     @ParameterizedTest
     @ValueSource(
         strings = [
-            "/manifest?tagUrl=/no_skatteetaten_aurora_demo/whoami/2",
-            "/tags?repoUrl=/no_skatteetaten_aurora_demo/whoami",
-            "/tags/semantic?repoUrl=/no_skatteetaten_aurora_demo/whoami"
+            "/manifest?tagUrl=$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami/2",
+            "/tags?repoUrl=$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami",
+            "/tags/semantic?repoUrl=$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami"
         ]
     )
     fun `Get docker registry image info`(path: String) {
@@ -75,6 +77,7 @@ class DockerRegistryControllerTest {
         given(
             dockerService.getImageTags(any())
         ).willReturn(tags)
+
         mockMvc.perform(get(path))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$").isNotEmpty)
@@ -83,8 +86,8 @@ class DockerRegistryControllerTest {
     @ParameterizedTest
     @ValueSource(
         strings = [
-            "/tags?repoUrl=docker.com/no_skatteetaten_aurora_demo/whoami",
-            "/manifest?tagUrl=docker.com/no_skatteetaten_aurora_demo/whoami/2"
+            "/tags?repoUrl=$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami",
+            "/manifest?tagUrl=$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami/2"
         ]
     )
     fun `Get docker registry image info given missing resource`(path: String) {
@@ -118,8 +121,8 @@ class DockerRegistryControllerTest {
     @ValueSource(
         strings = [
             "/tags?repoUrl=no_skatteetaten_aurora_demo/whaomi",
-            "/manifest?tagUrl=/no_skatteetaten_aurora_demo/whoami",
-            "/tags/semantic?repoUrl=/no_skatteetaten_aurora"
+            "/manifest?tagUrl=$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami",
+            "/tags/semantic?repoUrl=$defaultTestRegistry/no_skatteetaten_aurora"
         ]
     )
     fun `Get request given invalid repoUrl and tagUrl throw BadRequestException`(path: String) {
@@ -140,8 +143,8 @@ class DockerRegistryControllerTest {
     @ParameterizedTest
     @ValueSource(
         strings = [
-            "/tags?repoUrl=/no_skatteetaten_aurora_demo/whoami",
-            "/manifest?tagUrl=/no_skatteetaten_aurora_demo/whoami/2"
+            "/tags?repoUrl=$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami",
+            "/manifest?tagUrl=$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami/2"
         ]
     )
     fun `Get request given no authorization token throw ForbiddenException`(path: String) {
@@ -161,9 +164,9 @@ class DockerRegistryControllerTest {
     @ParameterizedTest
     @ValueSource(
         strings = [
-            "/tags?repoUrl=/no_skatteetaten_aurora_demo/whoami",
-            "/tags/semantic?repoUrl=/no_skatteetaten_aurora_demo/whoami",
-            "/manifest?tagUrl=/no_skatteetaten_aurora_demo/whoami/2"
+            "/tags?repoUrl=$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami",
+            "/tags/semantic?repoUrl=$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami",
+            "/manifest?tagUrl=$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami/2"
         ]
     )
     fun `Get request given throw IllegalStateException`(path: String) {
@@ -182,7 +185,7 @@ class DockerRegistryControllerTest {
 
     @Test
     fun `Verify groups tags correctly`() {
-        val path = "/tags/semantic?repoUrl=/no_skatteetaten_aurora_demo/whoami"
+        val path = "/tags/semantic?repoUrl=$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami"
         val tags = ImageTagsWithTypeDto(
             tags = parseJsonFromFile("dockerTagList.json")["tags"].map {
                 ImageTagTypedDto(name = it.asText())
