@@ -24,6 +24,13 @@ data class ImageRepoCommand(
         )
 }
 
+data class ImageRepo(
+    val registry: String? = null,
+    val imageGroup: String? = null,
+    val imageName: String? = null,
+    val imageTag: String? = null
+)
+
 @Component
 class ImageRepoCommandAssembler(
     @Value("\${cantus.docker.url}") val registryUrl: String,
@@ -63,14 +70,17 @@ class ImageRepoCommandAssembler(
         }
     }
 
-    private fun String.splitCheckNull(): List<String?> {
+    private fun String.splitCheckNull(): ImageRepo {
         val repoVariables = this.split("/")
         val repoVariablesSize = repoVariables.size
 
-        if (repoVariablesSize < 3 || repoVariablesSize > 4) return listOf(null, null, null, null)
+        if (repoVariablesSize < 3 || repoVariablesSize > 4) return ImageRepo()
 
-        if (repoVariables.getOrNull(3) == null) return repoVariables + listOf(null)
-
-        return repoVariables
+        return ImageRepo(
+            registry = repoVariables.getOrNull(0),
+            imageGroup = repoVariables.getOrNull(1),
+            imageName = repoVariables.getOrNull(2),
+            imageTag = repoVariables.getOrNull(3)
+        )
     }
 }

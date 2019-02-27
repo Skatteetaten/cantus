@@ -27,7 +27,6 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders
 @WebMvcTest(
     value = [
         DockerRegistryController::class,
-        ErrorHandler::class,
         ImageTagResourceAssembler::class,
         AuroraResponseAssembler::class,
         ImageRepoCommandAssembler::class
@@ -43,7 +42,7 @@ class DockerRegistryControllerTest {
 
     @Before
     fun setup() {
-        mockMvc = MockMvcBuilders.standaloneSetup(dockerService).setControllerAdvice(ErrorHandler()).build()
+        mockMvc = MockMvcBuilders.standaloneSetup(dockerService).build()
     }
 
     @ParameterizedTest

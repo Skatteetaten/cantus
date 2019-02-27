@@ -76,8 +76,6 @@ class DockerRegistryController(
                 ?: return Try.Failure(CantusFailure(repoUrl, BadRequestException("Invalid url=$repoUrl")))
 
             return Try.Success(fn(dockerRegistryService, imageRepoCommand))
-        } catch (e: IndexOutOfBoundsException) {
-            return Try.Failure(CantusFailure(repoUrl, BadRequestException("Invalid url=$repoUrl")))
         } catch (e: Throwable) {
             return Try.Failure(CantusFailure(repoUrl, e))
         }

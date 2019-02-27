@@ -1,41 +1,12 @@
 package no.skatteetaten.aurora.cantus.controller
 
-import mu.KotlinLogging
-import org.springframework.http.HttpHeaders
-import org.springframework.http.HttpStatus
-import org.springframework.http.MediaType
-import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.ExceptionHandler
-import org.springframework.web.context.request.WebRequest
 import org.springframework.web.reactive.function.client.ClientResponse
 import org.springframework.web.reactive.function.client.WebClientResponseException
-import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler
 import reactor.core.publisher.Mono
 import reactor.core.publisher.toMono
-import uk.q3c.rest.hal.HalResource
 import java.time.Duration
 
 private val blockTimeout: Long = 30
-private val errorLogger = KotlinLogging.logger {}
-
-class ErrorHandler : ResponseEntityExceptionHandler() {
-
-    @ExceptionHandler(RuntimeException::class)
-    fun handleGenericError(e: RuntimeException, request: WebRequest) =
-        handleException(e, request, HttpStatus.INTERNAL_SERVER_ERROR)
-
-    private fun handleException(e: Exception, request: WebRequest, httpStatus: HttpStatus): ResponseEntity<Any>? {
-        val auroraResponse = AuroraResponse<HalResource>(
-            success = false,
-            message = e.message ?: "",
-            failure = listOf(CantusFailure("", e))
-        )
-        val headers = HttpHeaders().apply { contentType = MediaType.APPLICATION_JSON }
-
-        errorLogger.debug(e) { "An exception has occurred with status=${httpStatus.value()} message=${e.message}" }
-        return handleExceptionInternal(e, auroraResponse, headers, httpStatus, request)
-    }
-}
 
 fun <T> Mono<T>.blockAndHandleError(
     duration: Duration = Duration.ofSeconds(blockTimeout),
