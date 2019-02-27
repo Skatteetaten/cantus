@@ -40,7 +40,7 @@ class ImageRepoCommandAssembler(
         url: String,
         bearerToken: String? = null
     ): ImageRepoCommand? {
-        val (overrideRegistryUrl, namespace, name, tag) = url.splitCheckNull()
+        val (overrideRegistryUrl, namespace, name, tag) = url.toImageRepo()
 
         if (namespace.isNullOrEmpty() || name.isNullOrEmpty()) return null
 
@@ -70,7 +70,7 @@ class ImageRepoCommandAssembler(
         }
     }
 
-    private fun String.splitCheckNull(): ImageRepo {
+    private fun String.toImageRepo(): ImageRepo {
         val repoVariables = this.split("/")
         val repoVariablesSize = repoVariables.size
 
