@@ -14,6 +14,8 @@ data class ImageRepoCommand(
         get() = listOf(imageGroup, imageName, imageTag).joinToString("/")
     val defaultRepo: String
         get() = listOf(imageGroup, imageName).joinToString("/")
+    val fullRepoCommand: String
+        get() = listOf(registry, imageGroup, imageName, imageTag).joinToString("/")
     val mappedTemplateVars: Map<String, String?>
         get() = mapOf(
             "imageGroup" to imageGroup,
@@ -31,7 +33,6 @@ class ImageRepoCommandAssembler(
         url: String,
         bearerToken: String? = null
     ): ImageRepoCommand? {
-
         val (overrideRegistryUrl, namespace, name, tag) = url.splitCheckNull()
 
         if (namespace.isNullOrEmpty() || name.isNullOrEmpty()) return null
@@ -66,7 +67,9 @@ class ImageRepoCommandAssembler(
         val repoVariables = this.split("/")
         val repoVariablesSize = repoVariables.size
 
-        if (repoVariablesSize < 3 || repoVariablesSize > 4) return listOf(null)
+        if (repoVariablesSize < 3 || repoVariablesSize > 4) return listOf(null, null, null, null)
+
+        if (repoVariables.getOrNull(3) == null) return repoVariables + listOf(null)
 
         return repoVariables
     }

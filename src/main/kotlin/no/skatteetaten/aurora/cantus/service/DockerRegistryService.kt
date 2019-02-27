@@ -51,7 +51,7 @@ class DockerRegistryService(
     ): ImageManifestDto {
         val url = imageRepoCommand.registry
 
-        if (imageRepoCommand.imageTag.isNullOrEmpty()) throw BadRequestException("Tag in tagUrl is required to get manifest of an image")
+        if (imageRepoCommand.imageTag.isNullOrEmpty()) throw BadRequestException("Invalid url=${imageRepoCommand.fullRepoCommand}")
 
         val registryMetadata = registryMetadataResolver.getMetadataForRegistry(url)
 

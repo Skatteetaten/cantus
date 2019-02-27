@@ -1,11 +1,14 @@
 package no.skatteetaten.aurora.cantus.controller
 
 import com.fasterxml.jackson.annotation.JsonIgnore
+import mu.KotlinLogging
 import no.skatteetaten.aurora.cantus.service.ImageManifestDto
 import no.skatteetaten.aurora.cantus.service.ImageTagType
 import org.springframework.stereotype.Component
 import uk.q3c.rest.hal.HalResource
 import java.time.Instant
+
+private val logger = KotlinLogging.logger {}
 
 data class TagResource(val name: String, val type: ImageTagType = ImageTagType.typeOf(name)) : HalResource()
 
@@ -98,6 +101,7 @@ fun <S : Any, T : Any> List<Try<S, T>>.getSuccessAndFailures(): Pair<List<S>, Li
 
     val failure = this.mapNotNull {
         if (it is Try.Failure) {
+            if (it.value is CantusFailure) logger.debug(it.value.error) { "An error has occurred" }
             it.value
         } else null
     }
@@ -159,12 +163,4 @@ class AuroraResponseAssembler {
             failure = failures
         )
     }
-
-    fun <T : HalResource> toAuroraResponseFailure(url: String, exception: Throwable) =
-        AuroraResponse<T>(
-            success = false,
-            message = exception.message ?: "",
-            failure = listOf(CantusFailure(url, exception))
-        )
 }
-

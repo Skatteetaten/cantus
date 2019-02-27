@@ -12,7 +12,8 @@
             }
           },
           "_embedded": {}
-        }],
+        }
+      ],
       "itemsInGroup": 1,
       "_links": {
         "self": {

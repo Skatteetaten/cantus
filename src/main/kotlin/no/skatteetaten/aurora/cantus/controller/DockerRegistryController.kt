@@ -8,7 +8,6 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
-import uk.q3c.rest.hal.HalResource
 
 @RestController
 class DockerRegistryController(
@@ -28,7 +27,8 @@ class DockerRegistryController(
                 dockerService
                     .getImageManifestInformation(imageRepoCommand)
                     .let { imageManifestDto ->
-                        imageTagResourceAssembler.toImageTagResource(manifestDto = imageManifestDto, requestUrl = it) }
+                        imageTagResourceAssembler.toImageTagResource(manifestDto = imageManifestDto, requestUrl = it)
+                    }
             }
         }
 
@@ -73,9 +73,11 @@ class DockerRegistryController(
     ): Try<T, CantusFailure> {
         try {
             val imageRepoCommand = imageRepoCommandAssembler.createAndValidateCommand(repoUrl, bearerToken)
-                ?: return Try.Failure(CantusFailure(repoUrl, BadRequestException("Invalid repoUrl or tagUrl")))
+                ?: return Try.Failure(CantusFailure(repoUrl, BadRequestException("Invalid url=$repoUrl")))
 
             return Try.Success(fn(dockerRegistryService, imageRepoCommand))
+        } catch (e: IndexOutOfBoundsException) {
+            return Try.Failure(CantusFailure(repoUrl, BadRequestException("Invalid url=$repoUrl")))
         } catch (e: Throwable) {
             return Try.Failure(CantusFailure(repoUrl, e))
         }
@@ -95,12 +97,6 @@ class ImageTagResourceAssembler(val auroraResponseAssembler: AuroraResponseAssem
 
     fun toTagResource(imageTagsWithTypeDto: ImageTagsWithTypeDto) =
         imageTagsWithTypeDto.tags.map { TagResource(it.name) }
-
-    fun <T : HalResource> toBadRequestResponse(repoUrl: String) =
-        auroraResponseAssembler.toAuroraResponseFailure<T>(
-            repoUrl,
-            BadRequestException(message = "Invalid url=$repoUrl")
-        )
 
     fun toGroupedTagResource(imageTagsWithTypeDto: ImageTagsWithTypeDto, repoUrl: String) =
         imageTagsWithTypeDto.tags

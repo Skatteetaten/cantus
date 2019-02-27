@@ -24,18 +24,6 @@ class ErrorHandler : ResponseEntityExceptionHandler() {
     fun handleGenericError(e: RuntimeException, request: WebRequest) =
         handleException(e, request, HttpStatus.INTERNAL_SERVER_ERROR)
 
-    @ExceptionHandler(ForbiddenException::class)
-    fun handleForbiddenRequest(e: ForbiddenException, request: WebRequest) =
-        handleException(e, request, HttpStatus.FORBIDDEN)
-
-    @ExceptionHandler(BadRequestException::class)
-    fun handleBadRequest(e: BadRequestException, request: WebRequest) =
-        handleException(e, request, HttpStatus.BAD_REQUEST)
-
-    @ExceptionHandler(SourceSystemException::class)
-    fun handleSourceSystem(e: SourceSystemException, request: WebRequest) =
-        handleException(e, request, HttpStatus.OK)
-
     private fun handleException(e: Exception, request: WebRequest, httpStatus: HttpStatus): ResponseEntity<Any>? {
         val auroraResponse = AuroraResponse<HalResource>(
             success = false,

@@ -126,6 +126,10 @@ class DockerRegistryControllerTest {
     fun `Get request given invalid repoUrl and tagUrl throw BadRequestException`(path: String) {
 
         val repoUrl = path.split("=")[1]
+
+        given(dockerService.getImageManifestInformation(any()))
+            .willThrow(BadRequestException("Invalid url=$repoUrl"))
+
         mockMvc.perform(get(path))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.items").isEmpty)
