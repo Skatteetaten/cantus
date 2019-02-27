@@ -42,11 +42,6 @@ class DockerRegistryControllerTest {
     @Autowired
     private lateinit var mockMvc: MockMvc
 
-    @Before
-    fun setup() {
-        mockMvc = MockMvcBuilders.standaloneSetup(dockerService).build()
-    }
-
     @ParameterizedTest
     @ValueSource(
         strings = [
