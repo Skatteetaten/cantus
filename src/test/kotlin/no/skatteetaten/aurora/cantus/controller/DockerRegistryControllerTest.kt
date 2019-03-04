@@ -3,11 +3,12 @@ package no.skatteetaten.aurora.cantus.controller
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.nhaarman.mockito_kotlin.any
+import com.nhaarman.mockito_kotlin.times
+import com.nhaarman.mockito_kotlin.verify
+import no.skatteetaten.aurora.cantus.ImageManifestDtoBuilder
 import no.skatteetaten.aurora.cantus.service.DockerRegistryService
-import no.skatteetaten.aurora.cantus.service.ImageManifestDto
 import no.skatteetaten.aurora.cantus.service.ImageTagTypedDto
 import no.skatteetaten.aurora.cantus.service.ImageTagsWithTypeDto
-import no.skatteetaten.aurora.cantus.service.JavaImageDto
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -21,6 +22,7 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import org.springframework.util.LinkedMultiValueMap
 
 private const val defaultTestRegistry: String = "docker.com"
 
@@ -50,19 +52,7 @@ class DockerRegistryControllerTest {
     )
     fun `Get docker registry image info`(path: String) {
         val tags = ImageTagsWithTypeDto(tags = listOf(ImageTagTypedDto("test")))
-        val manifest =
-            ImageManifestDto(
-                auroraVersion = "2",
-                dockerVersion = "2",
-                dockerDigest = "sah",
-                appVersion = "2",
-                nodeVersion = "2",
-                java = JavaImageDto(
-                    major = "2",
-                    minor = "0",
-                    build = "0"
-                )
-            )
+        val manifest = ImageManifestDtoBuilder().build()
 
         given(dockerService.getImageManifestInformation(any())).willReturn(manifest)
         given(dockerService.getImageTags(any())).willReturn(tags)
@@ -108,6 +98,29 @@ class DockerRegistryControllerTest {
             .andExpect(jsonPath("$.success").value(false))
             .andExpect(jsonPath("$.failure[0].url").value(repoUrl))
             .andExpect(jsonPath("$.failure[0].errorMessage").value("Resource could not be found status=${notFoundStatus.value()} message=${notFoundStatus.reasonPhrase}"))
+    }
+
+    @Test
+    fun `Get imageManifestList given multiple tagUrls return AuroraResponse`() {
+        val manifest = ImageManifestDtoBuilder().build()
+
+        given(dockerService.getImageManifestInformation(any())).willReturn(manifest)
+
+        val tagUrls = LinkedMultiValueMap<String, String>().apply {
+            addAll(
+                "tagUrl", listOf(
+                    "$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami/2",
+                    "$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami/1"
+                )
+            )
+        }
+
+        mockMvc.perform(get("/manifest").params(tagUrls))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.count").value(2))
+
+        verify(dockerService, times(2)).getImageManifestInformation(any())
     }
 
     @ParameterizedTest

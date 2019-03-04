@@ -1,5 +1,7 @@
 package no.skatteetaten.aurora.cantus.controller
 
+import kotlinx.coroutines.async
+import kotlinx.coroutines.runBlocking
 import no.skatteetaten.aurora.cantus.service.DockerRegistryService
 import no.skatteetaten.aurora.cantus.service.ImageManifestDto
 import no.skatteetaten.aurora.cantus.service.ImageTagsWithTypeDto
@@ -18,21 +20,35 @@ class DockerRegistryController(
 
     @GetMapping("/manifest")
     fun getManifestInformationList(
-        @RequestParam tagUrl: List<String>,
+        @RequestParam tagUrls: List<String>,
         @RequestHeader(required = false, value = "Authorization") bearerToken: String?
     ): AuroraResponse<ImageTagResource> {
 
-        val responses = tagUrl.map {
-            getResponse(bearerToken, it) { dockerService, imageRepoCommand ->
-                dockerService
-                    .getImageManifestInformation(imageRepoCommand)
-                    .let { imageManifestDto ->
-                        imageTagResourceAssembler.toImageTagResource(manifestDto = imageManifestDto, requestUrl = it)
+        val responses =
+            runBlocking {
+                val deferred =
+                    tagUrls.map {
+                        async { getImageTagResource(bearerToken, it) }
                     }
+                deferred.map { it.await() }
             }
-        }
 
         return imageTagResourceAssembler.imageTagResourceToAuroraResponse(responses)
+    }
+
+    private fun getImageTagResource(
+        bearerToken: String?,
+        tagUrl: String
+    ): Try<ImageTagResource, CantusFailure> {
+        return getResponse(bearerToken, tagUrl) { dockerService, imageRepoCommand ->
+            dockerService.getImageManifestInformation(imageRepoCommand)
+                .let { imageManifestDto ->
+                    imageTagResourceAssembler.toImageTagResource(
+                        manifestDto = imageManifestDto,
+                        requestUrl = tagUrl
+                    )
+                }
+        }
     }
 
     @GetMapping("/tags")
