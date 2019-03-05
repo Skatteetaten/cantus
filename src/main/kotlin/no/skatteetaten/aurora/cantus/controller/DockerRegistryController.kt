@@ -1,6 +1,7 @@
 package no.skatteetaten.aurora.cantus.controller
 
 import kotlinx.coroutines.async
+import kotlinx.coroutines.newFixedThreadPoolContext
 import kotlinx.coroutines.runBlocking
 import no.skatteetaten.aurora.cantus.service.DockerRegistryService
 import no.skatteetaten.aurora.cantus.service.ImageManifestDto
@@ -24,8 +25,9 @@ class DockerRegistryController(
         @RequestHeader(required = false, value = "Authorization") bearerToken: String?
     ): AuroraResponse<ImageTagResource> {
 
+        val context= newFixedThreadPoolContext(6, "cantus")
         val responses =
-            runBlocking {
+            runBlocking(context) {
                 val deferred =
                     tagUrls.map {
                         async { getImageTagResource(bearerToken, it) }
@@ -136,6 +138,6 @@ class ImageTagResourceAssembler(val auroraResponseAssembler: AuroraResponseAssem
             auroraVersion = manifestDto.auroraVersion,
             timeline = ImageBuildTimeline.fromDto(manifestDto),
             node = NodeJsImage.fromDto(manifestDto),
-            requsestUrl = requestUrl
+            requestUrl = requestUrl
         )
 }
