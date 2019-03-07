@@ -25,7 +25,7 @@ class DockerRegistryController(
         @RequestHeader(required = false, value = "Authorization") bearerToken: String?
     ): AuroraResponse<ImageTagResource> {
 
-        val context= newFixedThreadPoolContext(6, "cantus")
+        val context = newFixedThreadPoolContext(6, "cantus")
         val responses =
             runBlocking(context) {
                 val deferred =

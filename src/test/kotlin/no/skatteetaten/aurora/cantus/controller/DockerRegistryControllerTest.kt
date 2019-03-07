@@ -1,11 +1,10 @@
 package no.skatteetaten.aurora.cantus.controller
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.times
 import com.nhaarman.mockito_kotlin.verify
 import no.skatteetaten.aurora.cantus.ImageManifestDtoBuilder
+import no.skatteetaten.aurora.cantus.ImageTagsWithTypeDtoBuilder
 import no.skatteetaten.aurora.cantus.service.DockerRegistryService
 import no.skatteetaten.aurora.cantus.service.ImageTagTypedDto
 import no.skatteetaten.aurora.cantus.service.ImageTagsWithTypeDto
@@ -16,7 +15,6 @@ import org.mockito.BDDMockito.given
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.boot.test.mock.mockito.MockBean
-import org.springframework.core.io.ClassPathResource
 import org.springframework.http.HttpStatus
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
@@ -42,10 +40,12 @@ class DockerRegistryControllerTest {
     @Autowired
     private lateinit var mockMvc: MockMvc
 
+    private val tags = ImageTagsWithTypeDtoBuilder("no_skatteetaten_aurora_demo", "whoami").build()
+
     @ParameterizedTest
     @ValueSource(
         strings = [
-            "/manifest?tagUrl=$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami/2",
+            "/manifest?tagUrls=$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami/2",
             "/tags?repoUrl=$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami",
             "/tags/semantic?repoUrl=$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami"
         ]
@@ -70,7 +70,7 @@ class DockerRegistryControllerTest {
     @ValueSource(
         strings = [
             "/tags?repoUrl=$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami",
-            "/manifest?tagUrl=$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami/2"
+            "/manifest?tagUrls=$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami/2"
         ]
     )
     fun `Get docker registry image info given missing resource`(path: String) {
@@ -108,7 +108,7 @@ class DockerRegistryControllerTest {
 
         val tagUrls = LinkedMultiValueMap<String, String>().apply {
             addAll(
-                "tagUrl", listOf(
+                "tagUrls", listOf(
                     "$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami/2",
                     "$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami/1"
                 )
@@ -127,7 +127,7 @@ class DockerRegistryControllerTest {
     @ValueSource(
         strings = [
             "/tags?repoUrl=no_skatteetaten_aurora_demo/whaomi",
-            "/manifest?tagUrl=$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami",
+            "/manifest?tagUrls=$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami",
             "/tags/semantic?repoUrl=$defaultTestRegistry/no_skatteetaten_aurora"
         ]
     )
@@ -150,7 +150,7 @@ class DockerRegistryControllerTest {
     @ValueSource(
         strings = [
             "/tags?repoUrl=$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami",
-            "/manifest?tagUrl=$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami/2"
+            "/manifest?tagUrls=$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami/2"
         ]
     )
     fun `Get request given no authorization token throw ForbiddenException`(path: String) {
@@ -172,7 +172,7 @@ class DockerRegistryControllerTest {
         strings = [
             "/tags?repoUrl=$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami",
             "/tags/semantic?repoUrl=$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami",
-            "/manifest?tagUrl=$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami/2"
+            "/manifest?tagUrls=$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami/2"
         ]
     )
     fun `Get request given throw IllegalStateException`(path: String) {
@@ -192,36 +192,27 @@ class DockerRegistryControllerTest {
     @Test
     fun `Verify groups tags correctly`() {
         val path = "/tags/semantic?repoUrl=$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami"
-        val tags = ImageTagsWithTypeDto(
-            tags = parseJsonFromFile("dockerTagList.json")["tags"].map {
-                ImageTagTypedDto(name = it.asText())
-            }
-        )
+
         given(
             dockerService.getImageTags(any())
         ).willReturn(tags)
 
         mockMvc.perform(get(path))
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.count").value(4))
+            .andExpect(jsonPath("$.count").value(3))
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.items[0].group").value("MAJOR"))
             .andExpect(jsonPath("$.items[0].tagResource[0].name").value("0"))
             .andExpect(jsonPath("$.items[0].itemsInGroup").value(1))
             .andExpect(jsonPath("$.items[2].group").value("BUGFIX"))
             .andExpect(jsonPath("$.items[2].tagResource[0].name").value("0.0.0"))
-            .andExpect(jsonPath("$.items[2].itemsInGroup").value(2))
+            .andExpect(jsonPath("$.items[2].itemsInGroup").value(1))
     }
 
     @Test
     fun `Verify that allowed override docker registry url is validated as allowed`() {
         val path = "/tags?repoUrl=allowedurl.no/no_skatteetaten_aurora_demo/whoami"
 
-        val tags = ImageTagsWithTypeDto(
-            tags = parseJsonFromFile("dockerTagList.json")["tags"].map {
-                ImageTagTypedDto(name = it.asText())
-            }
-        )
         given(dockerService.getImageTags(any()))
             .willReturn(tags)
 
@@ -235,12 +226,6 @@ class DockerRegistryControllerTest {
         val repoUrl = "vg.no/no_skatteetaten_aurora_demo/whoami"
         val path = "/tags?repoUrl=$repoUrl"
 
-        val tags = ImageTagsWithTypeDto(
-            tags = parseJsonFromFile("dockerTagList.json")["tags"].map {
-                ImageTagTypedDto(name = it.asText())
-            }
-        )
-
         given(
             dockerService.getImageTags(any())
         ).willReturn(tags)
@@ -249,10 +234,5 @@ class DockerRegistryControllerTest {
             .andExpect(jsonPath("$.failure[0].errorMessage").value("Invalid Docker Registry URL url=vg.no"))
             .andExpect(jsonPath("$.failure[0].url").value(repoUrl))
             .andExpect(jsonPath("$.success").value(false))
-    }
-
-    fun parseJsonFromFile(fileName: String): JsonNode {
-        val classPath = ClassPathResource("/$fileName")
-        return jacksonObjectMapper().readTree(classPath.file)
     }
 }
