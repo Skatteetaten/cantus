@@ -1,7 +1,7 @@
 package no.skatteetaten.aurora.cantus.controller
 
+import kotlinx.coroutines.ExecutorCoroutineDispatcher
 import kotlinx.coroutines.async
-import kotlinx.coroutines.newFixedThreadPoolContext
 import kotlinx.coroutines.runBlocking
 import no.skatteetaten.aurora.cantus.service.DockerRegistryService
 import no.skatteetaten.aurora.cantus.service.ImageManifestDto
@@ -16,7 +16,8 @@ import org.springframework.web.bind.annotation.RestController
 class DockerRegistryController(
     val dockerRegistryService: DockerRegistryService,
     val imageTagResourceAssembler: ImageTagResourceAssembler,
-    val imageRepoCommandAssembler: ImageRepoCommandAssembler
+    val imageRepoCommandAssembler: ImageRepoCommandAssembler,
+    val threadPoolContext: ExecutorCoroutineDispatcher
 ) {
 
     @GetMapping("/manifest")
@@ -25,9 +26,8 @@ class DockerRegistryController(
         @RequestHeader(required = false, value = "Authorization") bearerToken: String?
     ): AuroraResponse<ImageTagResource> {
 
-        val context = newFixedThreadPoolContext(6, "cantus")
         val responses =
-            runBlocking(context) {
+            runBlocking(threadPoolContext) {
                 val deferred =
                     tagUrls.map {
                         async { getImageTagResource(bearerToken, it) }

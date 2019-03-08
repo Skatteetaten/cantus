@@ -3,6 +3,7 @@ package no.skatteetaten.aurora.cantus.controller
 import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.times
 import com.nhaarman.mockito_kotlin.verify
+import kotlinx.coroutines.newFixedThreadPoolContext
 import no.skatteetaten.aurora.cantus.ImageManifestDtoBuilder
 import no.skatteetaten.aurora.cantus.ImageTagsWithTypeDtoBuilder
 import no.skatteetaten.aurora.cantus.service.DockerRegistryService
@@ -13,8 +14,11 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.BDDMockito.given
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
+import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.boot.test.mock.mockito.MockBean
+import org.springframework.context.annotation.Bean
 import org.springframework.http.HttpStatus
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
@@ -34,6 +38,15 @@ private const val defaultTestRegistry: String = "docker.com"
     secure = false
 )
 class DockerRegistryControllerTest {
+
+    @TestConfiguration
+    class DockerRegistryControllerTestConfiguration {
+
+        @Bean
+        fun threadPoolContext(@Value("\${cantus.threadPoolSize:6}") threadPoolSize: Int) =
+            newFixedThreadPoolContext(threadPoolSize, "cantus")
+    }
+
     @MockBean
     private lateinit var dockerService: DockerRegistryService
 
