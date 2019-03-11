@@ -15,7 +15,7 @@ aurora:
 
 logging:
     level:
-        no.skatteetaten.aurora.cantus: WARN
+        no.skatteetaten.aurora.cantus: INFO
         org:
             hibernate: WARN
             springframework: INFO
