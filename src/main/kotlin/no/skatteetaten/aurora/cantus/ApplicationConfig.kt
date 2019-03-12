@@ -42,9 +42,14 @@ class ApplicationConfig {
         newFixedThreadPoolContext(threadPoolSize, "cantus")
 
     @Bean
-    fun webClient(builder: WebClient.Builder, tcpClient: TcpClient) =
+    fun webClient(
+        builder: WebClient.Builder,
+        tcpClient: TcpClient,
+        @Value("\${spring.application.name}") applicationName: String
+    ) =
         builder
             .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+            .defaultHeader("KlientID", applicationName)
             .exchangeStrategies(exchangeStrategies())
             .filter(ExchangeFilterFunction.ofRequestProcessor {
                 val bearer = it.headers()[HttpHeaders.AUTHORIZATION]?.firstOrNull()?.let { token ->

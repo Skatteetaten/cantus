@@ -8,11 +8,6 @@ spring:
     profiles:
         active: local
 
-aurora:
-    starter:
-        headerfilter:
-            enabled: false
-
 logging:
     level:
         no.skatteetaten.aurora.cantus: INFO
