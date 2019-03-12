@@ -37,7 +37,7 @@ server:
 
 management:
     server:
-        port: 8095
+        port: 8000
 
 logging:
     pattern:
