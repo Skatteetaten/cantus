@@ -26,6 +26,7 @@ apply(plugin = "spring-cloud-contract")
 
 dependencies {
     implementation("uk.q3c.rest:hal-kotlin:0.5.4.0.db32476")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-slf4j:1.1.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.1.1")
 
     testImplementation("com.squareup.okhttp3:mockwebserver:3.13.1")
