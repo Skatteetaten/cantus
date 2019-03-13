@@ -55,6 +55,8 @@ class DockerRegistryControllerTest {
 
     private val tags = ImageTagsWithTypeDtoBuilder("no_skatteetaten_aurora_demo", "whoami").build()
 
+    @Test
+
     @ParameterizedTest
     @ValueSource(
         strings = [
