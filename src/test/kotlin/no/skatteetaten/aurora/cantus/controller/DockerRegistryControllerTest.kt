@@ -57,8 +57,6 @@ class DockerRegistryControllerTest {
 
     private val tags = ImageTagsWithTypeDtoBuilder("no_skatteetaten_aurora_demo", "whoami").build()
 
-    @Test
-
     @ParameterizedTest
     @ValueSource(
         strings = [
@@ -97,26 +95,13 @@ class DockerRegistryControllerTest {
             .andExpect(jsonPath("$.success").value(true))
     }
 
-    @ParameterizedTest
-    @ValueSource(
-        strings = [
-            "/tags?repoUrl=$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami",
-            "/manifest?tagUrls=$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami/2"
-        ]
-    )
-    fun `Get docker registry image info given missing resource`(path: String) {
-
+    @Test
+    fun `Get docker registry image tags with GET given missing resource`() {
+        val path = "/tags?repoUrl=$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami"
         val notFoundStatus = HttpStatus.NOT_FOUND
         val repoUrl = path.split("=")[1]
 
         given(dockerService.getImageTags(any())).willThrow(
-            SourceSystemException(
-                message = "Resource could not be found status=${notFoundStatus.value()} message=${notFoundStatus.reasonPhrase}",
-                sourceSystem = "https://docker.com"
-            )
-        )
-
-        given(dockerService.getImageManifestInformation(any())).willThrow(
             SourceSystemException(
                 message = "Resource could not be found status=${notFoundStatus.value()} message=${notFoundStatus.reasonPhrase}",
                 sourceSystem = "https://docker.com"
@@ -129,6 +114,31 @@ class DockerRegistryControllerTest {
             .andExpect(jsonPath("$.success").value(false))
             .andExpect(jsonPath("$.failure[0].url").value(repoUrl))
             .andExpect(jsonPath("$.failure[0].errorMessage").value("Resource could not be found status=${notFoundStatus.value()} message=${notFoundStatus.reasonPhrase}"))
+    }
+
+    @Test
+    fun `Get docker registry image manifest with POST given missing resource`() {
+        val tagUrl = listOf("$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami/2")
+
+        val notFoundStatus = HttpStatus.NOT_FOUND
+
+        given(dockerService.getImageManifestInformation(any())).willThrow(
+            SourceSystemException(
+                message = "Resource could not be found status=${notFoundStatus.value()} message=${notFoundStatus.reasonPhrase}",
+                sourceSystem = "https://docker.com"
+            )
+        )
+
+        mockMvc.perform(post("/manifest")
+            .contentType(MediaType.APPLICATION_JSON_UTF8_VALUE)
+            .content(jacksonObjectMapper().writeValueAsString(tagUrl)))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.items").isEmpty)
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.failure[0].url").value(tagUrl.first()))
+            .andExpect(jsonPath("$.failure[0].errorMessage").value("Resource could not be found status=${notFoundStatus.value()} message=${notFoundStatus.reasonPhrase}"))
+
+
     }
 
     @Test
@@ -191,19 +201,12 @@ class DockerRegistryControllerTest {
             .andExpect(jsonPath("$.failure[0].errorMessage").value("Invalid url=${tagUrl.first()}"))
     }
 
-    @ParameterizedTest
-    @ValueSource(
-        strings = [
-            "/tags?repoUrl=$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami",
-            "/manifest?tagUrls=$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami/2"
-        ]
-    )
-    fun `Get request given no authorization token throw ForbiddenException`(path: String) {
+    @Test
+    fun `Get tags given no authorization token throw ForbiddenException`() {
+        val path = "/tags?repoUrl=$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami"
         given(dockerService.getImageTags(any()))
             .willThrow(ForbiddenException("Authorization bearer token is not present"))
 
-        given(dockerService.getImageManifestInformation(any()))
-            .willThrow(ForbiddenException("Authorization bearer token is not present"))
 
         mockMvc.perform(get(path))
             .andExpect(status().isOk)
@@ -211,6 +214,23 @@ class DockerRegistryControllerTest {
             .andExpect(jsonPath("$.items").isEmpty)
             .andExpect(jsonPath("$.success").value(false))
     }
+
+    @Test
+    fun `Get manifest given no authorization token throw ForbiddenException`() {
+        val tagUrl = listOf("$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami/2")
+
+        given(dockerService.getImageManifestInformation(any()))
+            .willThrow(ForbiddenException("Authorization bearer token is not present"))
+
+        mockMvc.perform(post("/manifest")
+            .contentType(MediaType.APPLICATION_JSON_UTF8_VALUE)
+            .content(jacksonObjectMapper().writeValueAsString(tagUrl)))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.failure[0].errorMessage").value("Authorization bearer token is not present"))
+            .andExpect(jsonPath("$.items").isEmpty)
+            .andExpect(jsonPath("$.success").value(false))
+    }
+
 
     @ParameterizedTest
     @ValueSource(
