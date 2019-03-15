@@ -9,7 +9,10 @@ Contract.make {
         stub(~/\/manifest/),
         test('/manifest')
     )
-    body(file('requests/ImageTagResource.json'))
+    headers {
+      contentType(applicationJson())
+    }
+    body('["docker1.no/no_skatt_test/namespace/name/tag"]')
   }
   response {
     status 200
