@@ -137,8 +137,6 @@ class DockerRegistryControllerTest {
             .andExpect(jsonPath("$.success").value(false))
             .andExpect(jsonPath("$.failure[0].url").value(tagUrl.first()))
             .andExpect(jsonPath("$.failure[0].errorMessage").value("Resource could not be found status=${notFoundStatus.value()} message=${notFoundStatus.reasonPhrase}"))
-
-
     }
 
     @Test
@@ -207,7 +205,6 @@ class DockerRegistryControllerTest {
         given(dockerService.getImageTags(any()))
             .willThrow(ForbiddenException("Authorization bearer token is not present"))
 
-
         mockMvc.perform(get(path))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.failure[0].errorMessage").value("Authorization bearer token is not present"))
@@ -230,7 +227,6 @@ class DockerRegistryControllerTest {
             .andExpect(jsonPath("$.items").isEmpty)
             .andExpect(jsonPath("$.success").value(false))
     }
-
 
     @ParameterizedTest
     @ValueSource(
