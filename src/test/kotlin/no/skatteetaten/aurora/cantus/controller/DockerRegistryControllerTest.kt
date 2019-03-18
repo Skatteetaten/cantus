@@ -301,4 +301,3 @@ class DockerRegistryControllerTest {
 private fun MockHttpServletRequestBuilder.setBody(tagUrls: List<String>): RequestBuilder =
     this.contentType(MediaType.APPLICATION_JSON_UTF8_VALUE)
         .content(jacksonObjectMapper().writeValueAsString(tagUrls))
-
