@@ -1,6 +1,7 @@
 package no.skatteetaten.aurora.cantus.controller
 
 import com.nhaarman.mockito_kotlin.any
+import com.nhaarman.mockito_kotlin.reset
 import com.nhaarman.mockito_kotlin.times
 import com.nhaarman.mockito_kotlin.verify
 import kotlinx.coroutines.newFixedThreadPoolContext
@@ -12,10 +13,13 @@ import no.skatteetaten.aurora.cantus.service.ImageTagTypedDto
 import no.skatteetaten.aurora.cantus.service.ImageTagsWithTypeDto
 import no.skatteetaten.aurora.mockmvc.extensions.Path
 import no.skatteetaten.aurora.mockmvc.extensions.contentType
+import no.skatteetaten.aurora.mockmvc.extensions.get
 import no.skatteetaten.aurora.mockmvc.extensions.mock.withContractResponse
 import no.skatteetaten.aurora.mockmvc.extensions.post
 import no.skatteetaten.aurora.mockmvc.extensions.responseJsonPath
 import no.skatteetaten.aurora.mockmvc.extensions.statusIsOk
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -30,8 +34,6 @@ import org.springframework.context.annotation.Bean
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.test.web.servlet.MockMvc
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers
 
 private const val defaultTestRegistry: String = "docker.com"
 
@@ -68,6 +70,12 @@ class DockerRegistryControllerContractTest {
     @MockBean
     private lateinit var mockedImageTagResourceAssembler: ImageTagResourceAssembler
 
+    @BeforeEach
+    fun reset() {
+        reset(mockedImageTagResourceAssembler)
+    }
+
+
     @Test
     fun `Get docker registry image manifest with POST`() {
         val manifest = ImageManifestDtoBuilder().build()
@@ -97,7 +105,6 @@ class DockerRegistryControllerContractTest {
         verify(dockerService, times(2)).getImageManifestInformation(any())
     }
 
-
     @ParameterizedTest
     @ValueSource(
         strings = [
@@ -109,12 +116,14 @@ class DockerRegistryControllerContractTest {
 
         val repoUrl = path.split("=")[1]
 
-        mockMvc.perform(MockMvcRequestBuilders.get(path))
-            .andExpect(MockMvcResultMatchers.status().isOk)
-            .andExpect(MockMvcResultMatchers.jsonPath("$.items").isEmpty)
-            .andExpect(MockMvcResultMatchers.jsonPath("$.success").value(false))
-            .andExpect(MockMvcResultMatchers.jsonPath("$.failure[0].url").value(repoUrl))
-            .andExpect(MockMvcResultMatchers.jsonPath("$.failure[0].errorMessage").value("Invalid url=$repoUrl"))
+        mockMvc.get(Path(path)) {
+            statusIsOk()
+                .responseJsonPath("$.items").isEmpty()
+                .responseJsonPath("$.success").isFalse()
+                .responseJsonPath("$.failure[0].url").equalsValue(repoUrl)
+                .responseJsonPath("$.failure[0].errorMessage").equalsValue("Invalid url=$repoUrl")
+
+        }
     }
 
     @ParameterizedTest
@@ -129,9 +138,10 @@ class DockerRegistryControllerContractTest {
 
         BDDMockito.given(dockerService.getImageTags(any())).willReturn(tags)
 
-        mockMvc.perform(MockMvcRequestBuilders.get(path))
-            .andExpect(MockMvcResultMatchers.status().isOk)
-            .andExpect(MockMvcResultMatchers.jsonPath("$").isNotEmpty)
+        mockMvc.get(Path(path)) {
+            statusIsOk()
+                .responseJsonPath("$").isNotEmpty()
+        }
     }
 
     @Test
@@ -147,11 +157,15 @@ class DockerRegistryControllerContractTest {
             )
         )
 
-        mockMvc.perform(MockMvcRequestBuilders.get(path))
-            .andExpect(MockMvcResultMatchers.status().isOk)
-            .andExpect(MockMvcResultMatchers.jsonPath("$.items").isEmpty)
-            .andExpect(MockMvcResultMatchers.jsonPath("$.success").value(false))
-            .andExpect(MockMvcResultMatchers.jsonPath("$.failure[0].url").value(repoUrl))
-            .andExpect(MockMvcResultMatchers.jsonPath("$.failure[0].errorMessage").value("Resource could not be found status=${notFoundStatus.value()} message=${notFoundStatus.reasonPhrase}"))
+        mockMvc.get(Path(path)) {
+            statusIsOk()
+                .andDo { print(it.response.contentAsString) }
+                .responseJsonPath("$.items").isEmpty()
+                .responseJsonPath("$.success").isFalse()
+                .responseJsonPath("$.failure[0].url").equalsValue(repoUrl)
+                .responseJsonPath("$.failure[0].errorMessage")
+                .equalsValue("Resource could not be found status=${notFoundStatus.value()} message=${notFoundStatus.reasonPhrase}")
+
+        }
     }
 }
