@@ -12,13 +12,14 @@ import no.skatteetaten.aurora.cantus.service.DockerRegistryService
 import no.skatteetaten.aurora.cantus.service.ImageTagTypedDto
 import no.skatteetaten.aurora.cantus.service.ImageTagsWithTypeDto
 import no.skatteetaten.aurora.mockmvc.extensions.Path
+import no.skatteetaten.aurora.mockmvc.extensions.TestObjectMapperConfigurer
 import no.skatteetaten.aurora.mockmvc.extensions.contentType
 import no.skatteetaten.aurora.mockmvc.extensions.get
 import no.skatteetaten.aurora.mockmvc.extensions.mock.withContractResponse
 import no.skatteetaten.aurora.mockmvc.extensions.post
 import no.skatteetaten.aurora.mockmvc.extensions.responseJsonPath
 import no.skatteetaten.aurora.mockmvc.extensions.statusIsOk
-import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -60,8 +61,6 @@ class DockerRegistryControllerContractTest {
     @MockBean
     private lateinit var dockerService: DockerRegistryService
 
-    private val testObjectMapper = createObjectMapper()
-
     @Autowired
     private lateinit var mockMvc: MockMvc
 
@@ -70,11 +69,19 @@ class DockerRegistryControllerContractTest {
     @MockBean
     private lateinit var mockedImageTagResourceAssembler: ImageTagResourceAssembler
 
+    init {
+        TestObjectMapperConfigurer.objectMapper = createObjectMapper()
+    }
+
+    @AfterAll
+    fun tearDown() {
+        TestObjectMapperConfigurer.reset()
+    }
+
     @BeforeEach
     fun reset() {
         reset(mockedImageTagResourceAssembler)
     }
-
 
     @Test
     fun `Get docker registry image manifest with POST`() {
@@ -88,65 +95,60 @@ class DockerRegistryControllerContractTest {
 
         val imageTagResource =
             BDDMockito.given(mockedImageTagResourceAssembler.imageTagResourceToAuroraResponse(any()))
-                .withContractResponse("imagetagresource/partialSuccess", objectMapper = testObjectMapper)
+                .withContractResponse("imagetagresource/partialSuccess")
                 { willReturn(content) }.mockResponse
 
         mockMvc.post(
             path = Path("/manifest"),
             headers = HttpHeaders().contentType(),
-            body = tagUrl,
-            docsIdentifier = "getDockerRegistryImageManifest"
+            body = tagUrl
         ) {
             statusIsOk()
-                .responseJsonPath("$").equalsObject(imageTagResource, objectMapper = testObjectMapper)
+                .responseJsonPath("$").equalsObject(imageTagResource)
                 .responseJsonPath("$.success").equalsValue(false)
         }
 
         verify(dockerService, times(2)).getImageManifestInformation(any())
     }
 
-    @ParameterizedTest
-    @ValueSource(
-        strings = [
-            "/tags?repoUrl=no_skatteetaten_aurora_demo/whaomi",
-            "/tags/semantic?repoUrl=$defaultTestRegistry/no_skatteetaten_aurora"
-        ]
-    )
-    fun `Get request given invalid repoUrl throw BadRequestException`(path: String) {
+    @Test
+    fun `Get docker registry image tags with GET`() {
+        val tags = ImageTagsWithTypeDto(tags = listOf(ImageTagTypedDto("test")))
+        val path = "/tags?repoUrl=url/namespace/name"
+        BDDMockito.given(dockerService.getImageTags(any())).willReturn(tags)
 
-        val repoUrl = path.split("=")[1]
+        val tagResource = BDDMockito.given(mockedImageTagResourceAssembler.tagResourceToAuroraResponse(any()))
+            .withContractResponse("tagresource/TagResource") {
+                willReturn(content)
+            }.mockResponse
 
         mockMvc.get(Path(path)) {
             statusIsOk()
-                .responseJsonPath("$.items").isEmpty()
-                .responseJsonPath("$.success").isFalse()
-                .responseJsonPath("$.failure[0].url").equalsValue(repoUrl)
-                .responseJsonPath("$.failure[0].errorMessage").equalsValue("Invalid url=$repoUrl")
-
+                .responseJsonPath("$").equalsObject(tagResource)
         }
     }
 
-    @ParameterizedTest
-    @ValueSource(
-        strings = [
-            "/tags?repoUrl=$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami",
-            "/tags/semantic?repoUrl=$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami"
-        ]
-    )
-    fun `Get docker registry image tags with GET`(path: String) {
+    @Test
+    fun `Get docker registry image tags grouped with GET`() {
         val tags = ImageTagsWithTypeDto(tags = listOf(ImageTagTypedDto("test")))
-
+        val path = "/tags/semantic?repoUrl=url/namespace/name"
         BDDMockito.given(dockerService.getImageTags(any())).willReturn(tags)
+
+        val groupedTagResource =
+            BDDMockito.given(mockedImageTagResourceAssembler.groupedTagResourceToAuroraResponse(any()))
+                .withContractResponse("tagresource/GroupedTagResource") {
+                    willReturn(content)
+                }.mockResponse
 
         mockMvc.get(Path(path)) {
             statusIsOk()
-                .responseJsonPath("$").isNotEmpty()
+                .responseJsonPath("$").equalsObject(groupedTagResource)
         }
     }
 
     @Test
     fun `Get docker registry image tags with GET given missing resource`() {
-        val path = "/tags?repoUrl=$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami"
+        val path = "/tags?repoUrl=url/namespace/missing"
         val notFoundStatus = HttpStatus.NOT_FOUND
         val repoUrl = path.split("=")[1]
 
@@ -157,14 +159,14 @@ class DockerRegistryControllerContractTest {
             )
         )
 
+        val tagResourceNotFound = BDDMockito.given(mockedImageTagResourceAssembler.tagResourceToAuroraResponse(any()))
+            .withContractResponse("tagresource/TagResourceNotFound") {
+                willReturn(content)
+            }.mockResponse
+
         mockMvc.get(Path(path)) {
             statusIsOk()
-                .andDo { print(it.response.contentAsString) }
-                .responseJsonPath("$.items").isEmpty()
-                .responseJsonPath("$.success").isFalse()
-                .responseJsonPath("$.failure[0].url").equalsValue(repoUrl)
-                .responseJsonPath("$.failure[0].errorMessage")
-                .equalsValue("Resource could not be found status=${notFoundStatus.value()} message=${notFoundStatus.reasonPhrase}")
+                .responseJsonPath("$").equalsObject(tagResourceNotFound)
 
         }
     }

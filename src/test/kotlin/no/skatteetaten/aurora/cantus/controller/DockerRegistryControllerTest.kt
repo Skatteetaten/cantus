@@ -4,7 +4,6 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.nhaarman.mockito_kotlin.any
 import kotlinx.coroutines.newFixedThreadPoolContext
 import no.skatteetaten.aurora.cantus.ImageTagsWithTypeDtoBuilder
-import no.skatteetaten.aurora.cantus.createObjectMapper
 import no.skatteetaten.aurora.cantus.service.DockerRegistryService
 import no.skatteetaten.aurora.mockmvc.extensions.Path
 import no.skatteetaten.aurora.mockmvc.extensions.contentType
@@ -59,6 +58,27 @@ class DockerRegistryControllerTest {
     private lateinit var mockMvc: MockMvc
 
     private val tags = ImageTagsWithTypeDtoBuilder("no_skatteetaten_aurora_demo", "whoami").build()
+
+    @ParameterizedTest
+    @ValueSource(
+        strings = [
+            "/tags?repoUrl=no_skatteetaten_aurora_demo/whaomi",
+            "/tags/semantic?repoUrl=$defaultTestRegistry/no_skatteetaten_aurora"
+        ]
+    )
+    fun `Get request given invalid repoUrl throw BadRequestException`(path: String) {
+
+        val repoUrl = path.split("=")[1]
+
+        mockMvc.get(Path(path)) {
+            statusIsOk()
+                .responseJsonPath("$.items").isEmpty()
+                .responseJsonPath("$.success").isFalse()
+                .responseJsonPath("$.failure[0].url").equalsValue(repoUrl)
+                .responseJsonPath("$.failure[0].errorMessage").equalsValue("Invalid url=$repoUrl")
+
+        }
+    }
 
     @Test
     fun `Get docker registry image manifest with POST given missing resources`() {
