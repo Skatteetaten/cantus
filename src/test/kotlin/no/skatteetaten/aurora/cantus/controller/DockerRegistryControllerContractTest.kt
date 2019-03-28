@@ -9,8 +9,6 @@ import no.skatteetaten.aurora.cantus.ImageManifestDtoBuilder
 import no.skatteetaten.aurora.cantus.ImageTagsWithTypeDtoBuilder
 import no.skatteetaten.aurora.cantus.createObjectMapper
 import no.skatteetaten.aurora.cantus.service.DockerRegistryService
-import no.skatteetaten.aurora.cantus.service.ImageTagTypedDto
-import no.skatteetaten.aurora.cantus.service.ImageTagsWithTypeDto
 import no.skatteetaten.aurora.mockmvc.extensions.Path
 import no.skatteetaten.aurora.mockmvc.extensions.TestObjectMapperConfigurer
 import no.skatteetaten.aurora.mockmvc.extensions.contentType
@@ -22,9 +20,8 @@ import no.skatteetaten.aurora.mockmvc.extensions.statusIsOk
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.BDDMockito
+import org.mockito.BDDMockito.given
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.test.autoconfigure.restdocs.AutoConfigureRestDocs
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.boot.test.context.TestConfiguration
@@ -50,10 +47,8 @@ class DockerRegistryControllerContractTest {
 
     @TestConfiguration
     class DockerRegistryControllerContractTestConfiguration {
-
         @Bean
-        fun threadPoolContext(@Value("\${cantus.threadPoolSize:6}") threadPoolSize: Int) =
-            newFixedThreadPoolContext(threadPoolSize, "cantus")
+        fun threadPoolContext() = newFixedThreadPoolContext(2, "cantus")
     }
 
     @MockBean
@@ -89,10 +84,10 @@ class DockerRegistryControllerContractTest {
             "$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami/1"
         )
 
-        BDDMockito.given(dockerService.getImageManifestInformation(any())).willReturn(manifest)
+        given(dockerService.getImageManifestInformation(any())).willReturn(manifest)
 
         val imageTagResource =
-            BDDMockito.given(mockedImageTagResourceAssembler.imageTagResourceToAuroraResponse(any()))
+            given(mockedImageTagResourceAssembler.imageTagResourceToAuroraResponse(any()))
                 .withContractResponse("imagetagresource/partialSuccess") { willReturn(content) }.mockResponse
 
         mockMvc.post(
@@ -110,11 +105,10 @@ class DockerRegistryControllerContractTest {
 
     @Test
     fun `Get docker registry image tags with GET`() {
-        val tags = ImageTagsWithTypeDto(tags = listOf(ImageTagTypedDto("test")))
         val path = "/tags?repoUrl=url/namespace/name"
-        BDDMockito.given(dockerService.getImageTags(any())).willReturn(tags)
+        given(dockerService.getImageTags(any())).willReturn(tags)
 
-        val tagResource = BDDMockito.given(mockedImageTagResourceAssembler.tagResourceToAuroraResponse(any()))
+        val tagResource = given(mockedImageTagResourceAssembler.tagResourceToAuroraResponse(any()))
             .withContractResponse("tagresource/TagResource") {
                 willReturn(content)
             }.mockResponse
@@ -127,12 +121,11 @@ class DockerRegistryControllerContractTest {
 
     @Test
     fun `Get docker registry image tags grouped with GET`() {
-        val tags = ImageTagsWithTypeDto(tags = listOf(ImageTagTypedDto("test")))
         val path = "/tags/semantic?repoUrl=url/namespace/name"
-        BDDMockito.given(dockerService.getImageTags(any())).willReturn(tags)
+        given(dockerService.getImageTags(any())).willReturn(tags)
 
         val groupedTagResource =
-            BDDMockito.given(mockedImageTagResourceAssembler.groupedTagResourceToAuroraResponse(any()))
+            given(mockedImageTagResourceAssembler.groupedTagResourceToAuroraResponse(any()))
                 .withContractResponse("tagresource/GroupedTagResource") {
                     willReturn(content)
                 }.mockResponse
@@ -147,16 +140,15 @@ class DockerRegistryControllerContractTest {
     fun `Get docker registry image tags with GET given missing resource`() {
         val path = "/tags?repoUrl=url/namespace/missing"
         val notFoundStatus = HttpStatus.NOT_FOUND
-        val repoUrl = path.split("=")[1]
 
-        BDDMockito.given(dockerService.getImageTags(any())).willThrow(
+        given(dockerService.getImageTags(any())).willThrow(
             SourceSystemException(
                 message = "Resource could not be found status=${notFoundStatus.value()} message=${notFoundStatus.reasonPhrase}",
                 sourceSystem = "https://docker.com"
             )
         )
 
-        val tagResourceNotFound = BDDMockito.given(mockedImageTagResourceAssembler.tagResourceToAuroraResponse(any()))
+        val tagResourceNotFound = given(mockedImageTagResourceAssembler.tagResourceToAuroraResponse(any()))
             .withContractResponse("tagresource/TagResourceNotFound") {
                 willReturn(content)
             }.mockResponse
