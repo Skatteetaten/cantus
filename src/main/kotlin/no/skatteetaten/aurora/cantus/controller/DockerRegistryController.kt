@@ -46,14 +46,13 @@ class DockerRegistryController(
         tagUrl: String
     ): Try<ImageTagResource, CantusFailure> {
         return getResponse(bearerToken, tagUrl) { dockerService, imageRepoCommand ->
-            val serviceResponse = dockerService.getImageManifestInformation(imageRepoCommand)
+            dockerService.getImageManifestInformation(imageRepoCommand)
                 .let { imageManifestDto ->
                     imageTagResourceAssembler.toImageTagResource(
                         manifestDto = imageManifestDto,
                         requestUrl = tagUrl
                     )
                 }
-            serviceResponse
         }
     }
 
@@ -103,46 +102,45 @@ class DockerRegistryController(
         }
     }
 }
-    @Component
-    class ImageTagResourceAssembler(val auroraResponseAssembler: AuroraResponseAssembler) {
-        fun imageTagResourceToAuroraResponse(resources: List<Try<ImageTagResource, CantusFailure>>): AuroraResponse<ImageTagResource> =
-            auroraResponseAssembler.toAuroraResponse(resources)
 
-        fun tagResourceToAuroraResponse(resources: Try<List<TagResource>, CantusFailure>) =
-            auroraResponseAssembler.toAuroraResponse(resources)
+@Component
+class ImageTagResourceAssembler(val auroraResponseAssembler: AuroraResponseAssembler) {
+    fun imageTagResourceToAuroraResponse(resources: List<Try<ImageTagResource, CantusFailure>>): AuroraResponse<ImageTagResource> =
+        auroraResponseAssembler.toAuroraResponse(resources)
 
-        fun groupedTagResourceToAuroraResponse(resources: Try<List<GroupedTagResource>, CantusFailure>) =
-            auroraResponseAssembler.toAuroraResponse(resources)
+    fun tagResourceToAuroraResponse(resources: Try<List<TagResource>, CantusFailure>) =
+        auroraResponseAssembler.toAuroraResponse(resources)
 
-        fun toTagResource(imageTagsWithTypeDto: ImageTagsWithTypeDto) =
-            imageTagsWithTypeDto.tags.map { TagResource(it.name) }
+    fun groupedTagResourceToAuroraResponse(resources: Try<List<GroupedTagResource>, CantusFailure>) =
+        auroraResponseAssembler.toAuroraResponse(resources)
 
-        fun toGroupedTagResource(imageTagsWithTypeDto: ImageTagsWithTypeDto, repoUrl: String) =
-            imageTagsWithTypeDto.tags
-                .groupBy { it.type }
-                .map { groupedTag ->
-                    GroupedTagResource(
-                        group = groupedTag.key.toString(),
-                        tagResource = groupedTag.value.map {
-                            TagResource(
-                                name = it.name,
-                                type = it.type
-                            )
-                        }
-                    )
-                }
+    fun toTagResource(imageTagsWithTypeDto: ImageTagsWithTypeDto) =
+        imageTagsWithTypeDto.tags.map { TagResource(it.name) }
 
-        fun toImageTagResource(manifestDto: ImageManifestDto, requestUrl: String) =
-            ImageTagResource(
-                java = JavaImage.fromDto(manifestDto),
-                dockerDigest = manifestDto.dockerDigest,
-                dockerVersion = manifestDto.dockerVersion,
-                appVersion = manifestDto.appVersion,
-                auroraVersion = manifestDto.auroraVersion,
-                timeline = ImageBuildTimeline.fromDto(manifestDto),
-                node = NodeJsImage.fromDto(manifestDto),
-                requestUrl = requestUrl
-            )
-    }
+    fun toGroupedTagResource(imageTagsWithTypeDto: ImageTagsWithTypeDto, repoUrl: String) =
+        imageTagsWithTypeDto.tags
+            .groupBy { it.type }
+            .map { groupedTag ->
+                GroupedTagResource(
+                    group = groupedTag.key.toString(),
+                    tagResource = groupedTag.value.map {
+                        TagResource(
+                            name = it.name,
+                            type = it.type
+                        )
+                    }
+                )
+            }
 
-
+    fun toImageTagResource(manifestDto: ImageManifestDto, requestUrl: String) =
+        ImageTagResource(
+            java = JavaImage.fromDto(manifestDto),
+            dockerDigest = manifestDto.dockerDigest,
+            dockerVersion = manifestDto.dockerVersion,
+            appVersion = manifestDto.appVersion,
+            auroraVersion = manifestDto.auroraVersion,
+            timeline = ImageBuildTimeline.fromDto(manifestDto),
+            node = NodeJsImage.fromDto(manifestDto),
+            requestUrl = requestUrl
+        )
+}

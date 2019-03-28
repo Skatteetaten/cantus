@@ -54,11 +54,10 @@ class DockerRegistryServiceNetworkTest {
     fun `Get image manifest given internal server error in docker registry`(statusCode: Int) {
 
         val mockResponse = MockResponse()
-            .setResponseCode(statusCode)
             .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
             .addHeader(dockerService.dockerContentDigestLabel, "sha256")
 
-        server.execute(mockResponse) {
+        server.execute(statusCode to mockResponse) {
             val exception = catch { dockerService.getImageManifestInformation(imageRepoCommand) }
 
             assertThat(exception).isNotNull().isInstanceOf(SourceSystemException::class)
