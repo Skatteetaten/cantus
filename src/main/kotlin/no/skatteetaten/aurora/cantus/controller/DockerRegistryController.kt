@@ -105,7 +105,7 @@ class DockerRegistryController(
 
 @Component
 class ImageTagResourceAssembler(val auroraResponseAssembler: AuroraResponseAssembler) {
-    fun imageTagResourceToAuroraResponse(resources: List<Try<ImageTagResource, CantusFailure>>): AuroraResponse<ImageTagResource> =
+    fun imageTagResourceToAuroraResponse(resources: List<Try<ImageTagResource, CantusFailure>>) =
         auroraResponseAssembler.toAuroraResponse(resources)
 
     fun tagResourceToAuroraResponse(resources: Try<List<TagResource>, CantusFailure>) =
