@@ -22,8 +22,6 @@ import no.skatteetaten.aurora.mockmvc.extensions.statusIsOk
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.BDDMockito
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
@@ -95,8 +93,7 @@ class DockerRegistryControllerContractTest {
 
         val imageTagResource =
             BDDMockito.given(mockedImageTagResourceAssembler.imageTagResourceToAuroraResponse(any()))
-                .withContractResponse("imagetagresource/partialSuccess")
-                { willReturn(content) }.mockResponse
+                .withContractResponse("imagetagresource/partialSuccess") { willReturn(content) }.mockResponse
 
         mockMvc.post(
             path = Path("/manifest"),
@@ -167,7 +164,6 @@ class DockerRegistryControllerContractTest {
         mockMvc.get(Path(path)) {
             statusIsOk()
                 .responseJsonPath("$").equalsObject(tagResourceNotFound)
-
         }
     }
 }

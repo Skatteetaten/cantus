@@ -76,7 +76,6 @@ class DockerRegistryControllerTest {
                 .responseJsonPath("$.success").isFalse()
                 .responseJsonPath("$.failure[0].url").equalsValue(repoUrl)
                 .responseJsonPath("$.failure[0].errorMessage").equalsValue("Invalid url=$repoUrl")
-
         }
     }
 
@@ -139,7 +138,6 @@ class DockerRegistryControllerTest {
                 .responseJsonPath("$.failure[0].errorMessage").equalsValue("Authorization bearer token is not present")
                 .responseJsonPath("$.items").isEmpty()
                 .responseJsonPath("$.success").isFalse()
-
         }
     }
 
@@ -195,7 +193,6 @@ class DockerRegistryControllerTest {
             responseJsonPath("$.failure[0].errorMessage").equalsValue("An error has occurred")
                 .responseJsonPath("$.items").isEmpty()
                 .responseJsonPath("$.success").isFalse()
-
         }
     }
 
@@ -246,7 +243,6 @@ class DockerRegistryControllerTest {
             responseJsonPath("$.failure[0].errorMessage").equalsValue("Invalid Docker Registry URL url=vg.no")
                 .responseJsonPath("$.failure[0].url").equalsValue(repoUrl)
                 .responseJsonPath("$.success").isFalse()
-
         }
     }
 }
