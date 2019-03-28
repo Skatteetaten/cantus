@@ -31,7 +31,6 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 
 private const val defaultTestRegistry: String = "docker.com"
 
-@AutoConfigureRestDocs
 @WebMvcTest(
     value = [
         DockerRegistryController::class,
