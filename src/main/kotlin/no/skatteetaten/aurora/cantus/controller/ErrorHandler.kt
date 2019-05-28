@@ -15,7 +15,7 @@ fun <T> Mono<T>.blockAndHandleError(
 ) =
     this.handleError(imageRepoCommand).toMono().block(duration)
 
-fun <T> Mono<T>.handleError(imageRepoCommand: ImageRepoCommand??) =
+fun <T> Mono<T>.handleError(imageRepoCommand: ImageRepoCommand?) =
     try {
         this.doOnError {
             when (it) {
