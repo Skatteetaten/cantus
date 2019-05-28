@@ -34,7 +34,8 @@ fun <T> Mono<T>.handleError(imageRepoCommand: ImageRepoCommand?) =
         } ?: "no existing ImageRepoCommand"
 
         throw SourceSystemException(
-            message = "Timeout when calling docker registry (${e.message}), $imageMsg",
+            message = "Timeout when calling docker registry, $imageMsg",
+            cause = e,
             sourceSystem = imageRepoCommand?.registry
         )
     }
