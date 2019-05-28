@@ -68,7 +68,7 @@ class DockerRegistryServiceNetworkTest {
     @ParameterizedTest
     @EnumSource(
         value = SocketPolicy::class,
-        names = ["DISCONNECT_AFTER_REQUEST", "DISCONNECT_DURING_RESPONSE_BODY", "NO_RESPONSE"],
+        names = ["DISCONNECT_AFTER_REQUEST", "DISCONNECT_DURING_RESPONSE_BODY", "NO_RESPONSE", "STALL_SOCKET_AT_START"],
         mode = EnumSource.Mode.INCLUDE
     )
     fun `Handle connection failure in retrieve that throws exception`(socketPolicy: SocketPolicy) {
