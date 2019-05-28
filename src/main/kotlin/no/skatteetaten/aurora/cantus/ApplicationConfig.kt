@@ -1,7 +1,10 @@
 package no.skatteetaten.aurora.cantus
 
+import io.netty.channel.ChannelDuplexHandler
+import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelOption
 import io.netty.handler.ssl.SslContextBuilder
+import io.netty.handler.timeout.ReadTimeoutException
 import io.netty.handler.timeout.ReadTimeoutHandler
 import io.netty.handler.timeout.WriteTimeoutHandler
 import kotlinx.coroutines.newFixedThreadPoolContext
@@ -113,6 +116,7 @@ class ApplicationConfig {
                 connection
                     .addHandlerLast(ReadTimeoutHandler(readTimeout, TimeUnit.MILLISECONDS))
                     .addHandlerLast(WriteTimeoutHandler(writeTimeout, TimeUnit.MILLISECONDS))
+                    .addHandlerLast(MyHandler())
             }
     }
 
@@ -139,3 +143,15 @@ class ApplicationConfig {
             ks
         }
 }
+
+
+class MyHandler : ChannelDuplexHandler() {
+
+        override fun exceptionCaught(ctx: ChannelHandlerContext , cause: Throwable) {
+                 if (cause is ReadTimeoutException ) {
+                     logger.error { "massive readtimeout"}
+                 } else {
+                     super.exceptionCaught(ctx, cause);
+                 }
+             }
+     }

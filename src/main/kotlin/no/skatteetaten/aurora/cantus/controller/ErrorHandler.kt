@@ -1,6 +1,7 @@
 package no.skatteetaten.aurora.cantus.controller
 
 import io.netty.handler.timeout.ReadTimeoutException
+import mu.KotlinLogging
 import org.springframework.web.reactive.function.client.ClientResponse
 import org.springframework.web.reactive.function.client.WebClientResponseException
 import reactor.core.publisher.Mono
@@ -8,6 +9,7 @@ import reactor.core.publisher.toMono
 import java.time.Duration
 
 private const val blockTimeout: Long = 30
+private val logger = KotlinLogging.logger {}
 
 fun <T> Mono<T>.blockAndHandleError(
     duration: Duration = Duration.ofSeconds(blockTimeout),
@@ -16,7 +18,6 @@ fun <T> Mono<T>.blockAndHandleError(
     this.handleError(imageRepoCommand).toMono().block(duration)
 
 fun <T> Mono<T>.handleError(imageRepoCommand: ImageRepoCommand?) =
-    try {
         this.doOnError {
             when (it) {
                 is WebClientResponseException -> throw SourceSystemException(
@@ -24,21 +25,11 @@ fun <T> Mono<T>.handleError(imageRepoCommand: ImageRepoCommand?) =
                     cause = it,
                     sourceSystem = imageRepoCommand?.registry
                 )
-                is SourceSystemException -> throw it
+                is SourceSystemException -> logger.error{"Source readtimeout"}
+                is ReadTimeoutException -> logger.error { "ReadTimeout happen" }
                 else -> throw CantusException("Error in response or request (${it::class.simpleName})", it)
             }
         }
-    } catch (e: ReadTimeoutException) {
-        val imageMsg = imageRepoCommand?.let {
-            "imageGroup=\"${it.imageGroup}\" imageName=\"${it.imageName}\" imageTag=\"${it.imageTag}\""
-        } ?: "no existing ImageRepoCommand"
-
-        throw SourceSystemException(
-            message = "Timeout when calling docker registry, $imageMsg",
-            cause = e,
-            sourceSystem = imageRepoCommand?.registry
-        )
-    }
 
 fun ClientResponse.handleStatusCodeError(sourceSystem: String?) {
 
