@@ -79,7 +79,7 @@ class DockerRegistryControllerContractTest {
     @Test
     fun `Get docker registry image manifest with POST`() {
         val manifest = ImageManifestDtoBuilder().build()
-        val tagUrl = TagUrls(
+        val tagUrl = TagUrlsWrapper(
             listOf(
                 "$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami/2",
                 "$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami/1"

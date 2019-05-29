@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
-data class TagUrls(val listOfTagUrls: List<String>)
+data class TagUrlsWrapper(val tagUrls: List<String>)
 
 @RestController
 class DockerRegistryController(
@@ -28,14 +28,14 @@ class DockerRegistryController(
 
     @PostMapping("/manifest")
     fun getManifestInformationList(
-        @RequestBody tagUrls: TagUrls,
+        @RequestBody tagUrlsWrapper: TagUrlsWrapper,
         @RequestHeader(required = false, value = HttpHeaders.AUTHORIZATION) bearerToken: String?
     ): AuroraResponse<ImageTagResource> {
 
         val responses =
             runBlocking(MDCContext() + threadPoolContext) {
                 val deferred =
-                    tagUrls.listOfTagUrls.map {
+                    tagUrlsWrapper.tagUrls.map {
                         async { getImageTagResource(bearerToken, it) }
                     }
                 deferred.map { it.await() }
