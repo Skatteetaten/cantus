@@ -20,17 +20,14 @@ fun <T> Mono<T>.blockAndHandleError(
 fun <T> Mono<T>.handleError(imageRepoCommand: ImageRepoCommand?) =
     this.doOnError {
         when (it) {
-            is WebClientResponseException -> createClientException(it, imageRepoCommand)
+            is WebClientResponseException -> createWebClientException(it, imageRepoCommand)
             is ReadTimeoutException -> createTimeoutException(it, imageRepoCommand)
-            is SourceSystemException -> throw it
-            else -> throw CantusException("Error in response or request (${it::class.simpleName})", it)
+            is SourceSystemException -> rethrowSourceSystemException(it)
+            else -> createCantusException(it)
         }
     }
 
-private fun createClientException(
-    e: WebClientResponseException,
-    imageRepoCommand: ImageRepoCommand?
-) {
+private fun createWebClientException(e: WebClientResponseException, imageRepoCommand: ImageRepoCommand?) {
     val msg = "Error in response, status=${e.statusCode} message=${e.statusText}"
     logger.error(e) { msg }
     throw SourceSystemException(
@@ -40,21 +37,28 @@ private fun createClientException(
     )
 }
 
-private fun createTimeoutException(
-    t: Throwable?,
-    imageRepoCommand: ImageRepoCommand?
-) {
+private fun createTimeoutException(t: Throwable?, imageRepoCommand: ImageRepoCommand?) {
     val imageMsg = imageRepoCommand?.let { cmd ->
         "imageGroup=\"${cmd.imageGroup}\" imageName=\"${cmd.imageName}\" imageTag=\"${cmd.imageTag}\""
     } ?: "no existing ImageRepoCommand"
     val msg = "Timeout when calling docker registry, $imageMsg"
     logger.error(t) { msg }
-
     throw SourceSystemException(
         message = msg,
         cause = t,
         sourceSystem = imageRepoCommand?.registry
     )
+}
+
+private fun rethrowSourceSystemException(it: Throwable) {
+    logger.error(it) {}
+    throw it
+}
+
+private fun createCantusException(it: Throwable) {
+    val msg = "Error in response or request (${it::class.simpleName})"
+    logger.error(it) { msg }
+    throw CantusException(msg, it)
 }
 
 fun ClientResponse.handleStatusCodeError(sourceSystem: String?) {
