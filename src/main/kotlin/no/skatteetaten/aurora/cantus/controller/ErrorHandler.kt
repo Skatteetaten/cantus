@@ -20,45 +20,45 @@ fun <T> Mono<T>.blockAndHandleError(
 fun <T> Mono<T>.handleError(imageRepoCommand: ImageRepoCommand?) =
     this.doOnError {
         when (it) {
-            is WebClientResponseException -> createWebClientException(it, imageRepoCommand)
-            is ReadTimeoutException -> createTimeoutException(it, imageRepoCommand)
-            is SourceSystemException -> rethrowSourceSystemException(it)
-            else -> createCantusException(it)
+            is WebClientResponseException -> it.handleException(imageRepoCommand)
+            is ReadTimeoutException -> it.handleException(imageRepoCommand)
+            is SourceSystemException -> it.logAndRethrow()
+            else -> it.handleException()
         }
     }
 
-private fun createWebClientException(e: WebClientResponseException, imageRepoCommand: ImageRepoCommand?) {
-    val msg = "Error in response, status=${e.statusCode} message=${e.statusText}"
-    logger.error(e) { msg }
+private fun WebClientResponseException.handleException(imageRepoCommand: ImageRepoCommand?) {
+    val msg = "Error in response, status=$statusCode message=$statusText"
+    logger.error(this) { msg }
     throw SourceSystemException(
         message = msg,
-        cause = e,
+        cause = this,
         sourceSystem = imageRepoCommand?.registry
     )
 }
 
-private fun createTimeoutException(t: Throwable?, imageRepoCommand: ImageRepoCommand?) {
+private fun ReadTimeoutException.handleException(imageRepoCommand: ImageRepoCommand?) {
     val imageMsg = imageRepoCommand?.let { cmd ->
         "imageGroup=\"${cmd.imageGroup}\" imageName=\"${cmd.imageName}\" imageTag=\"${cmd.imageTag}\""
     } ?: "no existing ImageRepoCommand"
     val msg = "Timeout when calling docker registry, $imageMsg"
-    logger.error(t) { msg }
+    logger.error(this) { msg }
     throw SourceSystemException(
         message = msg,
-        cause = t,
+        cause = this,
         sourceSystem = imageRepoCommand?.registry
     )
 }
 
-private fun rethrowSourceSystemException(it: Throwable) {
-    logger.error(it) {}
-    throw it
+private fun Throwable.logAndRethrow() {
+    logger.error(this) {}
+    throw this
 }
 
-private fun createCantusException(it: Throwable) {
-    val msg = "Error in response or request (${it::class.simpleName})"
-    logger.error(it) { msg }
-    throw CantusException(msg, it)
+private fun Throwable.handleException() {
+    val msg = "Error in response or request (${this::class.simpleName})"
+    logger.error(this) { msg }
+    throw CantusException(msg, this)
 }
 
 fun ClientResponse.handleStatusCodeError(sourceSystem: String?) {
