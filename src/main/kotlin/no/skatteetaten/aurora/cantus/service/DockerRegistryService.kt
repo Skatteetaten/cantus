@@ -15,7 +15,6 @@ import org.springframework.http.MediaType
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.bodyToMono
-import reactor.core.publisher.Mono
 import java.time.Duration
 import java.util.HashSet
 
@@ -121,7 +120,6 @@ class DockerRegistryService(
         }
         .retrieve()
         .bodyToMono<T>()
-        .timeout(Duration.ofSeconds(2), Mono.error(SourceSystemException("ReadTimeout from docker")))
         .blockAndHandleError(imageRepoCommand = imageRepoCommand)
 
     private fun getManifestFromRegistry(

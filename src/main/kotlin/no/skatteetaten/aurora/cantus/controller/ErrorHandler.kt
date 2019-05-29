@@ -18,18 +18,44 @@ fun <T> Mono<T>.blockAndHandleError(
     this.handleError(imageRepoCommand).toMono().block(duration)
 
 fun <T> Mono<T>.handleError(imageRepoCommand: ImageRepoCommand?) =
-        this.doOnError {
-            when (it) {
-                is WebClientResponseException -> throw SourceSystemException(
-                    message = "Error in response, status=${it.statusCode} message=${it.statusText}",
-                    cause = it,
-                    sourceSystem = imageRepoCommand?.registry
-                )
-                is SourceSystemException -> logger.error{"Source readtimeout"}
-                is ReadTimeoutException -> logger.error { "ReadTimeout happen" }
-                else -> throw CantusException("Error in response or request (${it::class.simpleName})", it)
-            }
+    this.doOnError {
+        when (it) {
+            is WebClientResponseException -> createClientException(it, imageRepoCommand)
+            is ReadTimeoutException -> createTimeoutException(it, imageRepoCommand)
+            is SourceSystemException -> throw it
+            else -> throw CantusException("Error in response or request (${it::class.simpleName})", it)
         }
+    }
+
+private fun createClientException(
+    e: WebClientResponseException,
+    imageRepoCommand: ImageRepoCommand?
+) {
+    val msg = "Error in response, status=${e.statusCode} message=${e.statusText}"
+    logger.error(e) { msg }
+    throw SourceSystemException(
+        message = msg,
+        cause = e,
+        sourceSystem = imageRepoCommand?.registry
+    )
+}
+
+private fun createTimeoutException(
+    t: Throwable?,
+    imageRepoCommand: ImageRepoCommand?
+) {
+    val imageMsg = imageRepoCommand?.let { cmd ->
+        "imageGroup=\"${cmd.imageGroup}\" imageName=\"${cmd.imageName}\" imageTag=\"${cmd.imageTag}\""
+    } ?: "no existing ImageRepoCommand"
+    val msg = "Timeout when calling docker registry, $imageMsg"
+    logger.error(t) { msg }
+
+    throw SourceSystemException(
+        message = msg,
+        cause = t,
+        sourceSystem = imageRepoCommand?.registry
+    )
+}
 
 fun ClientResponse.handleStatusCodeError(sourceSystem: String?) {
 
