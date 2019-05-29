@@ -79,9 +79,11 @@ class DockerRegistryControllerContractTest {
     @Test
     fun `Get docker registry image manifest with POST`() {
         val manifest = ImageManifestDtoBuilder().build()
-        val tagUrl = listOf(
-            "$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami/2",
-            "$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami/1"
+        val tagUrl = TagUrls(
+            listOf(
+                "$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami/2",
+                "$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami/1"
+            )
         )
 
         given(dockerService.getImageManifestInformation(any())).willReturn(manifest)

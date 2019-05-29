@@ -79,9 +79,7 @@ class DockerRegistryControllerTest {
 
     @Test
     fun `Get docker registry image manifest with POST given missing resources`() {
-        val tagUrl = listOf(
-            "$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami/2"
-        )
+        val tagUrl = TagUrls(listOf("$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami/2"))
 
         val notFoundStatus = HttpStatus.NOT_FOUND
 
@@ -100,7 +98,7 @@ class DockerRegistryControllerTest {
             statusIsOk()
                 .responseJsonPath("$.success").isFalse()
                 .responseJsonPath("$.items").isEmpty()
-                .responseJsonPath("$.failure[0].url").equalsValue(tagUrl.first())
+                .responseJsonPath("$.failure[0].url").equalsValue(tagUrl.listOfTagUrls.first())
                 .responseJsonPath("$.failure[0].errorMessage")
                 .equalsValue("Resource could not be found status=${notFoundStatus.value()} message=${notFoundStatus.reasonPhrase}")
         }
@@ -108,10 +106,10 @@ class DockerRegistryControllerTest {
 
     @Test
     fun `Post request given invalid tagUrl in body`() {
-        val tagUrl = listOf("")
+        val tagUrl = TagUrls(listOf(""))
 
         given(dockerService.getImageManifestInformation(any()))
-            .willThrow(BadRequestException("Invalid url=${tagUrl.first()}"))
+            .willThrow(BadRequestException("Invalid url=${tagUrl.listOfTagUrls.first()}"))
 
         mockMvc.post(
             path = Path("/manifest"),
@@ -120,8 +118,9 @@ class DockerRegistryControllerTest {
         ) {
             responseJsonPath("$.items").isEmpty()
                 .responseJsonPath("$.success").isFalse()
-                .responseJsonPath("$.failure[0].url").equalsValue(tagUrl.first())
-                .responseJsonPath("$.failure[0].errorMessage").equalsValue("Invalid url=${tagUrl.first()}")
+                .responseJsonPath("$.failure[0].url").equalsValue(tagUrl.listOfTagUrls.first())
+                .responseJsonPath("$.failure[0].errorMessage")
+                .equalsValue("Invalid url=${tagUrl.listOfTagUrls.first()}")
         }
     }
 
@@ -141,7 +140,7 @@ class DockerRegistryControllerTest {
 
     @Test
     fun `Get manifest given no authorization token throw ForbiddenException`() {
-        val tagUrl = listOf("$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami/2")
+        val tagUrl = TagUrls(listOf("$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami/2"))
 
         given(dockerService.getImageManifestInformation(any()))
             .willThrow(ForbiddenException("Authorization bearer token is not present"))
@@ -178,7 +177,7 @@ class DockerRegistryControllerTest {
 
     @Test
     fun `Post request given throw IllegalStateException`() {
-        val tagUrl = listOf("$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami/2")
+        val tagUrl = TagUrls(listOf("$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami/2"))
 
         given(dockerService.getImageManifestInformation(any()))
             .willThrow(IllegalStateException("An error has occurred"))
