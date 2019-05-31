@@ -79,7 +79,7 @@ class DockerRegistryControllerTest {
 
     @Test
     fun `Get docker registry image manifest with POST given missing resources`() {
-        val tagUrl = TagUrlsWrapper(listOf("$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami/2"))
+        val tagUrlsWrapper = TagUrlsWrapper(listOf("$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami/2"))
 
         val notFoundStatus = HttpStatus.NOT_FOUND
 
@@ -93,12 +93,12 @@ class DockerRegistryControllerTest {
         mockMvc.post(
             path = Path("/manifest"),
             headers = HttpHeaders().contentType(),
-            body = tagUrl
+            body = tagUrlsWrapper
         ) {
             statusIsOk()
                 .responseJsonPath("$.success").isFalse()
                 .responseJsonPath("$.items").isEmpty()
-                .responseJsonPath("$.failure[0].url").equalsValue(tagUrl.tagUrls.first())
+                .responseJsonPath("$.failure[0].url").equalsValue(tagUrlsWrapper.tagUrls.first())
                 .responseJsonPath("$.failure[0].errorMessage")
                 .equalsValue("Resource could not be found status=${notFoundStatus.value()} message=${notFoundStatus.reasonPhrase}")
         }
@@ -106,27 +106,28 @@ class DockerRegistryControllerTest {
 
     @Test
     fun `Post request given invalid tagUrl in body`() {
-        val tagUrl = TagUrlsWrapper(listOf(""))
+        val tagUrlsWrapper = TagUrlsWrapper(listOf(""))
 
         given(dockerService.getImageManifestInformation(any()))
-            .willThrow(BadRequestException("Invalid url=${tagUrl.tagUrls.first()}"))
+            .willThrow(BadRequestException("Invalid url=${tagUrlsWrapper.tagUrls.first()}"))
 
         mockMvc.post(
             path = Path("/manifest"),
-            body = tagUrl,
+            body = tagUrlsWrapper,
             headers = HttpHeaders().contentType()
         ) {
             responseJsonPath("$.items").isEmpty()
                 .responseJsonPath("$.success").isFalse()
-                .responseJsonPath("$.failure[0].url").equalsValue(tagUrl.tagUrls.first())
+                .responseJsonPath("$.failure[0].url").equalsValue(tagUrlsWrapper.tagUrls.first())
                 .responseJsonPath("$.failure[0].errorMessage")
-                .equalsValue("Invalid url=${tagUrl.tagUrls.first()}")
+                .equalsValue("Invalid url=${tagUrlsWrapper.tagUrls.first()}")
         }
     }
 
     @Test
     fun `Get tags given no authorization token throw ForbiddenException`() {
         val path = "/tags?repoUrl=$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami"
+
         given(dockerService.getImageTags(any()))
             .willThrow(ForbiddenException("Authorization bearer token is not present"))
 
@@ -140,14 +141,14 @@ class DockerRegistryControllerTest {
 
     @Test
     fun `Get manifest given no authorization token throw ForbiddenException`() {
-        val tagUrl = TagUrlsWrapper(listOf("$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami/2"))
+        val tagUrlsWrapper = TagUrlsWrapper(listOf("$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami/2"))
 
         given(dockerService.getImageManifestInformation(any()))
             .willThrow(ForbiddenException("Authorization bearer token is not present"))
 
         mockMvc.post(
             path = Path("/manifest"),
-            body = tagUrl,
+            body = tagUrlsWrapper,
             headers = HttpHeaders().contentType()
         ) {
             statusIsOk()
@@ -177,14 +178,14 @@ class DockerRegistryControllerTest {
 
     @Test
     fun `Post request given throw IllegalStateException`() {
-        val tagUrl = TagUrlsWrapper(listOf("$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami/2"))
+        val tagUrlsWrapper = TagUrlsWrapper(listOf("$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami/2"))
 
         given(dockerService.getImageManifestInformation(any()))
             .willThrow(IllegalStateException("An error has occurred"))
 
         mockMvc.post(
             path = Path("/manifest"),
-            body = tagUrl,
+            body = tagUrlsWrapper,
             headers = HttpHeaders().contentType()
         ) {
             responseJsonPath("$.failure[0].errorMessage").equalsValue("An error has occurred")
