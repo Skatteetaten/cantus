@@ -79,7 +79,7 @@ class DockerRegistryControllerContractTest {
     @Test
     fun `Get docker registry image manifest with POST`() {
         val manifest = ImageManifestDtoBuilder().build()
-        val tagUrl = TagUrlsWrapper(
+        val tagUrlsWrapper = TagUrlsWrapper(
             listOf(
                 "$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami/2",
                 "$defaultTestRegistry/no_skatteetaten_aurora_demo/whoami/1"
@@ -95,7 +95,7 @@ class DockerRegistryControllerContractTest {
         mockMvc.post(
             path = Path("/manifest"),
             headers = HttpHeaders().contentType(),
-            body = tagUrl
+            body = tagUrlsWrapper
         ) {
             statusIsOk()
                 .responseJsonPath("$").equalsObject(imageTagResource)
@@ -108,6 +108,7 @@ class DockerRegistryControllerContractTest {
     @Test
     fun `Get docker registry image tags with GET`() {
         val path = "/tags?repoUrl=url/namespace/name"
+
         given(dockerService.getImageTags(any())).willReturn(tags)
 
         val tagResource = given(mockedImageTagResourceAssembler.tagResourceToAuroraResponse(any()))
@@ -124,6 +125,7 @@ class DockerRegistryControllerContractTest {
     @Test
     fun `Get docker registry image tags grouped with GET`() {
         val path = "/tags/semantic?repoUrl=url/namespace/name"
+
         given(dockerService.getImageTags(any())).willReturn(tags)
 
         val groupedTagResource =
