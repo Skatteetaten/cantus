@@ -130,9 +130,13 @@ class DockerRegistryService(
                 val registry = imageRepoCommand.registry
                 val exceptionClass = e::class.simpleName
                 if (it.iteration() == 3L) {
-                    logger.error(e) { "Requests to $registry failed with $exceptionClass" }
+                    logger.warn(e) {
+                        "Last retry to registry=$registry, previous failed with exception=$exceptionClass"
+                    }
                 } else {
-                    logger.info { "Retrying request to $registry, previous failed with $exceptionClass - ${e.message}" }
+                    logger.info {
+                        "Retry=${it.iteration()} for request to registry=$registry, previous failed with exception=$exceptionClass - message=\"${e.message}\""
+                    }
                 }
             }
         )
