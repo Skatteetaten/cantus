@@ -16,14 +16,20 @@ class ImageRegistryUrlBuilder {
         return "${registryMetadata.fullRegistryUrl}/{imageGroup}/{imageName}/tags/list"
     }
 
-    fun createConfigUrl(
+    fun createBlobUrl(
         imageRepoCommand: ImageRepoCommand,
         registryMetadata: RegistryMetadata
     ): String {
-        logger.debug("Retrieving type=config from schemaVersion=v2 url=${registryMetadata.fullRegistryUrl} image=${imageRepoCommand.manifestRepo}")
-        return "${registryMetadata.fullRegistryUrl}/{imageGroup}/{imageName}/blobs/sha256:{configDigest}"
+        logger.debug("Retrieving type=blog from schemaVersion=v2 url=${registryMetadata.fullRegistryUrl} image=${imageRepoCommand.manifestRepo}")
+        return "${registryMetadata.fullRegistryUrl}/{imageGroup}/{imageName}/blobs/{digest}"
     }
-
+    fun createUploadUrl(
+        imageRepoCommand: ImageRepoCommand,
+        registryMetadata: RegistryMetadata
+    ): String {
+        logger.debug("Retrieving type=blog from schemaVersion=v2 url=${registryMetadata.fullRegistryUrl} image=${imageRepoCommand.manifestRepo}")
+        return "${registryMetadata.fullRegistryUrl}/{imageGroup}/{imageName}/blobs/uploads/"
+    }
     fun createManifestUrl(
         imageRepoCommand: ImageRepoCommand,
         registryMetadata: RegistryMetadata

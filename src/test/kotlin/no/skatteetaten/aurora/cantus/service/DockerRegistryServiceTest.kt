@@ -7,6 +7,10 @@ import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.message
 import assertk.catch
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import no.skatteetaten.aurora.cantus.ApplicationConfig
 import no.skatteetaten.aurora.cantus.controller.ForbiddenException
 import no.skatteetaten.aurora.cantus.controller.ImageRepoCommand
@@ -16,6 +20,7 @@ import no.skatteetaten.aurora.mockmvc.extensions.mockwebserver.setJsonFileAsBody
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.jupiter.api.Test
+import org.springframework.util.ResourceUtils
 import org.springframework.web.reactive.function.client.WebClient
 
 class DockerRegistryServiceTest {
@@ -190,5 +195,38 @@ class DockerRegistryServiceTest {
                 .message().isNotNull().contains("Unable to retrieve V2 manifest")
         }
         assertThat(requests.size).isEqualTo(2)
+    }
+
+     @Test
+    fun `should find layers for v2`() {
+
+        val manifestJson = jacksonObjectMapper().readTestResourceAsJson("dockerManifestV2.json")
+        val dto= ImageManifestResponseDto(
+            manifestBody = manifestJson,
+            contentType = manifestV2,
+            dockerContentDigest = "foobar"
+        )
+
+        val layers=dockerService.findLayers(dto)
+        assertThat(layers.size).isEqualTo(3)
+    }
+
+
+    @Test
+    fun `should find layers for v1`() {
+
+        val manifestJson = jacksonObjectMapper().readTestResourceAsJson("dockerManifestV1.json")
+        val dto= ImageManifestResponseDto(
+            manifestBody = manifestJson,
+            contentType = manifestV1,
+            dockerContentDigest = "foobar"
+        )
+
+        val layers=dockerService.findLayers(dto)
+        assertThat(layers.size).isEqualTo(4)
+    }
+
+    fun ObjectMapper.readTestResourceAsJson(fileName: String): JsonNode {
+        return this.readValue(ResourceUtils.getURL("src/test/resources/$fileName"))
     }
 }
