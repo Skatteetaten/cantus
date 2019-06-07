@@ -15,6 +15,7 @@ import org.springframework.http.MediaType
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.bodyToMono
+import reactor.retry.retryExponentialBackoff
 import java.time.Duration
 import java.util.HashSet
 
@@ -120,6 +121,15 @@ class DockerRegistryService(
         }
         .retrieve()
         .bodyToMono<T>()
+        .retryExponentialBackoff(
+            times = 3,
+            first = Duration.ofMillis(100),
+            max = Duration.ofSeconds(1),
+            doOnRetry = {
+                val e = it.exception()
+                logger.error(e) { "Request to ${imageRepoCommand.registry} failed with ${e::class.simpleName}" }
+            }
+        )
         .blockAndHandleError(imageRepoCommand = imageRepoCommand)
 
     private fun getManifestFromRegistry(
