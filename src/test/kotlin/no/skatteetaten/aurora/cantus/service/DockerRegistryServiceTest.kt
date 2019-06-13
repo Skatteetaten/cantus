@@ -139,22 +139,6 @@ class DockerRegistryServiceTest {
     }
 
     @Test
-    fun `Get image tags given missing authorization token throws ForbiddenException`() {
-        val exception = catch { dockerServiceNoBearer.getImageTags(imageRepoCommandNoToken) }
-        assertThat(exception)
-            .isNotNull().isInstanceOf(ForbiddenException::class)
-            .message().isNotNull().isEqualTo("Authorization bearer token is not present")
-    }
-
-    @Test
-    fun `Get image manifest given missing authorization token throws ForbiddenException`() {
-        val exception = catch { dockerServiceNoBearer.getImageManifestInformation(imageRepoCommandNoToken) }
-        assertThat(exception)
-            .isNotNull().isInstanceOf(ForbiddenException::class)
-            .message().isNotNull().isEqualTo("Authorization bearer token is not present")
-    }
-
-    @Test
     fun `Verify that if V2 content type is set then retrieve manifest with V2 method`() {
         val response = MockResponse()
             .setJsonFileAsBody("dockerManifestV2.json")
