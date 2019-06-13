@@ -383,9 +383,9 @@ class DockerRegistryService(
             }
             .retrieve()
             .onStatus({ it.value() == 404 }) { Mono.empty() }
-            .bodyToMono<Boolean>()
+            .bodyToMono<ByteArray>()
             .blockAndHandleError(imageRepoCommand = imageRepoCommand)
-            ?: false
+            ?.let { true } ?: false
     }
 
     private fun JsonNode.getV2Information(
