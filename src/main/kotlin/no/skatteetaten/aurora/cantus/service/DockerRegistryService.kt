@@ -2,6 +2,7 @@ package no.skatteetaten.aurora.cantus.service
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ArrayNode
+import com.fasterxml.jackson.databind.node.NullNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import mu.KotlinLogging
 import no.skatteetaten.aurora.cantus.controller.BadRequestException
@@ -121,10 +122,11 @@ class DockerRegistryService(
                         message = "Response did not contain $uploadUUIDHeader header",
                         sourceSystem = to.registry
                     )
-
+                logger.debug("UUID header=$uuidHeader")
                 resp.bodyToMono<JsonNode>().map {
+                    logger.debug("Found body=$it")
                     uuidHeader to it
-                }
+                }.switchIfEmpty(Mono.just(uuidHeader to NullNode.instance))
             }
             .handleError(to)
             .block(Duration.ofSeconds(5)) ?: throw SourceSystemException(
