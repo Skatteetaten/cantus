@@ -59,7 +59,7 @@ class DockerRegistryController(
         @RequestBody tagCommand: TagCommand
     ): AuroraResponse<TagCommandResource> {
 
-        //TODO: Error handling
+        // TODO: Error handling
         val from = imageRepoCommandAssembler.createAndValidateCommand(tagCommand.from, tagCommand.fromAuth)!!
         val to = imageRepoCommandAssembler.createAndValidateCommand(tagCommand.to, tagCommand.toAuth)!!
 

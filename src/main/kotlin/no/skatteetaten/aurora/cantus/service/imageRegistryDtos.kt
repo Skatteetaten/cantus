@@ -10,7 +10,6 @@ data class ImageManifestResponseDto(
     val manifestBody: JsonNode
 )
 
-
 data class ImageManifestDto(
     val auroraVersion: String? = null,
     val appVersion: String? = null,

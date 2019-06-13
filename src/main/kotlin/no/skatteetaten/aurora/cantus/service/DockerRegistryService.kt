@@ -58,48 +58,56 @@ class DockerRegistryService(
      */
     fun tagImage(from: ImageRepoCommand, to: ImageRepoCommand): Boolean {
 
-        val (fromRegistry, manifest) = getImageManifest(from)
+        val (_, manifest) = getImageManifest(from)
+        logger.debug("Found manifest=$manifest")
 
         val layers = findLayers(manifest)
+        logger.debug("found layers=$layers")
 
-        //TODO: do in paralell
-        val results = layers.map {
-            ensureLayerExist(from, to, it)
+        // TODO: do in parallel
+        layers.forEach { digest ->
+            ensureLayerExist(from, to, digest).also {
+                logger.debug("Layer=$digest pushed to=$to success=$it")
+            }
         }
 
         val toRegistryMetadata = registryMetadataResolver.getMetadataForRegistry(to.registry)
-        return putManifest(to, toRegistryMetadata, manifest)
-        //TODO: error handling
-        //put manifest
-
-        return true
+        return putManifest(to, toRegistryMetadata, manifest).also {
+            logger.debug("Manifest=$manifest pushed to=$to")
+        }
     }
 
-    //TODO better error handling
     private fun ensureLayerExist(from: ImageRepoCommand, to: ImageRepoCommand, digest: String): Boolean {
 
-        val toRegistryMetadata = registryMetadataResolver.getMetadataForRegistry(to.registry)
-        val fromRegistryMethod = registryMetadataResolver.getMetadataForRegistry(from.registry)
+        try {
+            val toRegistryMetadata = registryMetadataResolver.getMetadataForRegistry(to.registry)
+            val fromRegistryMethod = registryMetadataResolver.getMetadataForRegistry(from.registry)
 
-        if (digestExistInRepo(to, toRegistryMetadata, digest)) {
-            return true
+            if (digestExistInRepo(to, toRegistryMetadata, digest)) {
+                logger.debug("layer=$digest already exist in registry=$to")
+                return true
+            }
+            val result: Pair<String, JsonNode?> = createUploadUrl(to, toRegistryMetadata) { webClient ->
+
+                webClient
+                    .post()
+                    .uri(
+                        imageRegistryUrlBuilder.createUploadUrl(to, toRegistryMetadata),
+                        to.mappedTemplateVars
+                    )
+            } ?: return false
+            val location = result.first
+
+            logger.debug("Location=$location")
+            val data = getLayer(from, fromRegistryMethod, digest) ?: return false
+
+            return postLayer(to, toRegistryMetadata, "$location?digest=$digest", data)
+        } catch (e: SourceSystemException) {
+            logger.warn("Failed in ensuring layer=$digest")
+            return false
         }
-        val result: Pair<String, JsonNode?> = createUploadUrl(to, toRegistryMetadata) { webClient ->
-
-            webClient
-                .post()
-                .uri(
-                    imageRegistryUrlBuilder.createUploadUrl(to, toRegistryMetadata),
-                    to.mappedTemplateVars
-                )
-
-        } ?: return false
-        val location = result.first
-
-        val data = getLayer(from, fromRegistryMethod, digest) ?: return false
-
-        return postLayer(to, toRegistryMetadata, "$location?digest=$digest", data)
     }
+
     private fun putManifest(
         to: ImageRepoCommand,
         toRegistryMetadata: RegistryMetadata,
@@ -129,7 +137,6 @@ class DockerRegistryService(
         return getBodyFromDockerRegistry<JsonNode>(to, toRegistryMetadata) { webClient ->
             webClient
                 .post()
-
                 .uri(url)
                 .body(BodyInserters.fromObject(data))
                 .headers {
