@@ -163,7 +163,7 @@ class DockerRegistryService(
         data: ByteArray
     ): Boolean {
         return webClient
-            .post()
+            .put()
             .uri(
                 imageRegistryUrlBuilder.createUploadLayerUrl(to, toRegistryMetadata),
                 to.mappedTemplateVars + mapOf("uuid" to uuid, "digest" to digest)
