@@ -7,7 +7,7 @@ data class RegistryMetadata(
     val registry: String,
     val apiSchema: String,
     val isInternal: Boolean,
-    val port: String? = null
+    val port: String? = null // TODO: Brukes denne noengang?
 ) {
     val fullRegistryUrl: String
         get() = "$apiSchema://$registry${if (port.isNullOrEmpty()) "" else ":$port"}/v2"

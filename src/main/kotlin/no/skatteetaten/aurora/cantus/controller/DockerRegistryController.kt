@@ -22,6 +22,19 @@ private val logger = KotlinLogging.logger {}
 
 // TODO: Validate if bearer is required and not set EARLY, not in DockerRegistryService
 
+/* Det begynner å bli såpass mange forskjellige registries og premutasjoner at jeg tror man nesten må
+lage litt mer kompleks konfigurasjon for dem.
+  For hvert registry trenger man å vite protocol og om de skal ha auth eller ikke. Man treger kanskje også vite om
+  det er noe man kan pushe til eller ei (nexus har jo grops som ikke kan pushes til).
+
+  altså bort med allowed registries og default registries og inn med:
+  cantus.registries.<name>
+     url:
+     https: true/false
+     auth: Bearer/Basic/None (Enda mer moro hvis noen kommandoer mot nexus har bearer og andre har basic...)
+     readOnly: true/false
+
+ */
 @RestController
 class DockerRegistryController(
     val dockerRegistryService: DockerRegistryService,

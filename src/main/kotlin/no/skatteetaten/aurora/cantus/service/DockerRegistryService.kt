@@ -11,6 +11,7 @@ import no.skatteetaten.aurora.cantus.controller.blockAndHandleError
 import no.skatteetaten.aurora.cantus.controller.handleError
 import no.skatteetaten.aurora.cantus.controller.handleStatusCodeError
 import no.skatteetaten.aurora.cantus.createObjectMapper
+import org.springframework.http.HttpHeaders.AUTHORIZATION
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Service
@@ -51,7 +52,7 @@ class DockerRegistryService(
 
     val dockerVersionLabel = "docker_version"
     val dockerContentDigestLabel = "Docker-Content-Digest"
-    val locationHeader = "Location"
+    val uploadUUIDHeader = "Docker-Upload-UUID"
     val createdLabel = "created"
 
     /*
@@ -87,21 +88,50 @@ class DockerRegistryService(
             logger.debug("layer=$digest already exist in registry=$to")
             return true
         }
-        val result: Pair<String, JsonNode?> = createUploadUrl(to) { webClient ->
 
-            webClient
-                .post()
-                .uri(
-                    imageRegistryUrlBuilder.createUploadUrl(to, toRegistryMetadata),
-                    to.mappedTemplateVars
-                )
-        } ?: return false
-        val location = result.first
-
-        logger.debug("Location=$location")
+        val uuid = generateLocationUrl(to, toRegistryMetadata)
+        logger.debug("UUID=$uuid")
         val data = getLayer(from, fromRegistryMethod, digest) ?: return false
 
-        return postLayer(to, "$location?digest=$digest", data)
+        return postLayer(to, toRegistryMetadata, uuid, digest, data)
+    }
+
+    private fun generateLocationUrl(
+        to: ImageRepoCommand,
+        toRegistryMetadata: RegistryMetadata
+    ): String {
+        val (uuid, _) = webClient
+            .post()
+            .uri(
+                imageRegistryUrlBuilder.createUploadUrl(to, toRegistryMetadata),
+                to.mappedTemplateVars
+            )
+            .headers { headers ->
+                to.bearerToken?.let {
+                    headers.set(AUTHORIZATION, "Basic $it")
+                }
+                headers.contentLength = 0L
+            }
+            .exchange()
+            .flatMap { resp ->
+                resp.handleStatusCodeError(to.registry)
+
+                val uuidHeader = resp.headers().header(uploadUUIDHeader).firstOrNull()
+                    ?: throw SourceSystemException(
+                        message = "Response did not contain $uploadUUIDHeader header",
+                        sourceSystem = to.registry
+                    )
+
+                resp.bodyToMono<JsonNode>().map {
+                    uuidHeader to it
+                }
+            }
+            .handleError(to)
+            .block(Duration.ofSeconds(5)) ?: throw SourceSystemException(
+            message = "Response to generate location header did not succeed",
+            sourceSystem = to.registry
+        )
+        return uuid
     }
 
     private fun putManifest(
@@ -125,19 +155,27 @@ class DockerRegistryService(
 
     private fun postLayer(
         to: ImageRepoCommand,
-        url: String,
+        toRegistryMetadata: RegistryMetadata,
+        uuid: String,
+        digest: String,
         data: ByteArray
     ): Boolean {
-        logger.debug("posting layer to url=$url")
-        return getBodyFromDockerRegistry<JsonNode>(to) { webClient ->
-            webClient
-                .post()
-                .uri(url)
-                .body(BodyInserters.fromObject(data))
-                .headers { headers ->
-                    headers.contentType = MediaType.APPLICATION_OCTET_STREAM
+        return webClient
+            .post()
+            .uri(
+                imageRegistryUrlBuilder.createUploadLayerUrl(to, toRegistryMetadata),
+                to.mappedTemplateVars + mapOf("uuid" to uuid, "digest" to digest)
+            )
+            .body(BodyInserters.fromObject(data))
+            .headers { headers ->
+                headers.contentType = MediaType.APPLICATION_OCTET_STREAM
+                to.bearerToken?.let {
+                    headers.set(AUTHORIZATION, "Basic $it")
                 }
-        }?.let { true } ?: false
+            }
+            .retrieve()
+            .bodyToMono<JsonNode>()
+            .blockAndHandleError(imageRepoCommand = to)?.let { true } ?: false
     }
 
     fun findLayers(manifest: ImageManifestResponseDto): List<String> {
@@ -227,32 +265,6 @@ class DockerRegistryService(
         .bodyToMono<T>()
         .blockAndHandleError(imageRepoCommand = imageRepoCommand)
 
-    private fun createUploadUrl(
-        imageRepoCommand: ImageRepoCommand,
-        fn: (WebClient) -> WebClient.RequestHeadersSpec<*>
-    ): Pair<String, JsonNode>? = fn(webClient)
-        .headers { headers ->
-            imageRepoCommand.bearerToken?.let {
-                headers.setBearerAuth(it)
-            }
-        }
-        .exchange()
-        .flatMap { resp ->
-            resp.handleStatusCodeError(imageRepoCommand.registry)
-
-            val locationHeader = resp.headers().header(locationHeader).firstOrNull()
-                ?: throw SourceSystemException(
-                    message = "Response did not contain $locationHeader header",
-                    sourceSystem = imageRepoCommand.registry
-                )
-
-            resp.bodyToMono<JsonNode>().map {
-                locationHeader to it
-            }
-        }
-        .handleError(imageRepoCommand)
-        .block(Duration.ofSeconds(5))
-
     private fun getManifestFromRegistry(
         imageRepoCommand: ImageRepoCommand,
         fn: (WebClient) -> WebClient.RequestHeadersSpec<*>
@@ -322,7 +334,7 @@ class DockerRegistryService(
         imageRegistryMetadata: RegistryMetadata
     ): JsonNode =
         when (contentType) {
-            "application/vnd.docker.distribution.manifest.v2+json" ->
+            manifestV2 ->
                 this.getV2Information(imageRepoCommand, imageRegistryMetadata)
             else -> {
                 this.getV1CompatibilityFromManifest(imageRepoCommand)
@@ -364,7 +376,7 @@ class DockerRegistryService(
             )
             .headers { headers ->
                 imageRepoCommand.bearerToken?.let {
-                    headers.setBearerAuth(it)
+                    headers.set(AUTHORIZATION, "Basic $it")
                 }
             }
             .retrieve()

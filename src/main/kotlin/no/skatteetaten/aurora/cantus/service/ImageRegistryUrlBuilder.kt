@@ -20,14 +20,14 @@ class ImageRegistryUrlBuilder {
         imageRepoCommand: ImageRepoCommand,
         registryMetadata: RegistryMetadata
     ): String {
-        logger.debug("Retrieving type=blog from schemaVersion=v2 url=${registryMetadata.fullRegistryUrl} image=${imageRepoCommand.manifestRepo}")
+        logger.debug("Retrieving type=blob from schemaVersion=v2 url=${registryMetadata.fullRegistryUrl} image=${imageRepoCommand.manifestRepo}")
         return "${registryMetadata.fullRegistryUrl}/{imageGroup}/{imageName}/blobs/{digest}"
     }
     fun createUploadUrl(
         imageRepoCommand: ImageRepoCommand,
         registryMetadata: RegistryMetadata
     ): String {
-        logger.debug("Retrieving type=blog from schemaVersion=v2 url=${registryMetadata.fullRegistryUrl} image=${imageRepoCommand.manifestRepo}")
+        logger.debug("Retrieving type=upload from schemaVersion=v2 url=${registryMetadata.fullRegistryUrl} image=${imageRepoCommand.manifestRepo}")
         return "${registryMetadata.fullRegistryUrl}/{imageGroup}/{imageName}/blobs/uploads/"
     }
     fun createManifestUrl(
@@ -36,5 +36,10 @@ class ImageRegistryUrlBuilder {
     ): String {
         logger.debug("Retrieving type=manifest from schemaVersion=v1 url=${registryMetadata.fullRegistryUrl} image=${imageRepoCommand.manifestRepo}")
         return "${registryMetadata.fullRegistryUrl}/{imageGroup}/{imageName}/manifests/{imageTag}"
+    }
+
+    fun createUploadLayerUrl(imageRepoCommand: ImageRepoCommand, registryMetadata: RegistryMetadata): String {
+        logger.debug("Retrieving type=uploadLayer from schemaVersion=v2 url=${registryMetadata.fullRegistryUrl} image=${imageRepoCommand.manifestRepo}")
+        return "${registryMetadata.fullRegistryUrl}/{imageGroup}/{imageName}/blobs/uploads/{uuid}?digest={digest}"
     }
 }
