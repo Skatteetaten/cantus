@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import mu.KotlinLogging
 import no.skatteetaten.aurora.cantus.controller.BadRequestException
-import no.skatteetaten.aurora.cantus.controller.ForbiddenException
 import no.skatteetaten.aurora.cantus.controller.ImageRepoCommand
 import no.skatteetaten.aurora.cantus.controller.SourceSystemException
 import no.skatteetaten.aurora.cantus.controller.blockAndHandleError
@@ -102,7 +101,7 @@ class DockerRegistryService(
         logger.debug("Location=$location")
         val data = getLayer(from, fromRegistryMethod, digest) ?: return false
 
-        return postLayer(to, toRegistryMetadata, "$location?digest=$digest", data)
+        return postLayer(to, "$location?digest=$digest", data)
     }
 
     private fun putManifest(
@@ -126,7 +125,6 @@ class DockerRegistryService(
 
     private fun postLayer(
         to: ImageRepoCommand,
-        toRegistryMetadata: RegistryMetadata,
         url: String,
         data: ByteArray
     ): Boolean {
@@ -220,11 +218,10 @@ class DockerRegistryService(
         imageRepoCommand: ImageRepoCommand,
         fn: (WebClient) -> WebClient.RequestHeadersSpec<*>
     ): T? = fn(webClient)
-        .headers {
-            it.setBearerAuth(
-                imageRepoCommand.bearerToken
-                    ?: throw ForbiddenException("Authorization bearer token is not present")
-            )
+        .headers { headers ->
+            imageRepoCommand.bearerToken?.let {
+                headers.setBearerAuth(it)
+            }
         }
         .retrieve()
         .bodyToMono<T>()
@@ -234,11 +231,10 @@ class DockerRegistryService(
         imageRepoCommand: ImageRepoCommand,
         fn: (WebClient) -> WebClient.RequestHeadersSpec<*>
     ): Pair<String, JsonNode>? = fn(webClient)
-        .headers {
-            it.setBearerAuth(
-                imageRepoCommand.bearerToken
-                    ?: throw ForbiddenException("Authorization bearer token is not present")
-            )
+        .headers { headers ->
+            imageRepoCommand.bearerToken?.let {
+                headers.setBearerAuth(it)
+            }
         }
         .exchange()
         .flatMap { resp ->
@@ -261,11 +257,10 @@ class DockerRegistryService(
         imageRepoCommand: ImageRepoCommand,
         fn: (WebClient) -> WebClient.RequestHeadersSpec<*>
     ): ImageManifestResponseDto? = fn(webClient)
-        .headers {
-            it.setBearerAuth(
-                imageRepoCommand.bearerToken
-                    ?: throw ForbiddenException("Authorization bearer token is not present")
-            )
+        .headers { headers ->
+            imageRepoCommand.bearerToken?.let {
+                headers.setBearerAuth(it)
+            }
         }
         .exchange()
         .flatMap { resp ->
