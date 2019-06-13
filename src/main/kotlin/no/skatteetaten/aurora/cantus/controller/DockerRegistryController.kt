@@ -20,7 +20,7 @@ import uk.q3c.rest.hal.HalResource
 
 private val logger = KotlinLogging.logger {}
 
-//TODO: Validate if bearer is required and not set EARLY, not in DockerRegistryService
+// TODO: Validate if bearer is required and not set EARLY, not in DockerRegistryService
 
 @RestController
 class DockerRegistryController(
