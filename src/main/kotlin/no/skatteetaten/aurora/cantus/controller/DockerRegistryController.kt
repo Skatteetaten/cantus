@@ -4,6 +4,7 @@ import kotlinx.coroutines.ExecutorCoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.slf4j.MDCContext
+import mu.KotlinLogging
 import no.skatteetaten.aurora.cantus.service.DockerRegistryService
 import no.skatteetaten.aurora.cantus.service.ImageManifestDto
 import no.skatteetaten.aurora.cantus.service.ImageTagsWithTypeDto
@@ -17,6 +18,8 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import uk.q3c.rest.hal.HalResource
 
+private val logger = KotlinLogging.logger {}
+
 @RestController
 class DockerRegistryController(
     val dockerRegistryService: DockerRegistryService,
@@ -25,33 +28,13 @@ class DockerRegistryController(
     val threadPoolContext: ExecutorCoroutineDispatcher
 ) {
 
-    /*
-
-   Command In er:
-     - from: registryUrl/group/name:tag
-     - to : registryUrl/group/name:tag
-
-   Autentisering: Hvordan skal man autentisere dette? Vi kan jo potensielt sett kreve 2 set med credentials her,
-   en for å pulle og en for å pushe.
-
-   Skal Bearer token være en base64 json blob med all credential informasjon man trenger?
-
-   Skal cantus ha credentials informasjon for Nexus registriene for tagging?
-
-   Fra et rent puristisk perspektiv så hadde det vært greit om disse tokenene kom med inn i requestet. Om de da skal
-   være i en header eller bare i payload som data vet jeg ikke.
-
-
-
-  */
-
     data class TagCommandResource(val result: Boolean) : HalResource()
 
     data class TagCommand(
         val from: String,
-        val fromAuth: String?,
+        val fromAuth: String? = null,
         val to: String,
-        val toAuth: String?
+        val toAuth: String? = null
     )
 
     @PostMapping("/tag")
@@ -59,10 +42,12 @@ class DockerRegistryController(
         @RequestBody tagCommand: TagCommand
     ): AuroraResponse<TagCommandResource> {
 
+        logger.debug("command=$tagCommand")
         // TODO: Error handling
         val from = imageRepoCommandAssembler.createAndValidateCommand(tagCommand.from, tagCommand.fromAuth)!!
         val to = imageRepoCommandAssembler.createAndValidateCommand(tagCommand.to, tagCommand.toAuth)!!
 
+        logger.debug("command objects from=$from to=$to")
         val result = dockerRegistryService.tagImage(from, to)
 
         return AuroraResponse(

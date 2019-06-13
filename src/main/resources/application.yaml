@@ -10,7 +10,7 @@ spring:
 
 logging:
     level:
-        no.skatteetaten.aurora.cantus: INFO
+        no.skatteetaten.aurora.cantus: DEBUG
         org:
             hibernate: WARN
             springframework: INFO
