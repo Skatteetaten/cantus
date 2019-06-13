@@ -11,12 +11,14 @@ import no.skatteetaten.aurora.cantus.controller.SourceSystemException
 import no.skatteetaten.aurora.cantus.controller.blockAndHandleError
 import no.skatteetaten.aurora.cantus.controller.handleError
 import no.skatteetaten.aurora.cantus.controller.handleStatusCodeError
+import no.skatteetaten.aurora.cantus.createObjectMapper
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.bodyToMono
+import reactor.core.publisher.Mono
 import java.time.Duration
 import java.util.HashSet
 
@@ -79,33 +81,28 @@ class DockerRegistryService(
 
     private fun ensureLayerExist(from: ImageRepoCommand, to: ImageRepoCommand, digest: String): Boolean {
 
-        try {
-            val toRegistryMetadata = registryMetadataResolver.getMetadataForRegistry(to.registry)
-            val fromRegistryMethod = registryMetadataResolver.getMetadataForRegistry(from.registry)
+        val toRegistryMetadata = registryMetadataResolver.getMetadataForRegistry(to.registry)
+        val fromRegistryMethod = registryMetadataResolver.getMetadataForRegistry(from.registry)
 
-            if (digestExistInRepo(to, toRegistryMetadata, digest)) {
-                logger.debug("layer=$digest already exist in registry=$to")
-                return true
-            }
-            val result: Pair<String, JsonNode?> = createUploadUrl(to, toRegistryMetadata) { webClient ->
-
-                webClient
-                    .post()
-                    .uri(
-                        imageRegistryUrlBuilder.createUploadUrl(to, toRegistryMetadata),
-                        to.mappedTemplateVars
-                    )
-            } ?: return false
-            val location = result.first
-
-            logger.debug("Location=$location")
-            val data = getLayer(from, fromRegistryMethod, digest) ?: return false
-
-            return postLayer(to, toRegistryMetadata, "$location?digest=$digest", data)
-        } catch (e: SourceSystemException) {
-            logger.warn("Failed in ensuring layer=$digest")
-            return false
+        if (digestExistInRepo(to, toRegistryMetadata, digest)) {
+            logger.debug("layer=$digest already exist in registry=$to")
+            return true
         }
+        val result: Pair<String, JsonNode?> = createUploadUrl(to, toRegistryMetadata) { webClient ->
+
+            webClient
+                .post()
+                .uri(
+                    imageRegistryUrlBuilder.createUploadUrl(to, toRegistryMetadata),
+                    to.mappedTemplateVars
+                )
+        } ?: return false
+        val location = result.first
+
+        logger.debug("Location=$location")
+        val data = getLayer(from, fromRegistryMethod, digest) ?: return false
+
+        return postLayer(to, toRegistryMetadata, "$location?digest=$digest", data)
     }
 
     private fun putManifest(
@@ -123,7 +120,7 @@ class DockerRegistryService(
                 .headers {
                     it.contentType = MediaType.valueOf(manifest.contentType)
                 }
-                .body(BodyInserters.fromObject(manifest.manifestBody))
+                .body(BodyInserters.fromObject(createObjectMapper().writeValueAsString(manifest.manifestBody)))
         }?.let { true } ?: false
     }
 
@@ -369,21 +366,26 @@ class DockerRegistryService(
         registryMetadata: RegistryMetadata,
         digest: String
     ): Boolean {
-        val body: JsonNode? = getBodyFromDockerRegistry(imageRepoCommand, registryMetadata) { webClient ->
-            webClient
-                .head()
-                .uri(
-                    imageRegistryUrlBuilder.createBlobUrl(
-                        imageRepoCommand = imageRepoCommand,
-                        registryMetadata = registryMetadata
-                    ),
-                    imageRepoCommand.mappedTemplateVars + mapOf("digest" to digest)
-                )
-                .headers {
-                    it.accept = listOf(MediaType.valueOf("application/json"))
+
+        return webClient
+            .head()
+            .uri(
+                imageRegistryUrlBuilder.createBlobUrl(
+                    imageRepoCommand = imageRepoCommand,
+                    registryMetadata = registryMetadata
+                ),
+                imageRepoCommand.mappedTemplateVars + mapOf("digest" to digest)
+            )
+            .headers { headers ->
+                imageRepoCommand.bearerToken?.let {
+                    headers.setBearerAuth(it)
                 }
-        }
-        return body?.let { true } ?: false
+            }
+            .retrieve()
+            .onStatus({ it.value() == 404 }) { Mono.empty() }
+            .bodyToMono<Boolean>()
+            .blockAndHandleError(imageRepoCommand = imageRepoCommand)
+            ?: false
     }
 
     private fun JsonNode.getV2Information(

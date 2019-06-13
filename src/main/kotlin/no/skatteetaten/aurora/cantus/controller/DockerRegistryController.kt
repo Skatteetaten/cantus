@@ -43,7 +43,7 @@ class DockerRegistryController(
     ): AuroraResponse<TagCommandResource> {
 
         logger.debug("command=$tagCommand")
-        // TODO: Error handling
+        // TODO: Error handling, if wrongly formatted url silently fails
         val from = imageRepoCommandAssembler.createAndValidateCommand(tagCommand.from, tagCommand.fromAuth)!!
         val to = imageRepoCommandAssembler.createAndValidateCommand(tagCommand.to, tagCommand.toAuth)!!
 
