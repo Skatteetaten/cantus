@@ -88,7 +88,7 @@ class DockerRegistryService(
             logger.debug("layer=$digest already exist in registry=$to")
             return true
         }
-        val result: Pair<String, JsonNode?> = createUploadUrl(to, toRegistryMetadata) { webClient ->
+        val result: Pair<String, JsonNode?> = createUploadUrl(to) { webClient ->
 
             webClient
                 .post()
@@ -110,7 +110,7 @@ class DockerRegistryService(
         toRegistryMetadata: RegistryMetadata,
         manifest: ImageManifestResponseDto
     ): Boolean {
-        return getBodyFromDockerRegistry<JsonNode>(to, toRegistryMetadata) { webClient ->
+        return getBodyFromDockerRegistry<JsonNode>(to) { webClient ->
             webClient
                 .put()
                 .uri(
@@ -131,16 +131,13 @@ class DockerRegistryService(
         data: ByteArray
     ): Boolean {
         logger.debug("posting layer to url=$url")
-        return getBodyFromDockerRegistry<JsonNode>(to, toRegistryMetadata) { webClient ->
+        return getBodyFromDockerRegistry<JsonNode>(to) { webClient ->
             webClient
                 .post()
                 .uri(url)
                 .body(BodyInserters.fromObject(data))
                 .headers { headers ->
                     headers.contentType = MediaType.APPLICATION_OCTET_STREAM
-                    to.bearerToken?.let {
-                        headers.setBearerAuth(it)
-                    }
                 }
         }?.let { true } ?: false
     }
@@ -174,7 +171,7 @@ class DockerRegistryService(
 
         val registryMetadata = registryMetadataResolver.getMetadataForRegistry(url)
 
-        val dockerResponse = getManifestFromRegistry(imageRepoCommand, registryMetadata) { webClient ->
+        val dockerResponse = getManifestFromRegistry(imageRepoCommand) { webClient ->
             webClient
                 .get()
                 .uri(
@@ -197,7 +194,7 @@ class DockerRegistryService(
         val registryMetadata = registryMetadataResolver.getMetadataForRegistry(url)
 
         val tagsResponse: ImageTagsResponseDto? =
-            getBodyFromDockerRegistry(imageRepoCommand, registryMetadata) { webClient ->
+            getBodyFromDockerRegistry(imageRepoCommand) { webClient ->
                 logger.debug("Retrieving tags from $url")
                 webClient
                     .get()
@@ -221,16 +218,13 @@ class DockerRegistryService(
 
     private final inline fun <reified T : Any> getBodyFromDockerRegistry(
         imageRepoCommand: ImageRepoCommand,
-        registryMetadata: RegistryMetadata,
         fn: (WebClient) -> WebClient.RequestHeadersSpec<*>
     ): T? = fn(webClient)
         .headers {
-            if (registryMetadata.authenticationMethod == AuthenticationMethod.KUBERNETES_TOKEN) {
-                it.setBearerAuth(
-                    imageRepoCommand.bearerToken
-                        ?: throw ForbiddenException("Authorization bearer token is not present")
-                )
-            }
+            it.setBearerAuth(
+                imageRepoCommand.bearerToken
+                    ?: throw ForbiddenException("Authorization bearer token is not present")
+            )
         }
         .retrieve()
         .bodyToMono<T>()
@@ -238,16 +232,13 @@ class DockerRegistryService(
 
     private fun createUploadUrl(
         imageRepoCommand: ImageRepoCommand,
-        registryMetadata: RegistryMetadata,
         fn: (WebClient) -> WebClient.RequestHeadersSpec<*>
     ): Pair<String, JsonNode>? = fn(webClient)
         .headers {
-            if (registryMetadata.authenticationMethod == AuthenticationMethod.KUBERNETES_TOKEN) {
-                it.setBearerAuth(
-                    imageRepoCommand.bearerToken
-                        ?: throw ForbiddenException("Authorization bearer token is not present")
-                )
-            }
+            it.setBearerAuth(
+                imageRepoCommand.bearerToken
+                    ?: throw ForbiddenException("Authorization bearer token is not present")
+            )
         }
         .exchange()
         .flatMap { resp ->
@@ -268,16 +259,13 @@ class DockerRegistryService(
 
     private fun getManifestFromRegistry(
         imageRepoCommand: ImageRepoCommand,
-        registryMetadata: RegistryMetadata,
         fn: (WebClient) -> WebClient.RequestHeadersSpec<*>
     ): ImageManifestResponseDto? = fn(webClient)
         .headers {
-            if (registryMetadata.authenticationMethod == AuthenticationMethod.KUBERNETES_TOKEN) {
-                it.setBearerAuth(
-                    imageRepoCommand.bearerToken
-                        ?: throw ForbiddenException("Authorization bearer token is not present")
-                )
-            }
+            it.setBearerAuth(
+                imageRepoCommand.bearerToken
+                    ?: throw ForbiddenException("Authorization bearer token is not present")
+            )
         }
         .exchange()
         .flatMap { resp ->
@@ -351,7 +339,7 @@ class DockerRegistryService(
         registryMetadata: RegistryMetadata,
         digest: String
     ): ByteArray? {
-        return getBodyFromDockerRegistry(imageRepoCommand, registryMetadata) { webClient ->
+        return getBodyFromDockerRegistry(imageRepoCommand) { webClient ->
             webClient
                 .get()
                 .uri(
@@ -402,7 +390,7 @@ class DockerRegistryService(
             ).split(":").last()
         ).associate { "digest" to "sha256:$it" }
 
-        return getBodyFromDockerRegistry(imageRepoCommand, registryMetadata) { webClient ->
+        return getBodyFromDockerRegistry(imageRepoCommand) { webClient ->
             webClient
                 .get()
                 .uri(
