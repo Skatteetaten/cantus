@@ -136,8 +136,11 @@ class DockerRegistryService(
                 .post()
                 .uri(url)
                 .body(BodyInserters.fromObject(data))
-                .headers {
-                    it.contentType = MediaType.APPLICATION_OCTET_STREAM
+                .headers { headers ->
+                    headers.contentType = MediaType.APPLICATION_OCTET_STREAM
+                    to.bearerToken?.let {
+                        headers.setBearerAuth(it)
+                    }
                 }
         }?.let { true } ?: false
     }
