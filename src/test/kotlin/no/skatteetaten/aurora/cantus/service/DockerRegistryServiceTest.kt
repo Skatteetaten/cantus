@@ -190,7 +190,7 @@ class DockerRegistryServiceTest {
             dockerContentDigest = "foobar"
         )
 
-        val layers = dockerService.findLayers(dto)
+        val layers = dockerService.findBlobs(dto)
         assertThat(layers.size).isEqualTo(3)
     }
 
@@ -204,7 +204,7 @@ class DockerRegistryServiceTest {
             dockerContentDigest = "foobar"
         )
 
-        val layers = dockerService.findLayers(dto)
+        val layers = dockerService.findBlobs(dto)
         assertThat(layers.size).isEqualTo(4)
     }
 

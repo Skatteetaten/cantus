@@ -57,6 +57,7 @@ class DockerRegistryService(
     val createdLabel = "created"
 
     /*
+    TODO: test with v1
         https://www.danlorenc.com/posts/containers-part-2/
      */
     fun tagImage(from: ImageRepoCommand, to: ImageRepoCommand): Boolean {
@@ -64,13 +65,14 @@ class DockerRegistryService(
         val (_, manifest) = getImageManifest(from)
         logger.debug("Found manifest=$manifest")
 
-        val layers = findLayers(manifest)
+        val layers = findBlobs(manifest)
         logger.debug("found layers=$layers")
 
         // TODO: do in parallel
+        // TODO: missing config
         layers.forEach { digest ->
-            ensureLayerExist(from, to, digest).also {
-                logger.debug("Layer=$digest pushed to=$to success=$it")
+            ensureBlobExist(from, to, digest).also {
+                logger.debug("Blob=$digest pushed to=$to success=$it")
             }
         }
 
@@ -80,7 +82,7 @@ class DockerRegistryService(
         }
     }
 
-    private fun ensureLayerExist(from: ImageRepoCommand, to: ImageRepoCommand, digest: String): Boolean {
+    private fun ensureBlobExist(from: ImageRepoCommand, to: ImageRepoCommand, digest: String): Boolean {
 
         val toRegistryMetadata = registryMetadataResolver.getMetadataForRegistry(to.registry)
         val fromRegistryMethod = registryMetadataResolver.getMetadataForRegistry(from.registry)
@@ -185,10 +187,10 @@ class DockerRegistryService(
             .blockAndHandleError(imageRepoCommand = to)?.let { true } ?: false
     }
 
-    fun findLayers(manifest: ImageManifestResponseDto): List<String> {
+    fun findBlobs(manifest: ImageManifestResponseDto): List<String> {
         return if (manifest.contentType == manifestV2) {
             val layers: ArrayNode = manifest.manifestBody["layers"] as ArrayNode
-            layers.map { it["digest"].textValue() }
+            layers.map { it["digest"].textValue() } + manifest.manifestBody.at("/config/digest").textValue()
         } else {
             val layers: ArrayNode = manifest.manifestBody["fsLayers"] as ArrayNode
             layers.map { it["blobSum"].textValue() }
