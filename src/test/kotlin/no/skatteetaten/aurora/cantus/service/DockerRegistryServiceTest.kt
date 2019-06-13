@@ -181,7 +181,7 @@ class DockerRegistryServiceTest {
     }
 
     @Test
-    fun `should find layers for v2`() {
+    fun `should find blobs for v2`() {
 
         val manifestJson = jacksonObjectMapper().readTestResourceAsJson("dockerManifestV2.json")
         val dto = ImageManifestResponseDto(
@@ -191,11 +191,11 @@ class DockerRegistryServiceTest {
         )
 
         val layers = dockerService.findBlobs(dto)
-        assertThat(layers.size).isEqualTo(3)
+        assertThat(layers.size).isEqualTo(4)
     }
 
     @Test
-    fun `should find layers for v1`() {
+    fun `should find blogs for v1`() {
 
         val manifestJson = jacksonObjectMapper().readTestResourceAsJson("dockerManifestV1.json")
         val dto = ImageManifestResponseDto(

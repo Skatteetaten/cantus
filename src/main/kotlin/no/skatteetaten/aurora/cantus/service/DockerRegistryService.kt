@@ -68,6 +68,10 @@ class DockerRegistryService(
         val layers = findBlobs(manifest)
         logger.debug("found layers=$layers")
 
+        /*
+        Add test that returns this error when puting manifest. Make sure error is propagated.
+        {"errors":[{"code":"BLOB_UNKNOWN","message":"blob unknown to registry","detail":"sha256:303510ed0dee065d6dc0dd4fbb1833aa27ff6177e7dfc72881ea4ea0716c82a1"}]}⏎
+         */
         // TODO: do in parallel
         // TODO: missing config
         layers.forEach { digest ->
