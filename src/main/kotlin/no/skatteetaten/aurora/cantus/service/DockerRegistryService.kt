@@ -141,18 +141,23 @@ class DockerRegistryService(
         toRegistryMetadata: RegistryMetadata,
         manifest: ImageManifestResponseDto
     ): Boolean {
-        return getBodyFromDockerRegistry<JsonNode>(to) { webClient ->
-            webClient
-                .put()
-                .uri(
-                    imageRegistryUrlBuilder.createManifestUrl(to, toRegistryMetadata),
-                    to.mappedTemplateVars
-                )
-                .headers {
-                    it.contentType = MediaType.valueOf(manifest.contentType)
+        return webClient
+            .put()
+            .uri(
+                imageRegistryUrlBuilder.createManifestUrl(to, toRegistryMetadata),
+                to.mappedTemplateVars
+            )
+            .headers { headers ->
+                to.bearerToken?.let {
+                    headers.set(AUTHORIZATION, "Basic $it")
                 }
-                .body(BodyInserters.fromObject(createObjectMapper().writeValueAsString(manifest.manifestBody)))
-        }?.let { true } ?: false
+                headers.contentType = MediaType.valueOf(manifest.contentType)
+            }
+            .body(BodyInserters.fromObject(createObjectMapper().writeValueAsString(manifest.manifestBody)))
+            .retrieve()
+            .bodyToMono<JsonNode>()
+            .blockAndHandleError(imageRepoCommand = to)
+            ?.let { true } ?: false
     }
 
     private fun postLayer(
