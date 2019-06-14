@@ -4,6 +4,7 @@ import io.netty.handler.timeout.ReadTimeoutException
 import mu.KotlinLogging
 import org.springframework.web.reactive.function.client.ClientResponse
 import org.springframework.web.reactive.function.client.WebClientResponseException
+import org.springframework.web.reactive.function.client.bodyToMono
 import reactor.core.publisher.Mono
 import reactor.core.publisher.toMono
 import java.time.Duration
@@ -62,35 +63,42 @@ private fun Throwable.handleException() {
 }
 
 fun ClientResponse.handleStatusCodeError(sourceSystem: String?) {
-
     val statusCode = this.statusCode()
 
-    if (statusCode.is2xxSuccessful) {
+    if (!statusCode.is2xxSuccessful) {
         return
     }
+    // TODO: will this work?
+    this.bodyToMono<String>().switchIfEmpty(Mono.just("")).map { body ->
+        val message = when {
+            statusCode.is4xxClientError -> {
+                when (statusCode.value()) {
+                    404 -> "Resource could not be found"
+                    400 -> "Invalid request"
+                    403 -> "Forbidden"
+                    else -> "There has occurred a client error"
+                }
+            }
+            statusCode.is5xxServerError -> {
+                when (statusCode.value()) {
+                    500 -> "An internal server error has occurred in the docker registry"
+                    else -> "A server error has occurred"
+                }
+            }
 
-    val message = when {
-        statusCode.is4xxClientError -> {
-            when (statusCode.value()) {
-                404 -> "Resource could not be found"
-                400 -> "Invalid request"
-                403 -> "Forbidden"
-                else -> "There has occurred a client error"
+            else ->
+                "Unknown error occurred"
+        }.let {
+            if (body.isNotEmpty()) {
+                "$it body=$body"
+            } else {
+                it
             }
         }
-        statusCode.is5xxServerError -> {
-            when (statusCode.value()) {
-                500 -> "An internal server error has occurred in the docker registry"
-                else -> "A server error has occurred"
-            }
-        }
 
-        else ->
-            "Unknown error occurred"
+        throw SourceSystemException(
+            message = "$message status=${statusCode.value()} message=${statusCode.reasonPhrase}",
+            sourceSystem = sourceSystem
+        )
     }
-
-    throw SourceSystemException(
-        message = "$message status=${statusCode.value()} message=${statusCode.reasonPhrase}",
-        sourceSystem = sourceSystem
-    )
 }

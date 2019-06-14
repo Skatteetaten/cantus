@@ -69,7 +69,7 @@ class DockerRegistryService(
         logger.debug("found layers=$layers")
 
         /*
-        Add test that returns this error when puting manifest. Make sure error is propagated.
+        Add test that returns this error when putting manifest. Make sure error is propagated.
         {"errors":[{"code":"BLOB_UNKNOWN","message":"blob unknown to registry","detail":"sha256:303510ed0dee065d6dc0dd4fbb1833aa27ff6177e7dfc72881ea4ea0716c82a1"}]}⏎
          */
         // TODO: do in parallel
@@ -91,6 +91,7 @@ class DockerRegistryService(
         val toRegistryMetadata = registryMetadataResolver.getMetadataForRegistry(to.registry)
         val fromRegistryMethod = registryMetadataResolver.getMetadataForRegistry(from.registry)
 
+        // TODO: Tror det er en bug her.
         if (digestExistInRepo(to, toRegistryMetadata, digest)) {
             logger.debug("layer=$digest already exist in registry=$to")
             return true
@@ -377,7 +378,6 @@ class DockerRegistryService(
         registryMetadata: RegistryMetadata,
         digest: String
     ): Boolean {
-
         return webClient
             .head()
             .uri(
@@ -392,11 +392,19 @@ class DockerRegistryService(
                     headers.set(AUTHORIZATION, "Basic $it")
                 }
             }
-            .retrieve()
-            .onStatus({ it.value() == 404 }) { Mono.empty() }
-            .bodyToMono<ByteArray>()
-            .blockAndHandleError(imageRepoCommand = imageRepoCommand)
-            ?.let { true } ?: false
+            .exchange()
+            .flatMap { resp ->
+                // TODO: Will error handling here work?
+                resp.bodyToMono<String>().switchIfEmpty(Mono.just("")).map {
+                    if (resp.statusCode() == HttpStatus.NOT_FOUND) {
+                        Mono.just(false)
+                    } else {
+                        Mono.just(true)
+                    }
+                }
+            }
+            .handleError(imageRepoCommand)
+            .block(Duration.ofSeconds(5))?.let { true } ?: false
     }
 
     private fun JsonNode.getV2Information(
