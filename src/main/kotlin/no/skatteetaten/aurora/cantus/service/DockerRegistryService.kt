@@ -122,6 +122,7 @@ class DockerRegistryService(
             }
             .exchange()
             .flatMap { resp ->
+
                 resp.handleStatusCodeError(to.registry)
 
                 val uuidHeader = resp.headers().header(uploadUUIDHeader).firstOrNull()
