@@ -77,7 +77,7 @@ class DockerRegistryController(
         @RequestHeader(required = false, value = HttpHeaders.AUTHORIZATION) bearerToken: String?
     ): AuroraResponse<ImageTagResource> {
 
-        //TODO: Move this to service? Why should controller now anything about how this is run in parallel?
+        // TODO: Move this to service? Why should controller now anything about how this is run in parallel?
         val responses =
             runBlocking(MDCContext() + threadPoolContext) {
                 val deferred =
