@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
+import kotlinx.coroutines.newFixedThreadPoolContext
 import no.skatteetaten.aurora.cantus.ApplicationConfig
 import no.skatteetaten.aurora.cantus.controller.ImageRepoCommand
 import no.skatteetaten.aurora.cantus.controller.SourceSystemException
@@ -37,7 +38,8 @@ class DockerRegistryServiceTest {
     private val dockerServiceNoBearer = DockerRegistryService(
         WebClient.create(),
         RegistryMetadataResolver(listOf("noBearerToken.com")),
-        ImageRegistryUrlBuilder()
+        ImageRegistryUrlBuilder(),
+        newFixedThreadPoolContext(6, "cantus")
     )
 
     private val imageRepoCommandNoToken =
@@ -53,7 +55,8 @@ class DockerRegistryServiceTest {
             "123"
         ),
         RegistryMetadataResolver(listOf(imageRepoCommand.registry)),
-        ImageRegistryUrlBuilder()
+        ImageRegistryUrlBuilder(),
+        newFixedThreadPoolContext(6, "cantus")
     )
 
     @Test

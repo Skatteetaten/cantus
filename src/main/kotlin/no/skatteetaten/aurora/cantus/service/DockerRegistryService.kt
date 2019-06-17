@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.NullNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import kotlinx.coroutines.ExecutorCoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.slf4j.MDCContext
@@ -35,7 +36,8 @@ val manifestV2 = "application/vnd.docker.distribution.manifest.v2+json"
 class DockerRegistryService(
     val webClient: WebClient,
     val registryMetadataResolver: RegistryMetadataResolver,
-    val imageRegistryUrlBuilder: ImageRegistryUrlBuilder
+    val imageRegistryUrlBuilder: ImageRegistryUrlBuilder,
+    val threadPoolContext: ExecutorCoroutineDispatcher
 ) {
 
     val dockerManfestAccept: List<MediaType> = listOf(
@@ -72,11 +74,11 @@ class DockerRegistryService(
         {"errors":[{"code":"BLOB_UNKNOWN","message":"blob unknown to registry","detail":"sha256:303510ed0dee065d6dc0dd4fbb1833aa27ff6177e7dfc72881ea4ea0716c82a1"}]}⏎
          */
         // TODO: missing config
-        runBlocking(MDCContext()) {
+        runBlocking(threadPoolContext + MDCContext()) {
             layers.map { digest ->
                 async {
                     ensureBlobExist(from, to, digest).also {
-                        logger.debug("Blob=$digest pushed to=$to success=$it")
+                        logger.debug("Blob=$digest pushed to=${to.defaultRepo} success=$it")
                     }
                 }
             }.forEach { it.await() }
@@ -84,7 +86,7 @@ class DockerRegistryService(
 
         val toRegistryMetadata = registryMetadataResolver.getMetadataForRegistry(to.registry)
         return putManifest(to, toRegistryMetadata, manifest).also {
-            logger.debug("Manifest=$manifest pushed to=${to.defaultRepo}")
+            logger.debug("Manifest=$manifest pushed to=${to.fullRepoCommand}")
         }
     }
 

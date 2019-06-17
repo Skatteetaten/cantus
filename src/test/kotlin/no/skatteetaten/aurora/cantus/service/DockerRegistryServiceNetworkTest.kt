@@ -4,6 +4,7 @@ import assertk.assertThat
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.catch
+import kotlinx.coroutines.newFixedThreadPoolContext
 import no.skatteetaten.aurora.cantus.ApplicationConfig
 import no.skatteetaten.aurora.cantus.controller.CantusException
 import no.skatteetaten.aurora.cantus.controller.ImageRepoCommand
@@ -46,7 +47,8 @@ class DockerRegistryServiceNetworkTest {
             "123"
         ),
         RegistryMetadataResolver(listOf(imageRepoCommand.registry)),
-        ImageRegistryUrlBuilder()
+        ImageRegistryUrlBuilder(),
+        newFixedThreadPoolContext(6, "cantus")
     )
 
     @AfterEach
