@@ -122,7 +122,6 @@ class DockerRegistryService(
             }
             .exchange()
             .flatMap { resp ->
-
                 resp.handleStatusCodeError(to.registry)
 
                 val uuidHeader = resp.headers().header(uploadUUIDHeader).firstOrNull()
@@ -395,17 +394,21 @@ class DockerRegistryService(
             }
             .exchange()
             .flatMap { resp ->
-                // TODO: Will error handling here work?
-                resp.bodyToMono<String>().switchIfEmpty(Mono.just("")).map {
-                    if (resp.statusCode() == HttpStatus.NOT_FOUND) {
-                        Mono.just(false)
-                    } else {
-                        Mono.just(true)
+                resp.bodyToMono<String>().switchIfEmpty(Mono.just("")).flatMap { body ->
+                    when (resp.statusCode()) {
+                        HttpStatus.NOT_FOUND -> Mono.just(false)
+                        HttpStatus.OK -> Mono.just(true)
+                        else -> Mono.error(
+                            SourceSystemException(
+                                message = "Error when checking if blob=$digest exist in repository=${imageRepoCommand.defaultRepo} code=${resp.statusCode().value()} body=$body",
+                                sourceSystem = imageRepoCommand.registry
+                            )
+                        )
                     }
                 }
             }
             .handleError(imageRepoCommand)
-            .block(Duration.ofSeconds(5))?.let { true } ?: false
+            .block(Duration.ofSeconds(5)) ?: false
     }
 
     private fun JsonNode.getV2Information(
