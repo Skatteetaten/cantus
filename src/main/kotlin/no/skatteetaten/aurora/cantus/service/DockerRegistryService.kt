@@ -4,6 +4,9 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.NullNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import kotlinx.coroutines.async
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.slf4j.MDCContext
 import mu.KotlinLogging
 import no.skatteetaten.aurora.cantus.controller.BadRequestException
 import no.skatteetaten.aurora.cantus.controller.ImageRepoCommand
@@ -63,26 +66,25 @@ class DockerRegistryService(
     fun tagImage(from: ImageRepoCommand, to: ImageRepoCommand): Boolean {
 
         val (_, manifest) = getImageManifest(from)
-        logger.debug("Found manifest=$manifest")
-
         val layers = findBlobs(manifest)
-        logger.debug("found layers=$layers")
-
         /*
         Add test that returns this error when putting manifest. Make sure error is propagated.
         {"errors":[{"code":"BLOB_UNKNOWN","message":"blob unknown to registry","detail":"sha256:303510ed0dee065d6dc0dd4fbb1833aa27ff6177e7dfc72881ea4ea0716c82a1"}]}⏎
          */
-        // TODO: do in parallel
         // TODO: missing config
-        layers.forEach { digest ->
-            ensureBlobExist(from, to, digest).also {
-                logger.debug("Blob=$digest pushed to=$to success=$it")
-            }
+        runBlocking(MDCContext()) {
+            layers.map { digest ->
+                async {
+                    ensureBlobExist(from, to, digest).also {
+                        logger.debug("Blob=$digest pushed to=$to success=$it")
+                    }
+                }
+            }.forEach { it.await() }
         }
 
         val toRegistryMetadata = registryMetadataResolver.getMetadataForRegistry(to.registry)
         return putManifest(to, toRegistryMetadata, manifest).also {
-            logger.debug("Manifest=$manifest pushed to=$to")
+            logger.debug("Manifest=$manifest pushed to=${to.defaultRepo}")
         }
     }
 
@@ -93,12 +95,11 @@ class DockerRegistryService(
 
         // TODO: Tror det er en bug her.
         if (digestExistInRepo(to, toRegistryMetadata, digest)) {
-            logger.debug("layer=$digest already exist in registry=$to")
+            logger.debug("layer=$digest already exist in registry=${to.defaultRepo}")
             return true
         }
 
         val uuid = generateLocationUrl(to, toRegistryMetadata)
-        logger.debug("UUID=$uuid")
         val data = getLayer(from, fromRegistryMethod, digest) ?: return false
 
         return postLayer(to, toRegistryMetadata, uuid, digest, data)
