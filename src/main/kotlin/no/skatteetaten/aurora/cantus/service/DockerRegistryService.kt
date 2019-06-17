@@ -73,7 +73,6 @@ class DockerRegistryService(
         Add test that returns this error when putting manifest. Make sure error is propagated.
         {"errors":[{"code":"BLOB_UNKNOWN","message":"blob unknown to registry","detail":"sha256:303510ed0dee065d6dc0dd4fbb1833aa27ff6177e7dfc72881ea4ea0716c82a1"}]}⏎
          */
-        // TODO: missing config
         runBlocking(threadPoolContext + MDCContext()) {
             layers.map { digest ->
                 async {

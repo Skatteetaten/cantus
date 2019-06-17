@@ -57,18 +57,19 @@ class DockerRegistryController(
         @RequestBody tagCommand: TagCommand
     ): AuroraResponse<TagCommandResource> {
 
-        logger.debug("command=$tagCommand")
         // TODO: Error handling, if wrongly formatted url silently fails
         val from = imageRepoCommandAssembler.createAndValidateCommand(tagCommand.from, tagCommand.fromAuth)!!
         val to = imageRepoCommandAssembler.createAndValidateCommand(tagCommand.to, tagCommand.toAuth)!!
-
-        logger.debug("command objects from=$from to=$to")
-        val result = dockerRegistryService.tagImage(from, to)
-
-        return AuroraResponse(
-            success = true,
-            items = listOf(TagCommandResource(result))
-        )
+        return try {
+            val result = dockerRegistryService.tagImage(from, to)
+            AuroraResponse(
+                success = true,
+                message = "${from.fullRepoCommand} -> ${to.fullRepoCommand}",
+                items = listOf(TagCommandResource(result))
+            )
+        } catch (e: Exception) {
+            AuroraResponse(success = false, failure = listOf(CantusFailure(to.fullRepoCommand, e)))
+        }
     }
 
     @PostMapping("/manifest")
