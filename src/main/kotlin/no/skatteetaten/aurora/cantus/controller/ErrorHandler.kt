@@ -29,7 +29,7 @@ fun <T> Mono<T>.handleError(imageRepoCommand: ImageRepoCommand?) =
     }
 
 private fun WebClientResponseException.handleException(imageRepoCommand: ImageRepoCommand?) {
-    val msg = "Error in response, status=$statusCode message=$statusText"
+    val msg = "Error in response, status=$statusCode message=$statusText body=${this.responseBodyAsString}"
     logger.error(this) { msg }
     throw SourceSystemException(
         message = msg,

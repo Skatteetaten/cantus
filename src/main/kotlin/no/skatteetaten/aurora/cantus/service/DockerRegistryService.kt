@@ -138,9 +138,7 @@ class DockerRegistryService(
         return uuid
     }
 
-    //TODO: Test that put returns the below message and that it is propagated out
-    //{"errors":[{"code":"BLOB_UNKNOWN","message":"blob unknown to registry","detail":"sha256:303510ed0dee065d6dc0dd4fbb1833aa27ff6177e7dfc72881ea4ea0716c82a1"}]}⏎
-    private fun putManifest(
+    fun putManifest(
         to: ImageRepoCommand,
         manifest: ImageManifestResponseDto
     ): Boolean {
@@ -327,7 +325,6 @@ class DockerRegistryService(
             .blockAndHandleError(imageRepoCommand = imageRepoCommand)
     }
 
-    //TODO: test this with 404 and empty 200
     fun digestExistInRepo(
         imageRepoCommand: ImageRepoCommand,
         digest: String
@@ -351,7 +348,7 @@ class DockerRegistryService(
                         HttpStatus.OK -> Mono.just(true)
                         else -> Mono.error(
                             SourceSystemException(
-                                message = "Error when checking if blob=$digest exist in repository=${imageRepoCommand.defaultRepo} code=${resp.statusCode().value()} body=$body",
+                                message = "Error when checking if blob=$digest exist in repository=${imageRepoCommand.defaultRepo} code=${resp.statusCode().value()}",
                                 sourceSystem = imageRepoCommand.registry
                             )
                         )
