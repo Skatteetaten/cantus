@@ -5,6 +5,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.slf4j.MDCContext
 import mu.KotlinLogging
+import no.skatteetaten.aurora.cantus.AuroraIntegration
 import no.skatteetaten.aurora.cantus.service.DockerRegistryService
 import no.skatteetaten.aurora.cantus.service.ImageManifestDto
 import no.skatteetaten.aurora.cantus.service.ImageTagsWithTypeDto
@@ -34,13 +35,15 @@ lage litt mer kompleks konfigurasjon for dem.
      auth: Bearer/Basic/None (Enda mer moro hvis noen kommandoer mot nexus har bearer og andre har basic...)
      readOnly: true/false
 
+
  */
 @RestController
 class DockerRegistryController(
     val dockerRegistryService: DockerRegistryService,
     val imageTagResourceAssembler: ImageTagResourceAssembler,
     val imageRepoCommandAssembler: ImageRepoCommandAssembler,
-    val threadPoolContext: ExecutorCoroutineDispatcher
+    val threadPoolContext: ExecutorCoroutineDispatcher,
+    val aurora: AuroraIntegration
 ) {
 
     data class TagCommandResource(val result: Boolean) : HalResource()
@@ -52,14 +55,14 @@ class DockerRegistryController(
         val toAuth: String? = null
     )
 
+    //TODO: I kind of just want this to support Auth for To registry and imply auth to fromRepo.
     @PostMapping("/tag")
     fun tagDockerImage(
         @RequestBody tagCommand: TagCommand
     ): AuroraResponse<TagCommandResource> {
 
-        // TODO: Error handling, if wrongly formatted url silently fails
-        val from = imageRepoCommandAssembler.createAndValidateCommand(tagCommand.from, tagCommand.fromAuth)!!
-        val to = imageRepoCommandAssembler.createAndValidateCommand(tagCommand.to, tagCommand.toAuth)!!
+        val from = imageRepoCommandAssembler.createAndValidateCommand(tagCommand.from, tagCommand.fromAuth)
+        val to = imageRepoCommandAssembler.createAndValidateCommand(tagCommand.to, tagCommand.toAuth)
         return try {
             val result = dockerRegistryService.tagImage(from, to)
             AuroraResponse(
@@ -142,13 +145,11 @@ class DockerRegistryController(
         repoUrl: String,
         fn: (DockerRegistryService, ImageRepoCommand) -> T
     ): Try<T, CantusFailure> {
-        try {
+        return try {
             val imageRepoCommand = imageRepoCommandAssembler.createAndValidateCommand(repoUrl, bearerToken)
-                ?: return Try.Failure(CantusFailure(repoUrl, BadRequestException("Invalid url=$repoUrl")))
-
-            return Try.Success(fn(dockerRegistryService, imageRepoCommand))
+            Try.Success(fn(dockerRegistryService, imageRepoCommand))
         } catch (e: Throwable) {
-            return Try.Failure(CantusFailure(repoUrl, e))
+            Try.Failure(CantusFailure(repoUrl, e))
         }
     }
 }

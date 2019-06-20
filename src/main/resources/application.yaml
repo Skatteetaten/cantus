@@ -18,6 +18,35 @@ logging:
                 catalina: WARN
                 velocity: WARN
 
+integrations:
+    docker:
+        cluster:
+            url: docker-registry.default.svc:5000
+            https: false
+            auth: Bearer
+            readOnly: true
+            enabled: true
+        old:
+            url: docker-registry.aurora.sits.no:5000
+            https: true
+            auth: None
+            readOnly: false
+            enabled: true
+        nexus-pull:
+            url: container-registry-internal-private-pull.aurora.skead.no:443
+            https: true
+            auth: None
+            readOnly: true
+            enabled: true
+        nexus-release:
+            url: container-registry-internal-release.aurora.skead.no:443
+            https: true
+            auth: Basic
+            readOnly: false
+
+cantus.docker.internal.urls: "foo"
+cantus.docker.urlsallowed: ""
+
 ---
 spring:
     profiles: local
@@ -27,12 +56,8 @@ cantus:
     password: cantus
 
 server:
-    port: 8090
+    port: 8080
     max-http-header-size: 200000
-
-management:
-    server:
-        port: 8000
 
 logging:
     pattern:

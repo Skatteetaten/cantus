@@ -13,6 +13,8 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import kotlinx.coroutines.newFixedThreadPoolContext
 import no.skatteetaten.aurora.cantus.ApplicationConfig
+import no.skatteetaten.aurora.cantus.AuroraIntegration
+import no.skatteetaten.aurora.cantus.AuroraIntegration.AuthType.Bearer
 import no.skatteetaten.aurora.cantus.controller.ImageRepoCommand
 import no.skatteetaten.aurora.cantus.controller.SourceSystemException
 import no.skatteetaten.aurora.mockmvc.extensions.mockwebserver.execute
@@ -32,18 +34,10 @@ class DockerRegistryServiceTest {
         imageGroup = "no_skatteetaten_aurora_demo",
         imageName = "whoami",
         imageTag = "2",
-        bearerToken = "bearer token"
+        token = "bearer token",
+        authType = Bearer,
+        url = "http://${url.host()}:${url.port()}/v2"
     )
-
-    private val dockerServiceNoBearer = DockerRegistryService(
-        WebClient.create(),
-        RegistryMetadataResolver(listOf("noBearerToken.com")),
-        ImageRegistryUrlBuilder(),
-        newFixedThreadPoolContext(6, "cantus")
-    )
-
-    private val imageRepoCommandNoToken =
-        ImageRepoCommand("noBearerToken.com", "no_skatteetaten_aurora_demo", "whoami", "2")
 
     private val applicationConfig = ApplicationConfig()
 
@@ -54,8 +48,6 @@ class DockerRegistryServiceTest {
             "cantus",
             "123"
         ),
-        RegistryMetadataResolver(listOf(imageRepoCommand.registry)),
-        ImageRegistryUrlBuilder(),
         newFixedThreadPoolContext(6, "cantus")
     )
 

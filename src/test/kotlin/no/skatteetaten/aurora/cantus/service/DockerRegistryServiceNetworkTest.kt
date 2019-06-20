@@ -6,6 +6,8 @@ import assertk.assertions.isNotNull
 import assertk.catch
 import kotlinx.coroutines.newFixedThreadPoolContext
 import no.skatteetaten.aurora.cantus.ApplicationConfig
+import no.skatteetaten.aurora.cantus.AuroraIntegration
+import no.skatteetaten.aurora.cantus.AuroraIntegration.AuthType.Bearer
 import no.skatteetaten.aurora.cantus.controller.CantusException
 import no.skatteetaten.aurora.cantus.controller.ImageRepoCommand
 import no.skatteetaten.aurora.cantus.controller.SourceSystemException
@@ -34,7 +36,9 @@ class DockerRegistryServiceNetworkTest {
         imageGroup = "no_skatteetaten_aurora_demo",
         imageName = "whoami",
         imageTag = "2",
-        bearerToken = "bearer token"
+        token = "bearer token",
+        authType = Bearer,
+        url = "http://${url.host()}:${url.port()}/v2"
     )
 
     private val applicationConfig = ApplicationConfig()
@@ -46,8 +50,6 @@ class DockerRegistryServiceNetworkTest {
             "cantus",
             "123"
         ),
-        RegistryMetadataResolver(listOf(imageRepoCommand.registry)),
-        ImageRegistryUrlBuilder(),
         newFixedThreadPoolContext(6, "cantus")
     )
 
