@@ -208,7 +208,7 @@ class DockerRegistryServiceTest {
         val blob = "tehContent".toByteArray()
         every { httpClient.digestExistInRepo(to, digest) } returns false
 
-        every { httpClient.generateLocationUrl(to) } returns uuid
+        every { httpClient.getUploadUUID(to) } returns uuid
 
         every { httpClient.getBlob(from, digest) } returns blob
 

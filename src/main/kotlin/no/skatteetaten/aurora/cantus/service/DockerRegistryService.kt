@@ -67,7 +67,7 @@ class DockerRegistryService(
             return true
         }
 
-        val uuid = httpClient.generateLocationUrl(to)
+        val uuid = httpClient.getUploadUUID(to)
         //TODO: I think we need to throw exception if blob does not exist
         val data: ByteArray = httpClient.getBlob(from, digest) ?: return false
 

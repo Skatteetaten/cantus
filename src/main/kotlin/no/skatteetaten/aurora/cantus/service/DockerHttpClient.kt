@@ -39,11 +39,10 @@ class DockerHttpClient(
     val uploadUUIDHeader = "Docker-Upload-UUID"
     val dockerContentDigestLabel = "Docker-Content-Digest"
 
-    //TODO: Test error handling here,
-    fun generateLocationUrl(
+    fun getUploadUUID(
         to: ImageRepoCommand
     ): String {
-        val (uuid, _) = webClient
+        return webClient
             .post()
             .uri(
                 "${to.url}/{imageGroup}/{imageName}/blobs/uploads/",
@@ -57,26 +56,31 @@ class DockerHttpClient(
             }
             .exchange()
             .flatMap { resp ->
-                //TODO: This will not work the way it is written now.
-                //resp.handleStatusCodeError(to.registry)
+                if (!resp.statusCode().is2xxSuccessful) {
+                    resp.handleStatusCodeError<String>(to.registry)
+                } else {
+                    resp.bodyToMono<JsonNode>()
+                        .switchIfEmpty(Mono.just(NullNode.instance)).flatMap {
+                            val uuidHeader = resp.headers().header(uploadUUIDHeader).firstOrNull()
+                            if (uuidHeader == null) {
+                                Mono.error<String>(
+                                    SourceSystemException(
+                                        message = "Response did not contain $uploadUUIDHeader header",
+                                        sourceSystem = to.registry
+                                    )
+                                )
+                            } else {
+                                Mono.just(uuidHeader)
+                            }
 
-                val uuidHeader = resp.headers().header(uploadUUIDHeader).firstOrNull()
-                    ?: throw SourceSystemException(
-                        message = "Response did not contain $uploadUUIDHeader header",
-                        sourceSystem = to.registry
-                    )
-                logger.debug("UUID header=$uuidHeader")
-                resp.bodyToMono<JsonNode>().map {
-                    logger.debug("Found body=$it")
-                    uuidHeader to it
-                }.switchIfEmpty(Mono.just(uuidHeader to NullNode.instance))
+                        }
+                }
             }
             .handleError(to)
             .block(Duration.ofSeconds(5)) ?: throw SourceSystemException(
             message = "Response to generate location header did not succeed",
             sourceSystem = to.registry
         )
-        return uuid
     }
 
     fun putManifest(
@@ -186,7 +190,7 @@ class DockerHttpClient(
             }
             .retrieve()
             .bodyToMono<ImageTagsResponseDto>()
-            .blockAndHandleError(imageRepoCommand = imageRepoCommand)
+            .blockAndHandleError(duration = Duration.ofSeconds(1), imageRepoCommand = imageRepoCommand)
     }
 
     /*
