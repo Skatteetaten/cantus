@@ -65,36 +65,10 @@ private fun Throwable.handleException() {
 fun <T> ClientResponse.handleStatusCodeError(sourceSystem: String?): Mono<T> {
     val statusCode = this.statusCode()
     return this.bodyToMono<String>().switchIfEmpty(Mono.just("")).flatMap { body ->
-        val message = when {
-            statusCode.is4xxClientError -> {
-                when (statusCode.value()) {
-                    404 -> "Resource could not be found"
-                    400 -> "Invalid request"
-                    403 -> "Forbidden"
-                    else -> "There has occurred a client error"
-                }
-            }
-            statusCode.is5xxServerError -> {
-                when (statusCode.value()) {
-                    500 -> "An internal server error has occurred in the docker registry"
-                    else -> "A server error has occurred"
-                }
-            }
-
-            else ->
-                "Unknown error occurred"
-        }.let {
-            if (body.isNotEmpty()) {
-                "$it body=$body"
-            } else {
-                it
-            }
-        }
-
         Mono.error<T>(
             SourceSystemException(
-            message = "$message status=${statusCode.value()} message=${statusCode.reasonPhrase}",
-            sourceSystem = sourceSystem
+                message = "body=$body status=${statusCode.value()} message=${statusCode.reasonPhrase}",
+                sourceSystem = sourceSystem
             )
         )
     }

@@ -60,7 +60,8 @@ class DockerHttpClient(
                     resp.handleStatusCodeError<String>(to.registry)
                 } else {
                     resp.bodyToMono<JsonNode>()
-                        .switchIfEmpty(Mono.just(NullNode.instance)).flatMap {
+                        .switchIfEmpty(Mono.just(NullNode.instance))
+                        .flatMap {
                             val uuidHeader = resp.headers().header(uploadUUIDHeader).firstOrNull()
                             if (uuidHeader == null) {
                                 Mono.error<String>(
