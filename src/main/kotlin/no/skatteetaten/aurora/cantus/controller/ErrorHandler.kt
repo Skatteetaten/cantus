@@ -62,14 +62,8 @@ private fun Throwable.handleException() {
     throw CantusException(msg, this)
 }
 
-// TODO: Mono.error
-fun ClientResponse.handleStatusCodeError(sourceSystem: String?): Mono<Throwable> {
+fun <T> ClientResponse.handleStatusCodeError(sourceSystem: String?): Mono<T> {
     val statusCode = this.statusCode()
-
-    if (!statusCode.is2xxSuccessful) {
-        return Mono.empty()
-    }
-    // TODO: will this work?
     return this.bodyToMono<String>().switchIfEmpty(Mono.just("")).flatMap { body ->
         val message = when {
             statusCode.is4xxClientError -> {
@@ -97,7 +91,7 @@ fun ClientResponse.handleStatusCodeError(sourceSystem: String?): Mono<Throwable>
             }
         }
 
-        Mono.error<SourceSystemException>(
+        Mono.error<T>(
             SourceSystemException(
             message = "$message status=${statusCode.value()} message=${statusCode.reasonPhrase}",
             sourceSystem = sourceSystem

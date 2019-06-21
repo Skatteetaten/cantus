@@ -58,7 +58,7 @@ class DockerHttpClient(
             .exchange()
             .flatMap { resp ->
                 //TODO: This will not work the way it is written now.
-                resp.handleStatusCodeError(to.registry)
+                //resp.handleStatusCodeError(to.registry)
 
                 val uuidHeader = resp.headers().header(uploadUUIDHeader).firstOrNull()
                     ?: throw SourceSystemException(
@@ -146,17 +146,20 @@ class DockerHttpClient(
             }
             .exchange()
             .flatMap { resp ->
-                resp.handleStatusCodeError(imageRepoCommand.registry)
-
-                val dockerContentDigest = resp.headers().header(dockerContentDigestLabel).firstOrNull()
-                    ?: throw SourceSystemException(
-                        message = "Response did not contain ${this.dockerContentDigestLabel} header",
-                        sourceSystem = imageRepoCommand.registry
-                    )
-
-                resp.bodyToMono<JsonNode>().map {
-                    val contentType = resp.headers().contentType().get().toString()
-                    ImageManifestResponseDto(contentType, dockerContentDigest, it)
+                if (!resp.statusCode().is2xxSuccessful) {
+                    resp.handleStatusCodeError<ImageManifestResponseDto>(imageRepoCommand.registry)
+                } else {
+                    resp.bodyToMono<JsonNode>().flatMap { body ->
+                        val dockerContentDigest: String? =
+                            resp.headers().header(dockerContentDigestLabel).firstOrNull()
+                        val contentType: String? =
+                            resp.headers().contentType().map { it.toString() }.orElseGet { null }
+                        when {
+                            dockerContentDigest == null -> Mono.error<ImageManifestResponseDto>(SourceSystemException("Required header $dockerContentDigestLabel is not present"))
+                            contentType == null -> Mono.error<ImageManifestResponseDto>(SourceSystemException("Required header Content-Type is not present"))
+                            else -> Mono.just(ImageManifestResponseDto(contentType, dockerContentDigest, body))
+                        }
+                    }
                 }
             }
             .handleError(imageRepoCommand)
@@ -233,7 +236,6 @@ class DockerHttpClient(
             )
     }
 
-    //TODO: Can this be generic with accept header sent in? Either OctetStream og Json?
     fun getBlob(
         imageRepoCommand: ImageRepoCommand,
         digest: String
@@ -257,7 +259,7 @@ class DockerHttpClient(
     /*
       When doing a Head Request you get an empy body back
        empty body == true
-       404 error == falsee
+       404 error == false
        else == error
      */
     fun WebClient.ResponseSpec.exist() =
