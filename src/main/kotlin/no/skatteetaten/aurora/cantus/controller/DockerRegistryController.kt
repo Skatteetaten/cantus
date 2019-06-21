@@ -17,26 +17,9 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
-import uk.q3c.rest.hal.HalResource
 
 private val logger = KotlinLogging.logger {}
 
-// TODO: Validate if bearer is required and not set EARLY, not in DockerRegistryService
-
-/* Det begynner å bli såpass mange forskjellige registries og premutasjoner at jeg tror man nesten må
-lage litt mer kompleks konfigurasjon for dem.
-  For hvert registry trenger man å vite protocol og om de skal ha auth eller ikke. Man treger kanskje også vite om
-  det er noe man kan pushe til eller ei (nexus har jo grops som ikke kan pushes til).
-
-  altså bort med allowed registries og default registries og inn med:
-  cantus.registries.<name>
-     url:
-     https: true/false
-     auth: Bearer/Basic/None (Enda mer moro hvis noen kommandoer mot nexus har bearer og andre har basic...)
-     readOnly: true/false
-
-
- */
 @RestController
 class DockerRegistryController(
     val dockerRegistryService: DockerRegistryService,
@@ -46,24 +29,22 @@ class DockerRegistryController(
     val aurora: AuroraIntegration
 ) {
 
-    data class TagCommandResource(val result: Boolean) : HalResource()
-
-    data class TagCommand(
-        val from: String,
-        val fromAuth: String? = null,
-        val to: String,
-        val toAuth: String? = null
-    )
-
-    //TODO: I kind of just want this to support Auth for To registry and imply auth to fromRepo.
+    /*
+      TODO: For now the bearer token is only for the push registry, we need to create a composite token in the future if pull demands authroization
+     */
     @PostMapping("/tag")
     fun tagDockerImage(
-        @RequestBody tagCommand: TagCommand
+        @RequestBody tagCommand: TagCommand,
+        @RequestHeader(required = true, value = HttpHeaders.AUTHORIZATION) bearerToken: String
     ): AuroraResponse<TagCommandResource> {
 
-        val from = imageRepoCommandAssembler.createAndValidateCommand(tagCommand.from, tagCommand.fromAuth)
-        val to = imageRepoCommandAssembler.createAndValidateCommand(tagCommand.to, tagCommand.toAuth)
+        val from = imageRepoCommandAssembler.createAndValidateCommand(tagCommand.from)
+        val to = imageRepoCommandAssembler.createAndValidateCommand(tagCommand.to, bearerToken)
+
         return try {
+            if (from.imageTag == null) throw BadRequestException("From spec=${tagCommand.from} does not contain a tag")
+            if (to.imageTag == null) throw BadRequestException("To spec=${tagCommand.from} does not contain a tag")
+
             val result = dockerRegistryService.tagImage(from, to)
             AuroraResponse(
                 success = true,
@@ -81,7 +62,6 @@ class DockerRegistryController(
         @RequestHeader(required = false, value = HttpHeaders.AUTHORIZATION) bearerToken: String?
     ): AuroraResponse<ImageTagResource> {
 
-        // TODO: Move this to service? Why should controller now anything about how this is run in parallel?
         val responses =
             runBlocking(MDCContext() + threadPoolContext) {
                 val deferred =

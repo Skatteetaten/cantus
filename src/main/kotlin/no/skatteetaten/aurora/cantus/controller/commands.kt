@@ -3,6 +3,13 @@ package no.skatteetaten.aurora.cantus.controller
 import no.skatteetaten.aurora.cantus.AuroraIntegration
 import org.springframework.stereotype.Component
 
+data class TagCommand(
+    val from: String,
+    val to: String
+    // TODO: We could here add an additionalTags string with csv of aditional tags for ease of use.
+    // TODO: The only thing you need to do then is push the manifest several times
+)
+
 data class ImageRepoCommand(
     val url: String,
     val registry: String,

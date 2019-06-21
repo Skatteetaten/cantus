@@ -6,7 +6,6 @@ import assertk.assertions.isNotNull
 import assertk.catch
 import kotlinx.coroutines.newFixedThreadPoolContext
 import no.skatteetaten.aurora.cantus.ApplicationConfig
-import no.skatteetaten.aurora.cantus.AuroraIntegration
 import no.skatteetaten.aurora.cantus.AuroraIntegration.AuthType.Bearer
 import no.skatteetaten.aurora.cantus.controller.CantusException
 import no.skatteetaten.aurora.cantus.controller.ImageRepoCommand
@@ -26,7 +25,7 @@ import org.springframework.http.MediaType
 import org.springframework.web.reactive.function.client.WebClient
 
 @TestInstance(TestInstance.Lifecycle.PER_METHOD)
-class DockerRegistryServiceNetworkTest {
+class DockerHttpClientNetworkTest {
 
     private val server = MockWebServer()
     private val url = server.url("/")
@@ -43,14 +42,13 @@ class DockerRegistryServiceNetworkTest {
 
     private val applicationConfig = ApplicationConfig()
 
-    private val dockerService = DockerRegistryService(
+    private val httpClient = DockerHttpClient(
         applicationConfig.webClient(
             WebClient.builder(),
             applicationConfig.tcpClient(100, 100, 100, null),
             "cantus",
             "123"
-        ),
-        newFixedThreadPoolContext(6, "cantus")
+        )
     )
 
     @AfterEach
@@ -65,10 +63,10 @@ class DockerRegistryServiceNetworkTest {
         val mockResponse = MockResponse()
             .setResponseCode(statusCode)
             .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-            .addHeader(dockerService.dockerContentDigestLabel, "sha256")
+            .addHeader(httpClient.dockerContentDigestLabel, "sha256")
 
         server.execute(mockResponse) {
-            val exception = catch { dockerService.getImageManifestInformation(imageRepoCommand) }
+            val exception = catch { httpClient.getImageManifest(imageRepoCommand) }
 
             assertThat(exception).isNotNull().isInstanceOf(SourceSystemException::class)
         }
@@ -88,7 +86,7 @@ class DockerRegistryServiceNetworkTest {
             .setJsonFileAsBody("dockerTagList.json")
 
         server.execute(response) {
-            val exception = catch { dockerService.getImageTags(imageRepoCommand) }
+            val exception = catch { httpClient.getImageTags(imageRepoCommand) }
 
             assertThat(exception).isNotNull().isInstanceOf(CantusException::class)
         }
@@ -104,11 +102,11 @@ class DockerRegistryServiceNetworkTest {
 
         val response = MockResponse()
             .setJsonFileAsBody("dockerManifestV1.json")
-            .addHeader(dockerService.dockerContentDigestLabel, "SHA::256")
+            .addHeader(httpClient.dockerContentDigestLabel, "SHA::256")
             .apply { this.socketPolicy = socketPolicy }
 
         server.execute(response) {
-            val exception = catch { dockerService.getImageManifestInformation(imageRepoCommand) }
+            val exception = catch { httpClient.getImageManifest(imageRepoCommand) }
 
             assertThat(exception).isNotNull().isInstanceOf(CantusException::class)
         }
@@ -127,7 +125,7 @@ class DockerRegistryServiceNetworkTest {
             .setJsonFileAsBody("dockerTagList.json")
 
         server.execute(response) {
-            val result = dockerService.getImageTags(imageRepoCommand)
+            val result = httpClient.getImageTags(imageRepoCommand)
 
             assertThat(result).isNotNull()
         }
