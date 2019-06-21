@@ -271,38 +271,15 @@ class DockerHttpClient(
                 }
             }
             .retrieve()
-            .bodyToMono<String>()
-            .switchIfEmpty(Mono.just("true"))
+            .bodyToMono<Boolean>()
+            .switchIfEmpty(Mono.just(true))
             .onErrorResume { e ->
                 if (e is WebClientResponseException && e.statusCode == HttpStatus.NOT_FOUND) {
-                    Mono.just("false")
+                    Mono.just(false)
                 } else {
                     Mono.error(e)
                 }
             }
-            .map {
-                it?.toBoolean()
-            }
             .blockAndHandleError(imageRepoCommand = imageRepoCommand) ?: false
-
-        /*
-        .flatMap { resp ->
-            resp.bodyToMono<String>().switchIfEmpty(Mono.just("")).flatMap { body ->
-                when (resp.statusCode()) {
-                    HttpStatus.NOT_FOUND -> Mono.just(false)
-                    HttpStatus.OK -> Mono.just(true)
-                    else -> Mono.error(
-                        SourceSystemException(
-                            message = "Error when checking if blob=$digest exist in repository=${imageRepoCommand.defaultRepo} code=${resp.statusCode().value()}",
-                            sourceSystem = imageRepoCommand.registry
-                        )
-                    )
-                }
-            }
-        }
-        .handleError(imageRepoCommand)
-        .block(Duration.ofSeconds(5)) ?: false
-
-         */
     }
 }
