@@ -254,7 +254,23 @@ class DockerHttpClient(
             .blockAndHandleError(imageRepoCommand = imageRepoCommand)
     }
 
-    //TODO: Se om man kan reimplementere dette som retrieve
+    /*
+      When doing a Head Request you get an empy body back
+       empty body == true
+       404 error == falsee
+       else == error
+     */
+    fun WebClient.ResponseSpec.exist() =
+        this.bodyToMono<Boolean>()
+            .switchIfEmpty(Mono.just(true))
+            .onErrorResume { e ->
+                if (e is WebClientResponseException && e.statusCode == HttpStatus.NOT_FOUND) {
+                    Mono.just(false)
+                } else {
+                    Mono.error(e)
+                }
+            }
+
     fun digestExistInRepo(
         imageRepoCommand: ImageRepoCommand,
         digest: String
@@ -271,15 +287,7 @@ class DockerHttpClient(
                 }
             }
             .retrieve()
-            .bodyToMono<Boolean>()
-            .switchIfEmpty(Mono.just(true))
-            .onErrorResume { e ->
-                if (e is WebClientResponseException && e.statusCode == HttpStatus.NOT_FOUND) {
-                    Mono.just(false)
-                } else {
-                    Mono.error(e)
-                }
-            }
+            .exist()
             .blockAndHandleError(imageRepoCommand = imageRepoCommand) ?: false
     }
 }
