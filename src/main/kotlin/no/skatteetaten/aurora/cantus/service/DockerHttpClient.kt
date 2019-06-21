@@ -185,6 +185,28 @@ class DockerHttpClient(
             .blockAndHandleError(imageRepoCommand = imageRepoCommand)
     }
 
+    /*
+    //TODO: Need to add this retry where it is needed
+        .retryExponentialBackoff(
+            times = 3,
+            first = Duration.ofMillis(100),
+            max = Duration.ofSeconds(1),
+            doOnRetry = {
+                val e = it.exception()
+                val registry = imageRepoCommand.registry
+                val exceptionClass = e::class.simpleName
+                if (it.iteration() == 3L) {
+                    logger.warn(e) {
+                        "Last retry to registry=$registry, previous failed with exception=$exceptionClass"
+                    }
+                } else {
+                    logger.info {
+                        "Retry=${it.iteration()} for request to registry=$registry, previous failed with exception=$exceptionClass - message=\"${e.message}\""
+                    }
+                }
+            }
+        )
+     */
     fun getLayer(
         imageRepoCommand: ImageRepoCommand,
         configDigest: Map<String, String>
