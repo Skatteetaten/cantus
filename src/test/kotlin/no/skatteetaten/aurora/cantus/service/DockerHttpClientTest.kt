@@ -70,7 +70,7 @@ class DockerHttpClientTest {
             assertThat(exception)
                 .isNotNull().isInstanceOf(SourceSystemException::class)
                 .message().isNotNull()
-                .contains("Error when checking if blob=abc exist in repository=no_skatteetaten_aurora_demo/whoami code=401")
+                .contains("Error in response, status=401 UNAUTHORIZED")
         }
     }
 

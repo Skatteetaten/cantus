@@ -16,6 +16,7 @@ import org.springframework.http.MediaType
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.reactive.function.client.WebClient
+import org.springframework.web.reactive.function.client.WebClientResponseException
 import org.springframework.web.reactive.function.client.bodyToMono
 import reactor.core.publisher.Mono
 import java.time.Duration
@@ -269,22 +270,39 @@ class DockerHttpClient(
                     headers.set(AUTHORIZATION, "${imageRepoCommand.authType} $it")
                 }
             }
-            .exchange()
-            .flatMap { resp ->
-                resp.bodyToMono<String>().switchIfEmpty(Mono.just("")).flatMap { body ->
-                    when (resp.statusCode()) {
-                        HttpStatus.NOT_FOUND -> Mono.just(false)
-                        HttpStatus.OK -> Mono.just(true)
-                        else -> Mono.error(
-                            SourceSystemException(
-                                message = "Error when checking if blob=$digest exist in repository=${imageRepoCommand.defaultRepo} code=${resp.statusCode().value()}",
-                                sourceSystem = imageRepoCommand.registry
-                            )
-                        )
-                    }
+            .retrieve()
+            .bodyToMono<String>()
+            .switchIfEmpty(Mono.just("true"))
+            .onErrorResume { e ->
+                if (e is WebClientResponseException && e.statusCode == HttpStatus.NOT_FOUND) {
+                    Mono.just("false")
+                } else {
+                    Mono.error(e)
                 }
             }
-            .handleError(imageRepoCommand)
-            .block(Duration.ofSeconds(5)) ?: false
+            .map {
+                it?.toBoolean()
+            }
+            .blockAndHandleError(imageRepoCommand = imageRepoCommand) ?: false
+
+        /*
+        .flatMap { resp ->
+            resp.bodyToMono<String>().switchIfEmpty(Mono.just("")).flatMap { body ->
+                when (resp.statusCode()) {
+                    HttpStatus.NOT_FOUND -> Mono.just(false)
+                    HttpStatus.OK -> Mono.just(true)
+                    else -> Mono.error(
+                        SourceSystemException(
+                            message = "Error when checking if blob=$digest exist in repository=${imageRepoCommand.defaultRepo} code=${resp.statusCode().value()}",
+                            sourceSystem = imageRepoCommand.registry
+                        )
+                    )
+                }
+            }
+        }
+        .handleError(imageRepoCommand)
+        .block(Duration.ofSeconds(5)) ?: false
+
+         */
     }
 }
