@@ -166,7 +166,7 @@ class DockerRegistryServiceTest {
     }
 
     @Test
-    fun `should find blogs for v1`() {
+    fun `should find blobs for v1`() {
 
         val manifestJson = jacksonObjectMapper().readTestResourceAsJson("dockerManifestV1.json")
         val dto = ImageManifestResponseDto(
@@ -202,7 +202,7 @@ class DockerRegistryServiceTest {
     }
 
     @Test
-    fun `should put non existing blog`() {
+    fun `should put non existing blob`() {
         val digest = "sha256::foobar"
         val uuid = "uuid-is-this"
         val blob = "tehContent".toByteArray()

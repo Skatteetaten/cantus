@@ -23,21 +23,20 @@ import java.time.Duration
 
 private val logger = KotlinLogging.logger {}
 
-val manifestV1 = "application/vnd.docker.distribution.manifest.v1+json"
-val manifestV2 = "application/vnd.docker.distribution.manifest.v2+json"
+const val manifestV1 = "application/vnd.docker.distribution.manifest.v1+json"
+const val manifestV2 = "application/vnd.docker.distribution.manifest.v2+json"
+
+const val uploadUUIDHeader = "Docker-Upload-UUID"
+const val dockerContentDigestLabel = "Docker-Content-Digest"
 
 @Service
 class DockerHttpClient(
     val webClient: WebClient
 ) {
-
     val dockerManfestAccept: List<MediaType> = listOf(
         MediaType.valueOf(manifestV2),
         MediaType.valueOf(manifestV1)
     )
-
-    val uploadUUIDHeader = "Docker-Upload-UUID"
-    val dockerContentDigestLabel = "Docker-Content-Digest"
 
     fun getUploadUUID(
         to: ImageRepoCommand
