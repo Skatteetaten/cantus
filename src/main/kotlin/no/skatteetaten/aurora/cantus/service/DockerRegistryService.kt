@@ -68,8 +68,7 @@ class DockerRegistryService(
         }
 
         val uuid = httpClient.getUploadUUID(to)
-        // TODO: I think we need to throw exception if blob does not exist
-        val data: ByteArray = httpClient.getBlob(from, digest) ?: return false
+        val data: ByteArray = httpClient.getLayer(from, digest)
 
         return httpClient.postLayer(to, uuid, digest, data)
     }
@@ -121,19 +120,21 @@ class DockerRegistryService(
             }
         }
 
-    // TODO: This is the same as getBlob above.
     private fun JsonNode.getV2Information(
         imageRepoCommand: ImageRepoCommand
     ): JsonNode {
         // TODO: Hvorfor må vi gjøre dette?
-        val configDigest = listOf(
+
+        val configDigestNew = this.at("/config/digest").textValue()
+
+        val configDigest: String = listOf(
             this.at("/config").get("digest").asText().replace(
                 regex = "\\s".toRegex(),
                 replacement = ""
             ).split(":").last()
-        ).associate { "digest" to "sha256:$it" }
+        ).let { "sha256:$it" }
 
-        return httpClient.getLayer(imageRepoCommand, configDigest)
+        return httpClient.getConfig(imageRepoCommand, configDigest)
     }
 
     private fun JsonNode.getV1CompatibilityFromManifest(imageRepoCommand: ImageRepoCommand): JsonNode {

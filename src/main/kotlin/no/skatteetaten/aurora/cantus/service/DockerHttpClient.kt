@@ -95,35 +95,6 @@ class DockerHttpClient(
             .blockAndHandleError(imageRepoCommand = to)?.let { true } ?: false
     }
 
-    fun Mono<ClientResponse>.performBodyAndHeader(imageRepoCommand: ImageRepoCommand) =
-        this.flatMap { resp: ClientResponse ->
-            if (!resp.statusCode().is2xxSuccessful) {
-                resp.handleStatusCodeError<Pair<JsonNode?, HttpHeaders>>(imageRepoCommand.registry)
-            } else {
-                resp.bodyToMono<JsonNode>().map { body ->
-                    body to resp.headers().asHttpHeaders()
-                }.switchIfEmpty(Mono.just(null to resp.headers().asHttpHeaders()))
-            }
-        }.handleError(imageRepoCommand)
-            .block(Duration.ofSeconds(5))
-            ?: null to EMPTY
-
-    private fun ImageRepoCommand.createRequest(
-        path: String,
-        method: HttpMethod = HttpMethod.GET,
-        pathVariables: Map<String, String> = emptyMap()
-    ) = webClient
-        .method(method)
-        .uri(
-            "${this.url}/$path",
-            this.mappedTemplateVars + pathVariables
-        )
-        .headers { headers ->
-            this.token?.let {
-                headers.set(AUTHORIZATION, "${this.authType} $it")
-            }
-        }
-
     fun getImageManifest(imageRepoCommand: ImageRepoCommand): ImageManifestResponseDto {
 
         if (imageRepoCommand.imageTag.isNullOrEmpty()) throw BadRequestException("Invalid url=${imageRepoCommand.fullRepoCommand}")
@@ -139,6 +110,9 @@ class DockerHttpClient(
             message = "Manifest not found for image ${imageRepoCommand.manifestRepo}",
             sourceSystem = imageRepoCommand.registry
         )
+
+        // TODO: If content type is wrong then we will not get a body either way
+        // TODO: ContentType is always set? So just !! here? If i do not set ContentType the system will set octetstream.
         val contentType = headers["Content-Type"]?.first() ?: throw SourceSystemException(
             message = "Required header=Content-Type is not present",
             sourceSystem = imageRepoCommand.registry
@@ -160,34 +134,70 @@ class DockerHttpClient(
             .blockAndHandleError(duration = Duration.ofSeconds(1), imageRepoCommand = imageRepoCommand)
     }
 
-    fun getLayer(
-        imageRepoCommand: ImageRepoCommand,
-        configDigest: Map<String, String>
-    ): JsonNode {
-        return imageRepoCommand.createRequest("{imageGroup}/{imageName}/blobs/{digest}")
-            .headers { headers ->
-                headers.accept = listOf(MediaType.valueOf("application/json"))
-            }
-            .retrieve()
-            .bodyToMono<JsonNode>()
-            .blockAndHandleError(imageRepoCommand = imageRepoCommand)
-            ?: throw SourceSystemException(
-                message = "Unable to retrieve V2 manifest for ${imageRepoCommand.defaultRepo}/:$configDigest",
-                sourceSystem = imageRepoCommand.registry
-            )
-    }
+    fun getConfig(imageRepoCommand: ImageRepoCommand, digest: String) =
+        this.getBlob<JsonNode>(
+            imageRepoCommand, digest, accept = listOf(MediaType.valueOf("application/json"))
+        ) ?: throw SourceSystemException(
+            message = "Unable to retrieve V2 manifest for ${imageRepoCommand.defaultRepo}/$digest",
+            sourceSystem = imageRepoCommand.registry
+        )
 
-    fun getBlob(
+    fun getLayer(imageRepoCommand: ImageRepoCommand, digest: String) =
+        this.getBlob<ByteArray>(imageRepoCommand, digest) ?: throw SourceSystemException(
+            message = "Unable to retrieve blob with digest=$digest from repo=${imageRepoCommand.defaultRepo}",
+            sourceSystem = imageRepoCommand.registry
+        )
+
+    private inline fun <reified T : Any> getBlob(
         imageRepoCommand: ImageRepoCommand,
-        digest: String
-    ): ByteArray? {
+        digest: String,
+        accept: List<MediaType>? = null
+    ): T? {
         return imageRepoCommand.createRequest(
             path = "{imageGroup}/{imageName}/blobs/{digest}",
             pathVariables = mapOf("digest" to digest)
-        ).retrieve()
-            .bodyToMono<ByteArray>()
+        )
+            .headers { headers ->
+                accept?.let {
+                    headers.accept = it
+                }
+            }
+
+            .retrieve()
+            .bodyToMono<T>()
             .blockAndHandleError(imageRepoCommand = imageRepoCommand)
     }
+
+    fun digestExistInRepo(
+        imageRepoCommand: ImageRepoCommand,
+        digest: String
+    ): Boolean {
+        return imageRepoCommand.createRequest(
+            method = HttpMethod.HEAD,
+            path = "{imageGroup}/{imageName}/blobs/{digest}",
+            pathVariables = mapOf("digest" to digest)
+        )
+            .retrieve()
+            .exist()
+            //.retryRepoCommand(imageRepoCommand)
+            .blockAndHandleError(imageRepoCommand = imageRepoCommand) ?: false
+    }
+
+    private fun ImageRepoCommand.createRequest(
+        path: String,
+        method: HttpMethod = HttpMethod.GET,
+        pathVariables: Map<String, String> = emptyMap()
+    ) = webClient
+        .method(method)
+        .uri(
+            "${this.url}/$path",
+            this.mappedTemplateVars + pathVariables
+        )
+        .headers { headers ->
+            this.token?.let {
+                headers.set(AUTHORIZATION, "${this.authType} $it")
+            }
+        }
 
     /*
       When doing a Head Request you get an empy body back
@@ -195,7 +205,7 @@ class DockerHttpClient(
        404 error == false
        else == error
      */
-    fun WebClient.ResponseSpec.exist() =
+    private fun WebClient.ResponseSpec.exist() =
         this.bodyToMono<Boolean>()
             .switchIfEmpty(Mono.just(true))
             .onErrorResume { e ->
@@ -227,18 +237,17 @@ class DockerHttpClient(
         }
     )
 
-    fun digestExistInRepo(
-        imageRepoCommand: ImageRepoCommand,
-        digest: String
-    ): Boolean {
-        return imageRepoCommand.createRequest(
-            method = HttpMethod.HEAD,
-            path = "{imageGroup}/{imageName}/blobs/{digest}",
-            pathVariables = mapOf("digest" to digest)
-        )
-            .retrieve()
-            .exist()
-            //.retryRepoCommand(imageRepoCommand)
-            .blockAndHandleError(imageRepoCommand = imageRepoCommand) ?: false
-    }
+    private fun Mono<ClientResponse>.performBodyAndHeader(imageRepoCommand: ImageRepoCommand) =
+        this.flatMap { resp: ClientResponse ->
+            if (!resp.statusCode().is2xxSuccessful) {
+                resp.handleStatusCodeError<Pair<JsonNode?, HttpHeaders>>(imageRepoCommand.registry)
+            } else {
+                resp.bodyToMono<JsonNode>().map { body ->
+                    body to resp.headers().asHttpHeaders()
+                }.switchIfEmpty(Mono.just(null to resp.headers().asHttpHeaders()))
+            }
+        }.handleError(imageRepoCommand)
+            .block(Duration.ofSeconds(5))
+            ?: null to EMPTY
+    // The line above must be here to get the types to align but it will never happen. We switch on Empty in the flagMap block
 }

@@ -91,7 +91,7 @@ class DockerRegistryServiceTest {
         } returns dtoV2
 
         every {
-            httpClient.getLayer(
+            httpClient.getConfig(
                 any(),
                 any()
             )
@@ -115,7 +115,7 @@ class DockerRegistryServiceTest {
         } returns dtoV2
 
         every {
-            httpClient.getLayer(
+            httpClient.getConfig(
                 any(),
                 any()
             )
@@ -210,7 +210,7 @@ class DockerRegistryServiceTest {
 
         every { httpClient.getUploadUUID(to) } returns uuid
 
-        every { httpClient.getBlob(from, digest) } returns blob
+        every { httpClient.getLayer(from, digest) } returns blob
 
         every { httpClient.postLayer(to, uuid, digest, blob) } returns true
 

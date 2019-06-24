@@ -91,6 +91,16 @@ class DockerHttpClientTest {
     }
 
     @Test
+    fun `Verify fetches blob`() {
+        val response = MockResponse().setBody("This is a test")
+
+        server.execute(response) {
+            val blob = httpClient.getLayer(imageRepoCommand, "SHA::256")
+            assertThat(blob).isNotNull()
+        }
+    }
+
+    @Test
     fun `Verify fetches manifest information for specified image`() {
         val response =
             MockResponse()
