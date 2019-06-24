@@ -47,18 +47,21 @@ class DockerHttpClientTest {
         )
     )
 
-    /* TODO: Why doest this test fail?
     @Test
     fun `verify upload layer`() {
         val content = "this is teh content".toByteArray()
 
-        val response = MockResponse().setBody("<message>OK</message>")
+        //Any response will do here.
+        val response =
+            MockResponse()
+                .setJsonFileAsBody("dockerManifestV2Config.json")
+                .addHeader("Docker-Content-Digest", "SHA::256")
+
         server.execute(response) {
             val result = httpClient.uploadLayer(imageRepoCommand, "uuid", "digest", content)
             assertThat(result).isTrue()
         }
     }
-     */
 
     @Test
     fun `test put manifest failes`() {
@@ -121,6 +124,29 @@ class DockerHttpClientTest {
         server.execute(response) {
             val blob = httpClient.getLayer(imageRepoCommand, "SHA::256")
             assertThat(blob).isNotNull()
+        }
+    }
+
+    @Test
+    fun `Verify fetch layer throw exception on failure`() {
+        val response =
+            MockResponse()
+                .setResponseCode(404)
+
+        server.execute(response) {
+            val exception = catch { httpClient.getLayer(imageRepoCommand, "SHA::256") }
+
+            assertThat(exception).isNotNull().isInstanceOf(SourceSystemException::class)
+        }
+    }
+
+    @Test
+    fun `Verify fetch layer`() {
+        val response = MockResponse().setBody("foobar")
+
+        server.execute(response) {
+            val jsonResponse = httpClient.getLayer(imageRepoCommand, "SHA::256")
+            assertThat(jsonResponse).isNotNull()
         }
     }
 
