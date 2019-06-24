@@ -63,7 +63,7 @@ class DockerHttpClientNetworkTest {
         val mockResponse = MockResponse()
             .setResponseCode(statusCode)
             .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-            .addHeader(httpClient.dockerContentDigestLabel, "sha256")
+            .addHeader(dockerContentDigestLabel, "sha256")
 
         server.execute(mockResponse) {
             val exception = catch { httpClient.getImageManifest(imageRepoCommand) }
@@ -102,7 +102,7 @@ class DockerHttpClientNetworkTest {
 
         val response = MockResponse()
             .setJsonFileAsBody("dockerManifestV1.json")
-            .addHeader(httpClient.dockerContentDigestLabel, "SHA::256")
+            .addHeader(dockerContentDigestLabel, "SHA::256")
             .apply { this.socketPolicy = socketPolicy }
 
         server.execute(response) {

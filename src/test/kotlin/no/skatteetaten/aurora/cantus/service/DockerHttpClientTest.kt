@@ -125,7 +125,7 @@ class DockerHttpClientTest {
 
     @Test
     fun `Verify that empty manifest response throws SourceSystemException`() {
-        val response = MockResponse().addHeader(httpClient.dockerContentDigestLabel, "sha::256")
+        val response = MockResponse().addHeader(dockerContentDigestLabel, "sha::256")
 
         server.execute(response) {
             val exception = catch { httpClient.getImageManifest(imageRepoCommand) }
