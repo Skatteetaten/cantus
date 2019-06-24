@@ -7,6 +7,7 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 import org.springframework.web.reactive.function.client.bodyToMono
 import reactor.core.publisher.Mono
 import reactor.core.publisher.toMono
+import reactor.retry.RetryExhaustedException
 import java.time.Duration
 
 private const val blockTimeout: Long = 30
@@ -24,10 +25,20 @@ fun <T> Mono<T>.handleError(imageRepoCommand: ImageRepoCommand?) =
             is WebClientResponseException -> it.handleException(imageRepoCommand)
             is ReadTimeoutException -> it.handleException(imageRepoCommand)
             is SourceSystemException -> it.logAndRethrow()
+            is RetryExhaustedException -> it.handleException(imageRepoCommand)
             else -> it.handleException()
         }
     }
 
+private fun RetryExhaustedException.handleException(imageRepoCommand: ImageRepoCommand?) {
+    val msg = "Retry failed after 4 attempts url=${imageRepoCommand?.fullRepoCommand}\""
+    logger.error(this) { msg }
+    throw SourceSystemException(
+        message = msg,
+        cause = this,
+        sourceSystem = imageRepoCommand?.registry
+    )
+}
 private fun WebClientResponseException.handleException(imageRepoCommand: ImageRepoCommand?) {
     val msg = "Error in response, status=$statusCode message=$statusText body=\"${this.responseBodyAsString}\""
     logger.error(this) { msg }

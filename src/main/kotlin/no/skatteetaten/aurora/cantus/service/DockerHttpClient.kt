@@ -92,6 +92,7 @@ class DockerHttpClient(
             }
             .retrieve()
             .bodyToMono<JsonNode>()
+            .retryRepoCommand(to)
             .blockAndHandleError(imageRepoCommand = to)?.let { true } ?: false
     }
 
@@ -103,7 +104,6 @@ class DockerHttpClient(
             .headers {
                 it.accept = dockerManfestAccept
             }.exchange()
-            .retryRepoCommand(imageRepoCommand)
             .performBodyAndHeader(imageRepoCommand)
 
         val manifest: JsonNode = body ?: throw SourceSystemException(

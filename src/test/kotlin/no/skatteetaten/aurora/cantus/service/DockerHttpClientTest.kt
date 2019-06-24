@@ -11,6 +11,7 @@ import assertk.assertions.message
 import assertk.catch
 import no.skatteetaten.aurora.cantus.ApplicationConfig
 import no.skatteetaten.aurora.cantus.AuroraIntegration.AuthType.Bearer
+import no.skatteetaten.aurora.cantus.controller.CantusException
 import no.skatteetaten.aurora.cantus.controller.ImageRepoCommand
 import no.skatteetaten.aurora.cantus.controller.SourceSystemException
 import no.skatteetaten.aurora.cantus.createObjectMapper
@@ -46,6 +47,41 @@ class DockerHttpClientTest {
             "123"
         )
     )
+
+    @Test
+    fun `verify upload layer will retry`() {
+
+        val content = "this is teh content".toByteArray()
+
+        val fail = MockResponse().setResponseCode(404)
+        // Any response will do here.
+        val response =
+            MockResponse()
+                .setJsonFileAsBody("dockerManifestV2Config.json")
+                .addHeader("Docker-Content-Digest", "SHA::256")
+
+        server.execute(fail, fail, fail, response) {
+            val result = httpClient.uploadLayer(imageRepoCommand, "uuid", "digest", content)
+            assertThat(result).isTrue()
+        }
+    }
+
+    @Test
+
+    fun `verify upload layer will retry and fail after 4 times`() {
+
+        val content = "this is teh content".toByteArray()
+
+        val fail = MockResponse().setResponseCode(404)
+
+        server.execute(fail, fail, fail, fail) {
+            val exception = catch { httpClient.uploadLayer(imageRepoCommand, "uuid", "digest", content) }
+            assertThat(exception)
+                .isNotNull().isInstanceOf(CantusException::class)
+                .message().isNotNull()
+                .contains("Retry failed")
+        }
+    }
 
     @Test
     fun `verify upload layer`() {
