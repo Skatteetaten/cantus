@@ -22,6 +22,7 @@ import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.WebClientResponseException
 import org.springframework.web.reactive.function.client.bodyToMono
 import reactor.core.publisher.Mono
+import reactor.retry.retryExponentialBackoff
 import java.time.Duration
 
 private val logger = KotlinLogging.logger {}
@@ -131,6 +132,7 @@ class DockerHttpClient(
             .headers {
                 it.accept = dockerManfestAccept
             }.exchange()
+            .retryRepoCommand(imageRepoCommand)
             .performBodyAndHeader(imageRepoCommand)
 
         val manifest: JsonNode = body ?: throw SourceSystemException(
@@ -158,28 +160,6 @@ class DockerHttpClient(
             .blockAndHandleError(duration = Duration.ofSeconds(1), imageRepoCommand = imageRepoCommand)
     }
 
-    /*
-    //TODO: Need to add this retry where it is needed
-        .retryExponentialBackoff(
-            times = 3,
-            first = Duration.ofMillis(100),
-            max = Duration.ofSeconds(1),
-            doOnRetry = {
-                val e = it.exception()
-                val registry = imageRepoCommand.registry
-                val exceptionClass = e::class.simpleName
-                if (it.iteration() == 3L) {
-                    logger.warn(e) {
-                        "Last retry to registry=$registry, previous failed with exception=$exceptionClass"
-                    }
-                } else {
-                    logger.info {
-                        "Retry=${it.iteration()} for request to registry=$registry, previous failed with exception=$exceptionClass - message=\"${e.message}\""
-                    }
-                }
-            }
-        )
-     */
     fun getLayer(
         imageRepoCommand: ImageRepoCommand,
         configDigest: Map<String, String>
@@ -226,6 +206,27 @@ class DockerHttpClient(
                 }
             }
 
+    private fun <T : Any?> Mono<T>.retryRepoCommand(cmd: ImageRepoCommand) = this.retryExponentialBackoff(
+        times = 3,
+        first = Duration.ofMillis(100),
+        max = Duration.ofSeconds(1),
+        doOnRetry =
+        {
+            val e = it.exception()
+            val registry = cmd.registry
+            val exceptionClass = e::class.simpleName
+            if (it.iteration() == 3L) {
+                logger.warn(e) {
+                    "Last retry to registry=$registry, previous failed with exception=$exceptionClass"
+                }
+            } else {
+                logger.info {
+                    "Retry=${it.iteration()} for request to registry=$registry, previous failed with exception=$exceptionClass - message=\"${e.message}\""
+                }
+            }
+        }
+    )
+
     fun digestExistInRepo(
         imageRepoCommand: ImageRepoCommand,
         digest: String
@@ -237,6 +238,7 @@ class DockerHttpClient(
         )
             .retrieve()
             .exist()
+            //.retryRepoCommand(imageRepoCommand)
             .blockAndHandleError(imageRepoCommand = imageRepoCommand) ?: false
     }
 }
