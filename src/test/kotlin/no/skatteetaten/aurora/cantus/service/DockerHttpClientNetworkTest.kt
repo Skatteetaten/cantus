@@ -4,7 +4,6 @@ import assertk.assertThat
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.catch
-import kotlinx.coroutines.newFixedThreadPoolContext
 import no.skatteetaten.aurora.cantus.ApplicationConfig
 import no.skatteetaten.aurora.cantus.AuroraIntegration.AuthType.Bearer
 import no.skatteetaten.aurora.cantus.controller.CantusException

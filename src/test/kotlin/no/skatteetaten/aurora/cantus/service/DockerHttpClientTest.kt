@@ -144,7 +144,7 @@ class DockerHttpClientTest {
 
             assertThat(exception)
                 .isNotNull().isInstanceOf(SourceSystemException::class)
-                .message().isNotNull().contains("Required header Docker-Content-Digest is not present")
+                .message().isNotNull().contains("Required header=Docker-Content-Digest is not present")
         }
     }
 
