@@ -179,7 +179,7 @@ class DockerHttpClient(
         )
             .retrieve()
             .exist()
-            //.retryRepoCommand(imageRepoCommand)
+            // .retryRepoCommand(imageRepoCommand)
             .blockAndHandleError(imageRepoCommand = imageRepoCommand) ?: false
     }
 

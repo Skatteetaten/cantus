@@ -16,7 +16,6 @@ import java.util.HashSet
 
 private val logger = KotlinLogging.logger {}
 
-// TODO: Extract all http reelvant code to DockerHttpClient
 @Service
 class DockerRegistryService(
     val httpClient: DockerHttpClient,
@@ -113,29 +112,13 @@ class DockerRegistryService(
         imageRepoCommand: ImageRepoCommand
     ): JsonNode =
         when (contentType) {
-            manifestV2 ->
-                this.getV2Information(imageRepoCommand)
+            manifestV2 -> {
+                httpClient.getConfig(imageRepoCommand, at("/config/digest").textValue())
+            }
             else -> {
                 this.getV1CompatibilityFromManifest(imageRepoCommand)
             }
         }
-
-    private fun JsonNode.getV2Information(
-        imageRepoCommand: ImageRepoCommand
-    ): JsonNode {
-        // TODO: Hvorfor må vi gjøre dette?
-
-        val configDigestNew = this.at("/config/digest").textValue()
-
-        val configDigest: String = listOf(
-            this.at("/config").get("digest").asText().replace(
-                regex = "\\s".toRegex(),
-                replacement = ""
-            ).split(":").last()
-        ).let { "sha256:$it" }
-
-        return httpClient.getConfig(imageRepoCommand, configDigest)
-    }
 
     private fun JsonNode.getV1CompatibilityFromManifest(imageRepoCommand: ImageRepoCommand): JsonNode {
         val v1Compatibility =

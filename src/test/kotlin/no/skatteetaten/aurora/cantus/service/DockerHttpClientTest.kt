@@ -51,7 +51,7 @@ class DockerHttpClientTest {
     fun `verify upload layer`() {
         val content = "this is teh content".toByteArray()
 
-        //Any response will do here.
+        // Any response will do here.
         val response =
             MockResponse()
                 .setJsonFileAsBody("dockerManifestV2Config.json")
