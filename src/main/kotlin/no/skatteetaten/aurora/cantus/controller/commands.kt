@@ -59,7 +59,6 @@ class ImageRepoCommandAssembler(
         if (registry.auth == null)
             throw BadRequestException("Registry authType is required")
 
-
         if (registry.auth != AuroraIntegration.AuthType.None && bearerToken.isNullOrBlank())
             throw BadRequestException("Registry required authentication")
 

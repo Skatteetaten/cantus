@@ -16,7 +16,7 @@ import java.util.HashSet
 
 private val logger = KotlinLogging.logger {}
 
-//TODO: Extract all http reelvant code to DockerHttpClient
+// TODO: Extract all http reelvant code to DockerHttpClient
 @Service
 class DockerRegistryService(
     val httpClient: DockerHttpClient,
@@ -68,7 +68,7 @@ class DockerRegistryService(
         }
 
         val uuid = httpClient.getUploadUUID(to)
-        //TODO: I think we need to throw exception if blob does not exist
+        // TODO: I think we need to throw exception if blob does not exist
         val data: ByteArray = httpClient.getBlob(from, digest) ?: return false
 
         return httpClient.postLayer(to, uuid, digest, data)
@@ -108,7 +108,7 @@ class DockerRegistryService(
         )
     }
 
-    //TODO: Not sure that putting this on JsonNode is the right way?
+    // TODO: Not sure that putting this on JsonNode is the right way?
     private fun JsonNode.checkSchemaCompatibility(
         contentType: String,
         imageRepoCommand: ImageRepoCommand
@@ -125,7 +125,7 @@ class DockerRegistryService(
     private fun JsonNode.getV2Information(
         imageRepoCommand: ImageRepoCommand
     ): JsonNode {
-        //TODO: Hvorfor må vi gjøre dette?
+        // TODO: Hvorfor må vi gjøre dette?
         val configDigest = listOf(
             this.at("/config").get("digest").asText().replace(
                 regex = "\\s".toRegex(),

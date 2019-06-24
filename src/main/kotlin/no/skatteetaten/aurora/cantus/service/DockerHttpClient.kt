@@ -72,7 +72,6 @@ class DockerHttpClient(
                             } else {
                                 Mono.just(uuidHeader)
                             }
-
                         }
                 }
             }
