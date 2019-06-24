@@ -76,7 +76,7 @@ class DockerHttpClient(
             ?.let { true } ?: false
     }
 
-    fun postLayer(
+    fun uploadLayer(
         to: ImageRepoCommand,
         uuid: String,
         digest: String,

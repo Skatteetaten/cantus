@@ -70,7 +70,7 @@ class DockerRegistryService(
         val uuid = httpClient.getUploadUUID(to)
         val data: ByteArray = httpClient.getLayer(from, digest)
 
-        return httpClient.postLayer(to, uuid, digest, data)
+        return httpClient.uploadLayer(to, uuid, digest, data)
     }
 
     private fun imageManifestResponseToImageManifest(

@@ -212,7 +212,7 @@ class DockerRegistryServiceTest {
 
         every { httpClient.getLayer(from, digest) } returns blob
 
-        every { httpClient.postLayer(to, uuid, digest, blob) } returns true
+        every { httpClient.uploadLayer(to, uuid, digest, blob) } returns true
 
         val result = dockerService.ensureBlobExist(from, to, digest)
         assertThat(result).isTrue()
