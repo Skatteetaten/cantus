@@ -1,7 +1,9 @@
 package no.skatteetaten.aurora.cantus.service
 
+import assertk.Assert
 import assertk.assertThat
 import assertk.assertions.contains
+import assertk.assertions.hasSize
 import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isInstanceOf
@@ -19,6 +21,7 @@ import no.skatteetaten.aurora.mockmvc.extensions.mockwebserver.execute
 import no.skatteetaten.aurora.mockmvc.extensions.mockwebserver.setJsonFileAsBody
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
+import okhttp3.mockwebserver.RecordedRequest
 import org.junit.jupiter.api.Test
 import org.springframework.http.MediaType
 import org.springframework.web.reactive.function.client.WebClient
@@ -60,10 +63,11 @@ class DockerHttpClientTest {
                 .setJsonFileAsBody("dockerManifestV2Config.json")
                 .addHeader("Docker-Content-Digest", "SHA::256")
 
-        server.execute(fail, fail, fail, response) {
+        val requests = server.execute(fail, fail, fail, response) {
             val result = httpClient.uploadLayer(imageRepoCommand, "uuid", "digest", content)
             assertThat(result).isTrue()
         }
+        assertThat(requests).retries(3)
     }
 
     @Test
@@ -74,13 +78,14 @@ class DockerHttpClientTest {
 
         val fail = MockResponse().setResponseCode(404)
 
-        server.execute(fail, fail, fail, fail) {
+        val requests = server.execute(fail, fail, fail, fail) {
             val exception = catch { httpClient.uploadLayer(imageRepoCommand, "uuid", "digest", content) }
             assertThat(exception)
                 .isNotNull().isInstanceOf(CantusException::class)
                 .message().isNotNull()
                 .contains("Retry failed")
         }
+        assertThat(requests).retries(3)
     }
 
     @Test
@@ -286,6 +291,14 @@ class DockerHttpClientTest {
                 assertThat(it.dockerContentDigest).isEqualTo("sha256")
                 assertThat(it.manifestBody).isNotNull()
             }
+        }
+    }
+
+    private fun Assert<List<RecordedRequest>>.retries(retries: Int) = given { requests ->
+        assertThat(requests).hasSize(retries + 1)
+        val firstPath = requests.first().path
+        for (i in 1..retries) {
+            assertThat(firstPath).isEqualTo(requests[i].path)
         }
     }
 }

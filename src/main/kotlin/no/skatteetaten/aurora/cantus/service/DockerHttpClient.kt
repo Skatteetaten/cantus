@@ -200,7 +200,7 @@ class DockerHttpClient(
         }
 
     /*
-      When doing a Head Request you get an empy body back
+      When doing a Head Request you get an empty body back
        empty body == true
        404 error == false
        else == error
