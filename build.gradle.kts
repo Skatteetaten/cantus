@@ -1,12 +1,5 @@
-buildscript {
-    dependencies {
-        //must specify this in gradle.properties since the same version must be here and in aurora plugin
-        val springCloudContractVersion: String = project.property("aurora.springCloudContractVersion") as String
-        classpath("org.springframework.cloud:spring-cloud-contract-gradle-plugin:$springCloudContractVersion")
-    }
-}
-
 plugins {
+    id("org.springframework.cloud.contract")
     id("org.jetbrains.kotlin.jvm") version "1.3.21"
     id("org.jetbrains.kotlin.plugin.spring") version "1.3.21"
     id("org.jlleitschuh.gradle.ktlint") version "7.1.0"
@@ -21,8 +14,6 @@ plugins {
     id("no.skatteetaten.gradle.aurora") version "2.0.2"
 
 }
-
-apply(plugin = "spring-cloud-contract")
 
 dependencies {
     implementation("uk.q3c.rest:hal-kotlin:0.5.4.0.db32476")
