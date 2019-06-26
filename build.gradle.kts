@@ -12,7 +12,6 @@ plugins {
     id("se.patrikerdes.use-latest-versions") version "0.2.10"
 
     id("no.skatteetaten.gradle.aurora") version "2.3.1"
-
 }
 
 dependencies {
