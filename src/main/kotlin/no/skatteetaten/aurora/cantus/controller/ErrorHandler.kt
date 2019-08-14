@@ -19,6 +19,7 @@ fun <T> Mono<T>.blockAndHandleError(
 ) =
     this.handleError(imageRepoCommand).toMono().block(duration)
 
+//TODO: Se på error handling i hele denne filen
 fun <T> Mono<T>.handleError(imageRepoCommand: ImageRepoCommand?) =
     this.doOnError {
         when (it) {
@@ -69,7 +70,8 @@ private fun Throwable.logAndRethrow() {
 }
 
 private fun Throwable.handleException() {
-    val msg = "Error in response or request (${this::class.simpleName})"
+    val msg = "Error in response or request name=${this::class.simpleName} message=${this.message}"
+    // TODO: her synes jeg man kan logge med exceptionen, det gir mening.
     logger.error(this) { msg }
     throw CantusException(msg, this)
 }
