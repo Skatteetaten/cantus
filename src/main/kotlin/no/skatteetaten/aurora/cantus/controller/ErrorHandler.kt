@@ -40,7 +40,8 @@ private fun RetryExhaustedException.handleException(imageRepoCommand: ImageRepoC
     )
 }
 private fun WebClientResponseException.handleException(imageRepoCommand: ImageRepoCommand?) {
-    val msg = "Error in response, status=$statusCode message=$statusText body=\"${this.responseBodyAsString}\""
+    val msg =
+        "Error in response, status=$statusCode message=$statusText body=\"${this.responseBodyAsString}\" request_url=\"${this.request?.uri}\" request_method=\"${this.request?.method?.toString()}\""
     logger.error(this) { msg }
     throw SourceSystemException(
         message = msg,
