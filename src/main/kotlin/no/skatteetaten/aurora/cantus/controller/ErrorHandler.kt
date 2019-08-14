@@ -19,7 +19,7 @@ fun <T> Mono<T>.blockAndHandleError(
 ) =
     this.handleError(imageRepoCommand).toMono().block(duration)
 
-//TODO: Se på error handling i hele denne filen
+// TODO: Se på error handling i hele denne filen
 fun <T> Mono<T>.handleError(imageRepoCommand: ImageRepoCommand?) =
     this.doOnError {
         when (it) {
