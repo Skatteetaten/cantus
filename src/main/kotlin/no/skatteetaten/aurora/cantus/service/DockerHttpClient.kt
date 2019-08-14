@@ -172,6 +172,15 @@ class DockerHttpClient(
         imageRepoCommand: ImageRepoCommand,
         digest: String
     ): Boolean {
+        val foo: ByteArray? = imageRepoCommand.createRequest(
+            method = HttpMethod.HEAD,
+            path = "{imageGroup}/{imageName}/blobs/{digest}",
+            pathVariables = mapOf("digest" to digest)
+        )
+            .retrieve()
+            .bodyToMono<ByteArray>()
+            .blockAndHandleError(imageRepoCommand = imageRepoCommand)
+
         return imageRepoCommand.createRequest(
             method = HttpMethod.HEAD,
             path = "{imageGroup}/{imageName}/blobs/{digest}",
