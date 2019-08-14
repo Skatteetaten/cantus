@@ -70,7 +70,7 @@ class ImageRepoCommandAssembler(
             imageGroup = imageRepo.imageGroup,
             imageTag = imageRepo.imageTag,
             authType = registry.auth,
-            token = bearerToken,
+            token = bearerToken?.split(" ")?.last(),
             url = "$scheme${imageRepo.registry}/v2"
         )
     }
