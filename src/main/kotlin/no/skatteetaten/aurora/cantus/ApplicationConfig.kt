@@ -64,7 +64,14 @@ class ApplicationConfig {
                 logger.debug("HttpRequest method=${it.method()} url=${it.url()} $bearer")
                 it.toMono()
             })
-            .clientConnector(ReactorClientHttpConnector(HttpClient.from(tcpClient).compress(true))).build()
+            .clientConnector(
+                ReactorClientHttpConnector(
+                    HttpClient
+                        .from(tcpClient)
+                        .compress(true)
+                    //  .wiretap(true) // TODO : REMOVE
+                )
+            ).build()
 
     private fun exchangeStrategies(): ExchangeStrategies {
         val objectMapper = createObjectMapper()

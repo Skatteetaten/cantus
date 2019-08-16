@@ -45,11 +45,20 @@ class DockerRegistryService(
         val manifest = httpClient.getImageManifest(from)
         val layers = findBlobs(manifest)
 
+        /*
+        layers.forEach { digest ->
+            logger.debug("Pushing layer...")
+            ensureBlobExist(from, to, digest).also {
+                logger.debug("Blob=$digest pushed to=${to.defaultRepo} success=$it")
+            }
+        }
+         */
+
         runBlocking(threadPoolContext + MDCContext()) {
             layers.map { digest ->
                 async {
                     ensureBlobExist(from, to, digest).also {
-                        logger.debug("Blob=$digest pushed to=${to.defaultRepo} success=$it")
+                        logger.debug("Blob=$digest pushed to=${to.artifactRepo} success=$it")
                     }
                 }
             }.forEach { it.await() }
@@ -62,7 +71,7 @@ class DockerRegistryService(
     fun ensureBlobExist(from: ImageRepoCommand, to: ImageRepoCommand, digest: String): Boolean {
 
         if (httpClient.digestExistInRepo(to, digest)) {
-            logger.debug("layer=$digest already exist in registry=${to.defaultRepo}")
+            logger.debug("layer=$digest already exist in registry=${to.artifactRepo}")
             return true
         }
 

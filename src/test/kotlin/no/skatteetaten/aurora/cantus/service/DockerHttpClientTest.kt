@@ -22,8 +22,11 @@ import no.skatteetaten.aurora.mockmvc.extensions.mockwebserver.setJsonFileAsBody
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import okhttp3.mockwebserver.RecordedRequest
+import okio.Buffer
+import okio.BufferedSource
 import org.junit.jupiter.api.Test
 import org.springframework.http.MediaType
+import org.springframework.http.MediaType.APPLICATION_OCTET_STREAM_VALUE
 import org.springframework.web.reactive.function.client.WebClient
 
 class DockerHttpClientTest {
@@ -105,43 +108,51 @@ class DockerHttpClientTest {
     }
 
     @Test
-    fun `test put manifest failes`() {
-        val response =
-            "{\"errors\":[{\"code\":\"BLOB_UNKNOWN\",\"message\":\"blob unknown to registry\",\"detail\":\"sha256:303510ed0dee065d6dc0dd4fbb1833aa27ff6177e7dfc72881ea4ea0716c82a1\"}]}"
+    fun `test put manifest failed`() {
 
         val manifest = ImageManifestResponseDto(manifestV2, "abc", createObjectMapper().readTree("{}"))
 
-        server.execute(MockResponse().setResponseCode(404).setBody(response)) {
+        val response = MockResponse().setResponseCode(404)
+            .setBody("{\"errors\":[{\"code\":\"BLOB_UNKNOWN\",\"message\":\"blob unknown to registry\",\"detail\":\"sha256:303510ed0dee065d6dc0dd4fbb1833aa27ff6177e7dfc72881ea4ea0716c82a1\"}]}")
+        server.execute(response, response, response, response) {
             val exception = catch { httpClient.putManifest(imageRepoCommand, manifest) }
             assertThat(exception)
                 .isNotNull().isInstanceOf(SourceSystemException::class)
                 .message().isNotNull()
-                .contains("blob unknown to registry")
+                .contains("cause=NotFound lastError=404 Not Found operation=PUT_MANIFEST")
         }
     }
 
     @Test
     fun `test digest authentication failed`() {
-        server.execute(MockResponse().setResponseCode(401).setBody("Unauthorized")) {
+        val response = MockResponse().setResponseCode(401).setBody("Unauthorized")
+        server.execute(response, response, response, response) {
             val exception = catch { httpClient.digestExistInRepo(imageRepoCommand, "abc") }
             assertThat(exception)
                 .isNotNull().isInstanceOf(SourceSystemException::class)
                 .message().isNotNull()
-                .contains("Error in response, status=401 UNAUTHORIZED")
+                .contains("cause=Unauthorized lastError=401 Unauthorized operation=BLOB_EXIST")
         }
     }
 
     @Test
     fun `test digest does not exist in repo`() {
-        server.execute(MockResponse().setResponseCode(404)) {
+        val response = MockResponse().setResponseCode(404)
+        server.execute(response) {
             val result = httpClient.digestExistInRepo(imageRepoCommand, "abc")
             assertThat(result).isFalse()
         }
     }
 
+    // TODO: Hvorfor vil ikke denne?
     @Test
     fun `test digest exist in repo`() {
-        server.execute(MockResponse()) {
+        server.execute(
+            MockResponse()
+                .setResponseCode(200)
+                .setBody("abc123")
+                .addHeader("Content-Type", APPLICATION_OCTET_STREAM_VALUE)
+        ) {
             val result = httpClient.digestExistInRepo(imageRepoCommand, "abc")
             assertThat(result).isTrue()
         }
@@ -174,7 +185,7 @@ class DockerHttpClientTest {
             MockResponse()
                 .setResponseCode(404)
 
-        server.execute(response) {
+        server.execute(response, response, response, response) {
             val exception = catch { httpClient.getLayer(imageRepoCommand, "SHA::256") }
 
             assertThat(exception).isNotNull().isInstanceOf(SourceSystemException::class)
@@ -197,7 +208,7 @@ class DockerHttpClientTest {
             MockResponse()
                 .setResponseCode(404)
 
-        server.execute(response) {
+        server.execute(response, response, response, response) {
             val exception = catch { httpClient.getConfig(imageRepoCommand, "SHA::256") }
 
             assertThat(exception).isNotNull().isInstanceOf(SourceSystemException::class)

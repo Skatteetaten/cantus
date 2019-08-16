@@ -6,8 +6,10 @@ import no.skatteetaten.aurora.cantus.controller.BadRequestException
 import no.skatteetaten.aurora.cantus.controller.ImageRepoCommand
 import no.skatteetaten.aurora.cantus.controller.SourceSystemException
 import no.skatteetaten.aurora.cantus.controller.blockAndHandleError
+import no.skatteetaten.aurora.cantus.controller.blockAndHandleErrorWithRetry
 import no.skatteetaten.aurora.cantus.controller.handleError
 import no.skatteetaten.aurora.cantus.controller.handleStatusCodeError
+import no.skatteetaten.aurora.cantus.controller.retryRepoCommand
 import no.skatteetaten.aurora.cantus.createObjectMapper
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpHeaders.AUTHORIZATION
@@ -22,6 +24,7 @@ import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.WebClientResponseException
 import org.springframework.web.reactive.function.client.bodyToMono
 import reactor.core.publisher.Mono
+import reactor.core.publisher.switchIfEmpty
 import reactor.retry.retryExponentialBackoff
 import java.time.Duration
 
@@ -46,7 +49,7 @@ class DockerHttpClient(
         to: ImageRepoCommand
     ): String {
         val (_, headers) = to.createRequest(
-            method = HttpMethod.PUT,
+            method = HttpMethod.POST,
             path = "{imageGroup}/{imageName}/blobs/uploads/"
         )
             .headers { headers ->
@@ -72,8 +75,7 @@ class DockerHttpClient(
             .body(BodyInserters.fromObject(createObjectMapper().writeValueAsString(manifest.manifestBody)))
             .retrieve()
             .bodyToMono<JsonNode>()
-            .blockAndHandleError(imageRepoCommand = to)
-            ?.let { true } ?: false
+            .blockAndHandleErrorWithRetry("operation=PUT_MANIFEST registry=${to.fullRepoCommand}", to).let { true }
     }
 
     fun uploadLayer(
@@ -92,8 +94,10 @@ class DockerHttpClient(
             }
             .retrieve()
             .bodyToMono<JsonNode>()
-            .retryRepoCommand(to)
-            .blockAndHandleError(imageRepoCommand = to)?.let { true } ?: false
+            .blockAndHandleErrorWithRetry(
+                "operation=UPLOAD_LAYER registry=${to.artifactRepo} uuid=$uuid digest=$digest",
+                to
+            ).let { true }
     }
 
     fun getImageManifest(imageRepoCommand: ImageRepoCommand): ImageManifestResponseDto {
@@ -104,6 +108,7 @@ class DockerHttpClient(
             .headers {
                 it.accept = dockerManfestAccept
             }.exchange()
+            .retryRepoCommand("operation=GET_MANIFEST registry=${imageRepoCommand.fullRepoCommand}")
             .performBodyAndHeader(imageRepoCommand)
 
         val manifest: JsonNode = body ?: throw SourceSystemException(
@@ -138,13 +143,13 @@ class DockerHttpClient(
         this.getBlob<JsonNode>(
             imageRepoCommand, digest, accept = listOf(MediaType.valueOf("application/json"))
         ) ?: throw SourceSystemException(
-            message = "Unable to retrieve V2 manifest for ${imageRepoCommand.defaultRepo}/$digest",
+            message = "Unable to retrieve V2 manifest for ${imageRepoCommand.artifactRepo}/$digest",
             sourceSystem = imageRepoCommand.registry
         )
 
     fun getLayer(imageRepoCommand: ImageRepoCommand, digest: String) =
         this.getBlob<ByteArray>(imageRepoCommand, digest) ?: throw SourceSystemException(
-            message = "Unable to retrieve blob with digest=$digest from repo=${imageRepoCommand.defaultRepo}",
+            message = "Unable to retrieve blob with digest=$digest from repo=${imageRepoCommand.artifactRepo}",
             sourceSystem = imageRepoCommand.registry
         )
 
@@ -165,31 +170,35 @@ class DockerHttpClient(
 
             .retrieve()
             .bodyToMono<T>()
-            .blockAndHandleError(imageRepoCommand = imageRepoCommand)
+            .blockAndHandleErrorWithRetry(
+                "operation=GET_BLOB registry=${imageRepoCommand.artifactRepo}",
+                imageRepoCommand
+            )
     }
 
     fun digestExistInRepo(
         imageRepoCommand: ImageRepoCommand,
         digest: String
     ): Boolean {
-        val foo: ByteArray? = imageRepoCommand.createRequest(
+        val result = imageRepoCommand.createRequest(
             method = HttpMethod.HEAD,
             path = "{imageGroup}/{imageName}/blobs/{digest}",
             pathVariables = mapOf("digest" to digest)
         )
             .retrieve()
             .bodyToMono<ByteArray>()
-            .blockAndHandleError(imageRepoCommand = imageRepoCommand)
-
-        return imageRepoCommand.createRequest(
-            method = HttpMethod.HEAD,
-            path = "{imageGroup}/{imageName}/blobs/{digest}",
-            pathVariables = mapOf("digest" to digest)
-        )
-            .retrieve()
-            .exist()
-            // .retryRepoCommand(imageRepoCommand)
-            .blockAndHandleError(imageRepoCommand = imageRepoCommand) ?: false
+            .onErrorResume { e ->
+                if (e is WebClientResponseException && e.statusCode == HttpStatus.NOT_FOUND) {
+                    Mono.empty()
+                } else {
+                    Mono.error(e)
+                }
+            }
+            .blockAndHandleErrorWithRetry(
+                "operation=BLOB_EXIST registry=${imageRepoCommand.artifactRepo} digest=$digest",
+                imageRepoCommand
+            )
+        return result != null
     }
 
     private fun ImageRepoCommand.createRequest(
@@ -207,44 +216,6 @@ class DockerHttpClient(
                 headers.set(AUTHORIZATION, "${this.authType} $it")
             }
         }
-
-    /*
-      When doing a Head Request you get an empty body back
-       empty body == true
-       404 error == false
-       else == error
-     */
-    private fun WebClient.ResponseSpec.exist() =
-        this.bodyToMono<Boolean>()
-            .switchIfEmpty(Mono.just(true))
-            .onErrorResume { e ->
-                if (e is WebClientResponseException && e.statusCode == HttpStatus.NOT_FOUND) {
-                    Mono.just(false)
-                } else {
-                    Mono.error(e)
-                }
-            }
-
-    private fun <T : Any?> Mono<T>.retryRepoCommand(cmd: ImageRepoCommand) = this.retryExponentialBackoff(
-        times = 3,
-        first = Duration.ofMillis(100),
-        max = Duration.ofSeconds(1),
-        doOnRetry =
-        {
-            val e = it.exception()
-            val registry = cmd.registry
-            val exceptionClass = e::class.simpleName
-            if (it.iteration() == 3L) {
-                logger.warn(e) {
-                    "Last retry to registry=$registry, previous failed with exception=$exceptionClass"
-                }
-            } else {
-                logger.info {
-                    "Retry=${it.iteration()} for request to registry=$registry, previous failed with exception=$exceptionClass - message=\"${e.message}\""
-                }
-            }
-        }
-    )
 
     private fun Mono<ClientResponse>.performBodyAndHeader(imageRepoCommand: ImageRepoCommand) =
         this.flatMap { resp: ClientResponse ->

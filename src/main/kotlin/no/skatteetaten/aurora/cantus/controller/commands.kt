@@ -23,6 +23,8 @@ data class ImageRepoCommand(
         get() = listOf(imageGroup, imageName, imageTag).joinToString("/")
     val defaultRepo: String
         get() = listOf(imageGroup, imageName).joinToString("/")
+    val artifactRepo: String
+        get() = listOf(registry, imageGroup, imageName).joinToString("/")
     val fullRepoCommand: String
         get() = listOf(registry, imageGroup, imageName, imageTag).joinToString("/")
     val mappedTemplateVars: Map<String, String?>
