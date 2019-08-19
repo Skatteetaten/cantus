@@ -47,9 +47,7 @@ class DockerRegistryService(
         runBlocking(threadPoolContext + MDCContext()) {
             layers.map { digest ->
                 async {
-                    ensureBlobExist(from, to, digest).also {
-                        logger.debug("Blob=$digest pushed to=${to.artifactRepo} success=$it")
-                    }
+                    ensureBlobExist(from, to, digest)
                 }
             }.forEach { it.await() }
         }
@@ -68,7 +66,9 @@ class DockerRegistryService(
         val uuid = httpClient.getUploadUUID(to)
         val data: ByteArray = httpClient.getLayer(from, digest)
 
-        return httpClient.uploadLayer(to, uuid, digest, data)
+        return httpClient.uploadLayer(to, uuid, digest, data).also {
+            logger.debug("Blob=$digest pushed to=${to.artifactRepo} success=$it")
+        }
     }
 
     private fun imageManifestResponseToImageManifest(
