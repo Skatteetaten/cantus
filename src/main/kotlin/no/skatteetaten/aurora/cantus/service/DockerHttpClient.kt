@@ -40,7 +40,7 @@ class DockerHttpClient(
     val webClient: WebClient
 ) {
     val dockerManfestAccept: List<MediaType> = listOf(
-        MediaType.valueOf(manifestV2) // , MediaType.valueOf(manifestV1)
+        MediaType.valueOf(manifestV2), MediaType.valueOf(manifestV1)
     )
 
     fun getUploadUUID(
