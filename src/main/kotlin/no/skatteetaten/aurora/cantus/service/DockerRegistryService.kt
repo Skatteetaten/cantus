@@ -54,7 +54,7 @@ class DockerRegistryService(
             }.forEach { it.await() }
         }
         return httpClient.putManifest(to, manifest).also {
-            logger.debug("Manifest=$manifest pushed to=${to.fullRepoCommand}")
+            logger.info("Tagged docker image from=${from.fullRepoCommand} to=${to.fullRepoCommand} manifest=$manifest")
         }
     }
 
