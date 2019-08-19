@@ -37,22 +37,12 @@ class DockerRegistryService(
     val createdLabel = "created"
 
     /*
-    TODO: test with v1
-        https://www.danlorenc.com/posts/containers-part-2/
+       Inspiration from method in the following blogpost https://www.danlorenc.com/posts/containers-part-2/
      */
     fun tagImage(from: ImageRepoCommand, to: ImageRepoCommand): Boolean {
 
         val manifest = httpClient.getImageManifest(from)
         val layers = findBlobs(manifest)
-
-        /*
-        layers.forEach { digest ->
-            logger.debug("Pushing layer...")
-            ensureBlobExist(from, to, digest).also {
-                logger.debug("Blob=$digest pushed to=${to.defaultRepo} success=$it")
-            }
-        }
-         */
 
         runBlocking(threadPoolContext + MDCContext()) {
             layers.map { digest ->

@@ -182,14 +182,15 @@ class DockerHttpClient(
     ): Boolean {
         val result = imageRepoCommand.createRequest(
             method = HttpMethod.HEAD,
-            path = "{imageGroup}/{imageName}/blobs/{digest}",
-            pathVariables = mapOf("digest" to digest)
+            path = "{imageGroup}/{imageName}/blobs/$digest"
         )
             .retrieve()
             .bodyToMono<ByteArray>()
+            .map { true } //We need this to turn it into a boolean
+            .switchIfEmpty { Mono.just(true) }
             .onErrorResume { e ->
                 if (e is WebClientResponseException && e.statusCode == HttpStatus.NOT_FOUND) {
-                    Mono.empty()
+                    Mono.just(false)
                 } else {
                     Mono.error(e)
                 }
@@ -198,7 +199,7 @@ class DockerHttpClient(
                 "operation=BLOB_EXIST registry=${imageRepoCommand.artifactRepo} digest=$digest",
                 imageRepoCommand
             )
-        return result != null
+        return result ?: false
     }
 
     private fun ImageRepoCommand.createRequest(

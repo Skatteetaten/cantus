@@ -144,14 +144,11 @@ class DockerHttpClientTest {
         }
     }
 
-    // TODO: Hvorfor vil ikke denne?
     @Test
     fun `test digest exist in repo`() {
         server.execute(
             MockResponse()
                 .setResponseCode(200)
-                .setBody("abc123")
-                .addHeader("Content-Type", APPLICATION_OCTET_STREAM_VALUE)
         ) {
             val result = httpClient.digestExistInRepo(imageRepoCommand, "abc")
             assertThat(result).isTrue()
