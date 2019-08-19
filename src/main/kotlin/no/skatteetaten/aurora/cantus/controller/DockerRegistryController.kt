@@ -10,6 +10,8 @@ import no.skatteetaten.aurora.cantus.service.DockerRegistryService
 import no.skatteetaten.aurora.cantus.service.ImageManifestDto
 import no.skatteetaten.aurora.cantus.service.ImageTagsWithTypeDto
 import org.springframework.http.HttpHeaders
+import org.springframework.http.HttpStatus
+import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Component
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
@@ -38,7 +40,7 @@ class DockerRegistryController(
     fun tagDockerImage(
         @RequestBody tagCommand: TagCommand,
         @RequestHeader(required = true, value = HttpHeaders.AUTHORIZATION) bearerToken: String
-    ): AuroraResponse<TagCommandResource> {
+    ): ResponseEntity<AuroraResponse<TagCommandResource>> {
 
         val from = imageRepoCommandAssembler.createAndValidateCommand(tagCommand.from)
         val to = imageRepoCommandAssembler.createAndValidateCommand(tagCommand.to, bearerToken)
@@ -48,13 +50,20 @@ class DockerRegistryController(
             if (to.imageTag == null) throw BadRequestException("To spec=${tagCommand.from} does not contain a tag")
 
             val result = dockerRegistryService.tagImage(from, to)
-            AuroraResponse(
-                success = true,
-                message = "${from.fullRepoCommand} -> ${to.fullRepoCommand}",
-                items = listOf(TagCommandResource(result))
+            ResponseEntity(
+                AuroraResponse(
+                    success = result,
+                    message = "${from.fullRepoCommand} -> ${to.fullRepoCommand}",
+                    items = listOf(TagCommandResource(result))
+                ),
+                HttpStatus.OK
             )
         } catch (e: Exception) {
-            AuroraResponse(success = false, failure = listOf(CantusFailure(to.fullRepoCommand, e)))
+            logger.debug("Failed tagging exception occured")
+            ResponseEntity(
+                AuroraResponse(success = false, failure = listOf(CantusFailure(to.fullRepoCommand, e))),
+                HttpStatus.INTERNAL_SERVER_ERROR
+            )
         }
     }
 
