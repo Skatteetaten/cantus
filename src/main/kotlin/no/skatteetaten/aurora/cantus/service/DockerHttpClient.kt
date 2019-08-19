@@ -67,14 +67,18 @@ class DockerHttpClient(
         to: ImageRepoCommand,
         manifest: ImageManifestResponseDto
     ): Boolean {
+        val manifestBody = createObjectMapper().writeValueAsString(manifest.manifestBody)
         return to.createRequest(method = HttpMethod.PUT, path = "{imageGroup}/{imageName}/manifests/{imageTag}")
             .headers { headers ->
                 headers.contentType = MediaType.valueOf(manifest.contentType)
             }
-            .body(BodyInserters.fromObject(createObjectMapper().writeValueAsString(manifest.manifestBody)))
+            .body(BodyInserters.fromObject(manifestBody))
             .retrieve()
             .bodyToMono<JsonNode>()
-            .blockAndHandleErrorWithRetry("operation=PUT_MANIFEST registry=${to.fullRepoCommand}", to).let { true }
+            .blockAndHandleErrorWithRetry(
+                "operation=PUT_MANIFEST registry=${to.fullRepoCommand} manifest=$manifestBody contentType=${manifest.contentType}",
+                to
+            ).let { true }
     }
 
     fun uploadLayer(
