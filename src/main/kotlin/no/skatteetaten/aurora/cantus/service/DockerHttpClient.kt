@@ -143,7 +143,12 @@ class DockerHttpClient(
 
     fun getConfig(imageRepoCommand: ImageRepoCommand, digest: String) =
         this.getBlob<JsonNode>(
-            imageRepoCommand, digest, accept = listOf(MediaType.valueOf("application/json"))
+            imageRepoCommand, digest,
+            accept = listOf(
+                MediaType.valueOf("application/json"),
+                MediaType.valueOf("application/vnd.docker.container.image.v1+json"),
+                MediaType.valueOf("application/octet-stream")
+            )
         ) ?: throw SourceSystemException(
             message = "Unable to retrieve V2 manifest for ${imageRepoCommand.artifactRepo}/$digest",
             sourceSystem = imageRepoCommand.registry
@@ -169,7 +174,6 @@ class DockerHttpClient(
                     headers.accept = it
                 }
             }
-
             .retrieve()
             .bodyToMono<T>()
             .blockAndHandleErrorWithRetry(
