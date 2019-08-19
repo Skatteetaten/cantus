@@ -22,11 +22,8 @@ import no.skatteetaten.aurora.mockmvc.extensions.mockwebserver.setJsonFileAsBody
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import okhttp3.mockwebserver.RecordedRequest
-import okio.Buffer
-import okio.BufferedSource
 import org.junit.jupiter.api.Test
 import org.springframework.http.MediaType
-import org.springframework.http.MediaType.APPLICATION_OCTET_STREAM_VALUE
 import org.springframework.web.reactive.function.client.WebClient
 
 class DockerHttpClientTest {

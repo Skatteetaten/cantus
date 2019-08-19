@@ -2,8 +2,6 @@ package no.skatteetaten.aurora.cantus.controller
 
 import io.netty.handler.timeout.ReadTimeoutException
 import mu.KotlinLogging
-import org.apache.tomcat.util.ExceptionUtils
-import org.springframework.core.NestedExceptionUtils
 import org.springframework.web.reactive.function.client.ClientResponse
 import org.springframework.web.reactive.function.client.WebClientResponseException
 import org.springframework.web.reactive.function.client.bodyToMono
@@ -12,7 +10,6 @@ import reactor.core.publisher.toMono
 import reactor.retry.RetryExhaustedException
 import reactor.retry.retryExponentialBackoff
 import java.time.Duration
-import kotlin.reflect.jvm.internal.impl.utils.ExceptionUtilsKt
 
 private const val blockTimeout: Long = 30
 private val logger = KotlinLogging.logger {}

@@ -25,7 +25,6 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 import org.springframework.web.reactive.function.client.bodyToMono
 import reactor.core.publisher.Mono
 import reactor.core.publisher.switchIfEmpty
-import reactor.retry.retryExponentialBackoff
 import java.time.Duration
 
 private val logger = KotlinLogging.logger {}
@@ -186,7 +185,7 @@ class DockerHttpClient(
         )
             .retrieve()
             .bodyToMono<ByteArray>()
-            .map { true } //We need this to turn it into a boolean
+            .map { true } // We need this to turn it into a boolean
             .switchIfEmpty { Mono.just(true) }
             .onErrorResume { e ->
                 if (e is WebClientResponseException && e.statusCode == HttpStatus.NOT_FOUND) {
