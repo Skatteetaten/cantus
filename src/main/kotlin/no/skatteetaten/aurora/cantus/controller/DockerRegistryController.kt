@@ -42,8 +42,6 @@ class DockerRegistryController(
         @RequestBody tagCommand: TagCommand,
         @RequestHeader(required = true, value = HttpHeaders.AUTHORIZATION) bearerToken: String
     ): ResponseEntity<AuroraResponse<TagCommandResource>> {
-
-        val watch = StopWatch().apply { this.start() }
         val from = imageRepoCommandAssembler.createAndValidateCommand(tagCommand.from)
         val to = imageRepoCommandAssembler.createAndValidateCommand(tagCommand.to, bearerToken)
 
@@ -72,9 +70,6 @@ class DockerRegistryController(
                 AuroraResponse(success = false, failure = listOf(CantusFailure(to.fullRepoCommand, e))),
                 status
             )
-        }.also {
-            watch.stop()
-            logger.debug { "Tag image tookMs=${watch.totalTimeMillis} input=$tagCommand" }
         }
     }
 
