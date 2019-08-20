@@ -13,6 +13,7 @@ import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Component
+import org.springframework.util.StopWatch
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -42,6 +43,7 @@ class DockerRegistryController(
         @RequestHeader(required = true, value = HttpHeaders.AUTHORIZATION) bearerToken: String
     ): ResponseEntity<AuroraResponse<TagCommandResource>> {
 
+        val watch = StopWatch().apply { this.start() }
         val from = imageRepoCommandAssembler.createAndValidateCommand(tagCommand.from)
         val to = imageRepoCommandAssembler.createAndValidateCommand(tagCommand.to, bearerToken)
 
@@ -70,6 +72,9 @@ class DockerRegistryController(
                 AuroraResponse(success = false, failure = listOf(CantusFailure(to.fullRepoCommand, e))),
                 status
             )
+        }.also {
+            watch.stop()
+            logger.debug { "Tag image tookMs=${watch.totalTimeMillis} input=$tagCommand" }
         }
     }
 
@@ -79,6 +84,7 @@ class DockerRegistryController(
         @RequestHeader(required = false, value = HttpHeaders.AUTHORIZATION) bearerToken: String?
     ): AuroraResponse<ImageTagResource> {
 
+        val watch = StopWatch().apply { this.start() }
         val responses =
             runBlocking(MDCContext() + threadPoolContext) {
                 val deferred =
@@ -88,7 +94,14 @@ class DockerRegistryController(
                 deferred.map { it.await() }
             }
 
-        return imageTagResourceAssembler.imageTagResourceToAuroraResponse(responses)
+        return imageTagResourceAssembler.imageTagResourceToAuroraResponse(responses).also {
+            watch.stop()
+            logger.debug {
+                "Get imageManifest tookMs=${watch.totalTimeMillis} urls=${tagUrlsWrapper.tagUrls.joinToString(
+                    ","
+                )}"
+            }
+        }
     }
 
     private fun getImageTagResource(
@@ -111,7 +124,7 @@ class DockerRegistryController(
         @RequestParam repoUrl: String,
         @RequestHeader(required = false, value = HttpHeaders.AUTHORIZATION) bearerToken: String?
     ): AuroraResponse<TagResource> {
-
+        val watch = StopWatch().apply { this.start() }
         val response =
             getResponse(bearerToken, repoUrl) { dockerService, imageRepoCommand ->
                 dockerService.getImageTags(imageRepoCommand).let { tags ->
@@ -120,7 +133,10 @@ class DockerRegistryController(
                 }
             }
 
-        return imageTagResourceAssembler.tagResourceToAuroraResponse(response)
+        return imageTagResourceAssembler.tagResourceToAuroraResponse(response).also {
+            watch.stop()
+            logger.debug { "Get imageTags tookMs=${watch.totalTimeMillis} url=$repoUrl" }
+        }
     }
 
     @GetMapping("/tags/semantic")
@@ -129,12 +145,16 @@ class DockerRegistryController(
         @RequestHeader(required = false, value = HttpHeaders.AUTHORIZATION) bearerToken: String?
     ): AuroraResponse<GroupedTagResource> {
 
+        val watch = StopWatch().apply { this.start() }
         val response = getResponse(bearerToken, repoUrl) { dockerService, imageRepoCommand ->
             dockerService.getImageTags(imageRepoCommand)
                 .let { tags -> imageTagResourceAssembler.toGroupedTagResource(tags, imageRepoCommand.defaultRepo) }
         }
 
-        return imageTagResourceAssembler.groupedTagResourceToAuroraResponse(response)
+        return imageTagResourceAssembler.groupedTagResourceToAuroraResponse(response).also {
+            watch.stop()
+            logger.debug { "Get semantic tags tookMs=${watch.totalTimeMillis} url=$repoUrl" }
+        }
     }
 
     private final inline fun <reified T : Any> getResponse(
