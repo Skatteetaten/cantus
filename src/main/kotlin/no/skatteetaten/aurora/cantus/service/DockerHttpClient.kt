@@ -142,40 +142,31 @@ class DockerHttpClient(
     }
 
     fun getConfig(imageRepoCommand: ImageRepoCommand, digest: String) =
-        this.getBlob<JsonNode>(
-            imageRepoCommand, digest,
-            accept = listOf(
-                MediaType.valueOf("application/json"),
-                MediaType.valueOf("application/vnd.docker.container.image.v1+json"),
-                MediaType.valueOf("application/octet-stream")
-            )
-        ) ?: throw SourceSystemException(
+        this.getBlob(
+            imageRepoCommand, digest
+        )?.let {
+            createObjectMapper().readTree(it)
+        } ?: throw SourceSystemException(
             message = "Unable to retrieve V2 manifest for ${imageRepoCommand.artifactRepo}/$digest",
             sourceSystem = imageRepoCommand.registry
         )
 
     fun getLayer(imageRepoCommand: ImageRepoCommand, digest: String) =
-        this.getBlob<ByteArray>(imageRepoCommand, digest) ?: throw SourceSystemException(
+        this.getBlob(imageRepoCommand, digest) ?: throw SourceSystemException(
             message = "Unable to retrieve blob with digest=$digest from repo=${imageRepoCommand.artifactRepo}",
             sourceSystem = imageRepoCommand.registry
         )
 
-    private inline fun <reified T : Any> getBlob(
+    private fun getBlob(
         imageRepoCommand: ImageRepoCommand,
-        digest: String,
-        accept: List<MediaType>? = null
-    ): T? {
+        digest: String
+    ): ByteArray? {
         return imageRepoCommand.createRequest(
             path = "{imageGroup}/{imageName}/blobs/{digest}",
             pathVariables = mapOf("digest" to digest)
         )
-            .headers { headers ->
-                accept?.let {
-                    headers.accept = it
-                }
-            }
             .retrieve()
-            .bodyToMono<T>()
+            .bodyToMono<ByteArray>()
             .blockAndHandleErrorWithRetry(
                 "operation=GET_BLOB registry=${imageRepoCommand.artifactRepo}",
                 imageRepoCommand
