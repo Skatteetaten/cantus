@@ -60,9 +60,15 @@ class DockerRegistryController(
             )
         } catch (e: Exception) {
             logger.debug("Failed tagging exception occured")
+            val status = if (e is BadRequestException) {
+                HttpStatus.BAD_REQUEST
+            } else {
+                HttpStatus.INTERNAL_SERVER_ERROR
+            }
+            // TODO: the http error in here is an authentication error then we should perhaps throw another status?
             ResponseEntity(
                 AuroraResponse(success = false, failure = listOf(CantusFailure(to.fullRepoCommand, e))),
-                HttpStatus.INTERNAL_SERVER_ERROR
+                status
             )
         }
     }
