@@ -138,7 +138,8 @@ class DockerHttpClient(
         return imageRepoCommand.createRequest("/{imageGroup}/{imageName}/tags/list")
             .retrieve()
             .bodyToMono<ImageTagsResponseDto>()
-            .blockAndHandleError(duration = Duration.ofSeconds(1), imageRepoCommand = imageRepoCommand)
+            .blockAndHandleError(duration = Duration.ofSeconds(2), imageRepoCommand = imageRepoCommand)
+        // TODO: configure this
     }
 
     fun getConfig(imageRepoCommand: ImageRepoCommand, digest: String) =
