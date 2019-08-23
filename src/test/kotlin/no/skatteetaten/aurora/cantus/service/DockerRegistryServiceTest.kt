@@ -15,7 +15,7 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.newFixedThreadPoolContext
-import no.skatteetaten.aurora.AuroraIntegration.AuthType.Bearer
+import no.skatteetaten.aurora.cantus.AuroraIntegration.AuthType.Bearer
 import no.skatteetaten.aurora.cantus.controller.ImageRepoCommand
 import no.skatteetaten.aurora.cantus.controller.SourceSystemException
 import org.junit.jupiter.api.Test

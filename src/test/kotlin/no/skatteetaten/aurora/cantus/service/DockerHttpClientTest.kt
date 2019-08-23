@@ -12,7 +12,7 @@ import assertk.assertions.isTrue
 import assertk.assertions.message
 import assertk.catch
 import no.skatteetaten.aurora.cantus.ApplicationConfig
-import no.skatteetaten.aurora.AuroraIntegration.AuthType.Bearer
+import no.skatteetaten.aurora.cantus.AuroraIntegration.AuthType.Bearer
 import no.skatteetaten.aurora.cantus.controller.CantusException
 import no.skatteetaten.aurora.cantus.controller.ImageRepoCommand
 import no.skatteetaten.aurora.cantus.controller.SourceSystemException

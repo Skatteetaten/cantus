@@ -1,4 +1,4 @@
-package no.skatteetaten.aurora;
+package no.skatteetaten.aurora.cantus;
 
 import java.util.Map;
 

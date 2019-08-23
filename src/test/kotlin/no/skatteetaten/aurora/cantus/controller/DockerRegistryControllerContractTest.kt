@@ -5,7 +5,7 @@ import com.nhaarman.mockito_kotlin.reset
 import com.nhaarman.mockito_kotlin.times
 import com.nhaarman.mockito_kotlin.verify
 import kotlinx.coroutines.newFixedThreadPoolContext
-import no.skatteetaten.aurora.AuroraIntegration
+import no.skatteetaten.aurora.cantus.AuroraIntegration
 import no.skatteetaten.aurora.cantus.ImageManifestDtoBuilder
 import no.skatteetaten.aurora.cantus.ImageTagsWithTypeDtoBuilder
 import no.skatteetaten.aurora.cantus.createObjectMapper

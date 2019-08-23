@@ -1,6 +1,6 @@
 package no.skatteetaten.aurora.cantus.controller
 
-import no.skatteetaten.aurora.AuroraIntegration
+import no.skatteetaten.aurora.cantus.AuroraIntegration
 import org.springframework.stereotype.Component
 
 data class TagCommand(

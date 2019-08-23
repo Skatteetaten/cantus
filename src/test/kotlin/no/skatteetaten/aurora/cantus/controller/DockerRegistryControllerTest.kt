@@ -3,7 +3,7 @@ package no.skatteetaten.aurora.cantus.controller
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.nhaarman.mockito_kotlin.any
 import kotlinx.coroutines.newFixedThreadPoolContext
-import no.skatteetaten.aurora.AuroraIntegration
+import no.skatteetaten.aurora.cantus.AuroraIntegration
 import no.skatteetaten.aurora.cantus.ImageTagsWithTypeDtoBuilder
 import no.skatteetaten.aurora.cantus.service.DockerRegistryService
 import no.skatteetaten.aurora.mockmvc.extensions.Path
