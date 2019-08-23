@@ -5,7 +5,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.slf4j.MDCContext
 import mu.KotlinLogging
-import no.skatteetaten.aurora.cantus.AuroraIntegration
+import no.skatteetaten.aurora.AuroraIntegration
 import no.skatteetaten.aurora.cantus.service.DockerRegistryService
 import no.skatteetaten.aurora.cantus.service.ImageManifestDto
 import no.skatteetaten.aurora.cantus.service.ImageTagsWithTypeDto

@@ -1,4 +1,4 @@
-package no.skatteetaten.aurora.cantus;
+package no.skatteetaten.aurora;
 
 import java.util.Map;
 
@@ -29,6 +29,7 @@ public class AuroraIntegration {
     public static class DockerRegistry {
 
         private String url;
+        private String guiUrl = null;
         private AuthType auth = AuthType.None;
         private boolean https = true;
         private boolean readOnly = true;
@@ -72,6 +73,14 @@ public class AuroraIntegration {
 
         public void setEnabled(boolean enabled) {
             this.enabled = enabled;
+        }
+
+        public String getGuiUrl() {
+            return guiUrl;
+        }
+
+        public void setGuiUrl(String guiUrl) {
+            this.guiUrl = guiUrl;
         }
     }
 }
