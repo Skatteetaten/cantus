@@ -29,7 +29,7 @@ public class AuroraIntegration {
     public static class DockerRegistry {
 
         private String url;
-        private String guiUrl = null;
+        private String guiUrlPattern = null;
         private AuthType auth = AuthType.None;
         private boolean https = true;
         private boolean readOnly = true;
@@ -75,12 +75,12 @@ public class AuroraIntegration {
             this.enabled = enabled;
         }
 
-        public String getGuiUrl() {
-            return guiUrl;
+        public String getGuiUrlPattern() {
+            return guiUrlPattern;
         }
 
-        public void setGuiUrl(String guiUrl) {
-            this.guiUrl = guiUrl;
+        public void setGuiUrlPattern(String guiUrlPattern) {
+            this.guiUrlPattern = guiUrlPattern;
         }
     }
 }
