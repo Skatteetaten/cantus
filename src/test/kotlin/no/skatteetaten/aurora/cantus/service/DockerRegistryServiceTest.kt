@@ -49,7 +49,6 @@ class DockerRegistryServiceTest {
         newFixedThreadPoolContext(6, "cantus")
     )
 
-
     @Test
     fun `Verify that if V2 content type is set then retrieve manifest with V2 method`() {
         every {
