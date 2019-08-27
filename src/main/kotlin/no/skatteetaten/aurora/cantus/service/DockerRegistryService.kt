@@ -76,12 +76,8 @@ class DockerRegistryService(
         imageManifestResponse: ImageManifestResponseDto
     ): ImageManifestDto {
 
-        val manifestBody = imageManifestResponse
-            .manifestBody
-            .checkSchemaCompatibility(
-                contentType = imageManifestResponse.contentType,
-                imageRepoCommand = imageRepoCommand
-            )
+        val configDigest = imageManifestResponse.manifestBody.at("/config/digest").textValue()
+        val manifestBody = httpClient.getConfig(imageRepoCommand, configDigest)
 
         val environmentVariables = manifestBody.getEnvironmentVariablesFromManifest()
 
@@ -105,40 +101,11 @@ class DockerRegistryService(
         )
     }
 
-    // TODO: Not sure that putting this on JsonNode is the right way?
-    private fun JsonNode.checkSchemaCompatibility(
-        contentType: String,
-        imageRepoCommand: ImageRepoCommand
-    ): JsonNode =
-        when (contentType) {
-            manifestV2 -> {
-                httpClient.getConfig(imageRepoCommand, at("/config/digest").textValue())
-            }
-            else -> {
-                this.getV1CompatibilityFromManifest(imageRepoCommand)
-            }
-        }
-
-    private fun JsonNode.getV1CompatibilityFromManifest(imageRepoCommand: ImageRepoCommand): JsonNode {
-        val v1Compatibility =
-            this.get("history")?.get(0)?.get("v1Compatibility")?.asText() ?: throw SourceSystemException(
-                message = "Body of v1 manifest is empty for image ${imageRepoCommand.manifestRepo}",
-                sourceSystem = imageRepoCommand.registry
-            )
-
-        return jacksonObjectMapper().readTree(v1Compatibility)
-    }
-
     private fun JsonNode.getVariableFromManifestBody(label: String) = this.get(label)?.asText() ?: ""
 
     fun findBlobs(manifest: ImageManifestResponseDto): List<String> {
-        return if (manifest.contentType == manifestV2) {
-            val layers: ArrayNode = manifest.manifestBody["layers"] as ArrayNode
-            layers.map { it["digest"].textValue() } + manifest.manifestBody.at("/config/digest").textValue()
-        } else {
-            val layers: ArrayNode = manifest.manifestBody["fsLayers"] as ArrayNode
-            layers.map { it["blobSum"].textValue() }
-        }
+        val layers: ArrayNode = manifest.manifestBody["layers"] as ArrayNode
+        return layers.map { it["digest"].textValue() } + manifest.manifestBody.at("/config/digest").textValue()
     }
 
     fun getImageManifestInformation(

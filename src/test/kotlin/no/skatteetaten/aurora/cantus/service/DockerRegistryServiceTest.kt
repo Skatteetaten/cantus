@@ -49,40 +49,6 @@ class DockerRegistryServiceTest {
         newFixedThreadPoolContext(6, "cantus")
     )
 
-    @Test
-    fun `Verify fetches manifest information for specified image v1`() {
-
-        val dto = ImageManifestResponseDto(
-            contentType = manifestV1,
-            dockerContentDigest = "SHA::256",
-            manifestBody = objectMapper.readTestResourceAsJson("dockerManifestV1.json")
-        )
-        every { httpClient.getImageManifest(any()) } returns dto
-        val jsonResponse = dockerService.getImageManifestInformation(from)
-
-        assertThat(jsonResponse).isNotNull().given {
-            assertThat(it.dockerDigest).isEqualTo("SHA::256")
-            assertThat(it.dockerVersion).isEqualTo("1.13.1")
-            assertThat(it.buildEnded).isEqualTo("2018-11-05T14:01:22.654389192Z")
-        }
-    }
-
-    @Test
-    fun `v1 manifest with no config throws error`() {
-
-        val dto = ImageManifestResponseDto(
-            contentType = manifestV1,
-            dockerContentDigest = "SHA::256",
-            manifestBody = objectMapper.readTestResourceAsJson("dockerManifestV1Error.json")
-        )
-
-        every { httpClient.getImageManifest(any()) } returns dto
-        val exception = catch { dockerService.getImageManifestInformation(from) }
-
-        assertThat(exception)
-            .isNotNull().isInstanceOf(SourceSystemException::class)
-            .message().isNotNull().contains("Body of v1 manifest is empty")
-    }
 
     @Test
     fun `Verify that if V2 content type is set then retrieve manifest with V2 method`() {
@@ -162,20 +128,6 @@ class DockerRegistryServiceTest {
     @Test
     fun `should find blobs for v2`() {
         val layers = dockerService.findBlobs(dtoV2)
-        assertThat(layers.size).isEqualTo(4)
-    }
-
-    @Test
-    fun `should find blobs for v1`() {
-
-        val manifestJson = jacksonObjectMapper().readTestResourceAsJson("dockerManifestV1.json")
-        val dto = ImageManifestResponseDto(
-            manifestBody = manifestJson,
-            contentType = manifestV1,
-            dockerContentDigest = "foobar"
-        )
-
-        val layers = dockerService.findBlobs(dto)
         assertThat(layers.size).isEqualTo(4)
     }
 

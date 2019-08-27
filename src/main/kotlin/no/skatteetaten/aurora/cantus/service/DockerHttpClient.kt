@@ -29,7 +29,6 @@ import java.time.Duration
 
 private val logger = KotlinLogging.logger {}
 
-const val manifestV1 = "application/vnd.docker.distribution.manifest.v1+json"
 const val manifestV2 = "application/vnd.docker.distribution.manifest.v2+json"
 
 const val uploadUUIDHeader = "Docker-Upload-UUID"

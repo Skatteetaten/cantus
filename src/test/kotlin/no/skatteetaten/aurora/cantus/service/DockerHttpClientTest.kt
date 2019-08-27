@@ -228,12 +228,12 @@ class DockerHttpClientTest {
             MockResponse()
                 .setJsonFileAsBody("dockerManifestV1.json")
                 .addHeader("Docker-Content-Digest", "SHA::256")
-                .setHeader("Content-Type", MediaType.valueOf(manifestV1))
+                .setHeader("Content-Type", MediaType.valueOf(manifestV2))
 
         server.execute(response) {
             val jsonResponse = httpClient.getImageManifest(imageRepoCommand)
             assertThat(jsonResponse).isNotNull().given {
-                assertThat(it.contentType).contains("v1")
+                assertThat(it.contentType).contains("v2+json")
                 assertThat(it.dockerContentDigest).isEqualTo("SHA::256")
                 assertThat(it.manifestBody).isNotNull()
             }
