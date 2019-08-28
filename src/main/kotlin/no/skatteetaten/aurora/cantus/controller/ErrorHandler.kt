@@ -11,7 +11,7 @@ import reactor.retry.RetryExhaustedException
 import reactor.retry.retryExponentialBackoff
 import java.time.Duration
 
-private const val blockTimeout: Long = 30
+private const val blockTimeout: Long = 300
 private val logger = KotlinLogging.logger {}
 
 fun <T : Any?> Mono<T>.blockAndHandleErrorWithRetry(
