@@ -117,12 +117,15 @@ class DockerHttpClient(
             sourceSystem = imageRepoCommand.registry
         )
 
-        // TODO: If content type is wrong then we will not get a body either way
-        // TODO: ContentType is always set? So just !! here? If i do not set ContentType the system will set octetstream.
-        val contentType = headers["Content-Type"]?.first() ?: throw SourceSystemException(
-            message = "Required header=Content-Type is not present",
-            sourceSystem = imageRepoCommand.registry
-        )
+        val contentType = headers["Content-Type"]?.first() ?: ""
+
+        if (contentType != manifestV2) {
+            logger.info("Old image manifest detected for image=${imageRepoCommand.artifactRepo}:${imageRepoCommand.imageTag}")
+            throw SourceSystemException(
+                message = "Only v2 manifest is supported. contentType=$contentType image=${imageRepoCommand.artifactRepo}:${imageRepoCommand.imageTag}",
+                sourceSystem = imageRepoCommand.registry
+            )
+        }
 
         val contentDigestLabel: String = headers[dockerContentDigestLabel]?.first() ?: throw SourceSystemException(
             message = "Required header=$dockerContentDigestLabel is not present",

@@ -276,7 +276,8 @@ class DockerHttpClientTest {
 
             assertThat(exception)
                 .isNotNull().isInstanceOf(SourceSystemException::class)
-                .message().isNotNull().contains("Required header=Docker-Content-Digest is not present")
+                .message().isNotNull()
+                .contains("Only v2 manifest is supported. contentType=application/json;charset=UTF-8")
         }
     }
 
