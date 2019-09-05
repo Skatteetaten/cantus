@@ -20,7 +20,6 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.2.2")
 
     testImplementation("com.squareup.okhttp3:mockwebserver:3.14.2")
-
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("io.projectreactor.addons:reactor-extra:3.2.3.RELEASE")
     implementation("org.springframework.boot:spring-boot-starter-web")

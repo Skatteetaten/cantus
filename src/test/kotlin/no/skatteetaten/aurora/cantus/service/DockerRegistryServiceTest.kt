@@ -20,6 +20,10 @@ import no.skatteetaten.aurora.cantus.controller.ImageRepoCommand
 import no.skatteetaten.aurora.cantus.controller.SourceSystemException
 import org.junit.jupiter.api.Test
 import org.springframework.util.ResourceUtils
+import reactor.core.publisher.Flux
+import reactor.core.publisher.Mono
+import reactor.core.publisher.toFlux
+import reactor.core.publisher.toMono
 
 class DockerRegistryServiceTest {
 
@@ -156,7 +160,9 @@ class DockerRegistryServiceTest {
     fun `should put non existing blob`() {
         val digest = "sha256::foobar"
         val uuid = "uuid-is-this"
-        val blob = "tehContent".toByteArray()
+
+        val blob: Mono<ByteArray> = "this is teh content".toByteArray().toMono()
+
         every { httpClient.digestExistInRepo(to, digest) } returns false
 
         every { httpClient.getUploadUUID(to) } returns uuid

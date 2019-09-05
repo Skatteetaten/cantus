@@ -25,6 +25,10 @@ import okhttp3.mockwebserver.RecordedRequest
 import org.junit.jupiter.api.Test
 import org.springframework.http.MediaType
 import org.springframework.web.reactive.function.client.WebClient
+import reactor.core.publisher.Flux
+import reactor.core.publisher.Mono
+import reactor.core.publisher.toFlux
+import reactor.core.publisher.toMono
 
 class DockerHttpClientTest {
     private val server = MockWebServer()
@@ -54,7 +58,7 @@ class DockerHttpClientTest {
     @Test
     fun `verify upload layer will retry`() {
 
-        val content = "this is teh content".toByteArray()
+        val content: Mono<ByteArray> = "this is teh content".toByteArray().toMono()
 
         val fail = MockResponse().setResponseCode(404)
         // Any response will do here.
@@ -74,7 +78,7 @@ class DockerHttpClientTest {
 
     fun `verify upload layer will retry and fail after 4 times`() {
 
-        val content = "this is teh content".toByteArray()
+        val content: Mono<ByteArray> = "this is teh content".toByteArray().toMono()
 
         val fail = MockResponse().setResponseCode(404)
 
@@ -90,7 +94,7 @@ class DockerHttpClientTest {
 
     @Test
     fun `verify upload layer`() {
-        val content = "this is teh content".toByteArray()
+        val content: Mono<ByteArray> = "this is teh content".toByteArray().toMono()
 
         // Any response will do here.
         val response =
@@ -168,21 +172,8 @@ class DockerHttpClientTest {
         val response = MockResponse().setBody("This is a test")
 
         server.execute(response) {
-            val blob = httpClient.getLayer(imageRepoCommand, "SHA::256")
+            val blob = httpClient.getLayer(imageRepoCommand, "SHA::256").block()
             assertThat(blob).isNotNull()
-        }
-    }
-
-    @Test
-    fun `Verify fetch layer throw exception on failure`() {
-        val response =
-            MockResponse()
-                .setResponseCode(404)
-
-        server.execute(response, response, response, response) {
-            val exception = catch { httpClient.getLayer(imageRepoCommand, "SHA::256") }
-
-            assertThat(exception).isNotNull().isInstanceOf(SourceSystemException::class)
         }
     }
 
@@ -191,7 +182,7 @@ class DockerHttpClientTest {
         val response = MockResponse().setBody("foobar")
 
         server.execute(response) {
-            val jsonResponse = httpClient.getLayer(imageRepoCommand, "SHA::256")
+            val jsonResponse = httpClient.getLayer(imageRepoCommand, "SHA::256").block()
             assertThat(jsonResponse).isNotNull()
         }
     }

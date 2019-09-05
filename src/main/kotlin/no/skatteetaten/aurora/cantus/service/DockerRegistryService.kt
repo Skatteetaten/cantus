@@ -11,6 +11,8 @@ import no.skatteetaten.aurora.cantus.controller.ImageRepoCommand
 import no.skatteetaten.aurora.cantus.controller.SourceSystemException
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
+import reactor.core.publisher.Mono
+import reactor.core.publisher.Signal
 import java.util.HashSet
 
 private val logger = KotlinLogging.logger {}
@@ -63,7 +65,7 @@ class DockerRegistryService(
         }
 
         val uuid = httpClient.getUploadUUID(to)
-        val data: ByteArray = httpClient.getLayer(from, digest)
+        val data: Mono<ByteArray> = httpClient.getLayer(from, digest)
 
         return httpClient.uploadLayer(to, uuid, digest, data).also {
             logger.debug("Blob=$digest pushed to=${to.artifactRepo} success=$it")

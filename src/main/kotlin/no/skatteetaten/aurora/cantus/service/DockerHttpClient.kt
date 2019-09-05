@@ -22,6 +22,7 @@ import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.reactive.function.client.ClientResponse
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.WebClientResponseException
+import org.springframework.web.reactive.function.client.body
 import org.springframework.web.reactive.function.client.bodyToMono
 import reactor.core.publisher.Mono
 import reactor.core.publisher.switchIfEmpty
@@ -83,13 +84,13 @@ class DockerHttpClient(
         to: ImageRepoCommand,
         uuid: String,
         digest: String,
-        data: ByteArray
+        data: Mono<ByteArray>
     ): Boolean {
         return to.createRequest(
             method = HttpMethod.PUT, path = "{imageGroup}/{imageName}/blobs/uploads/{uuid}?digest={digest}",
             pathVariables = mapOf("uuid" to uuid, "digest" to digest)
         )
-            .body(BodyInserters.fromObject(data))
+            .body(data)
             .headers { headers ->
                 headers.contentType = MediaType.APPLICATION_OCTET_STREAM
             }
@@ -153,11 +154,13 @@ class DockerHttpClient(
             sourceSystem = imageRepoCommand.registry
         )
 
-    fun getLayer(imageRepoCommand: ImageRepoCommand, digest: String) =
-        this.getBlob(imageRepoCommand, digest) ?: throw SourceSystemException(
-            message = "Unable to retrieve blob with digest=$digest from repo=${imageRepoCommand.artifactRepo}",
-            sourceSystem = imageRepoCommand.registry
+    fun getLayer(imageRepoCommand: ImageRepoCommand, digest: String): Mono<ByteArray> =
+        imageRepoCommand.createRequest(
+            path = "{imageGroup}/{imageName}/blobs/{digest}",
+            pathVariables = mapOf("digest" to digest)
         )
+            .retrieve()
+            .bodyToMono<ByteArray>()
 
     private fun getBlob(
         imageRepoCommand: ImageRepoCommand,
