@@ -20,9 +20,7 @@ import no.skatteetaten.aurora.cantus.controller.ImageRepoCommand
 import no.skatteetaten.aurora.cantus.controller.SourceSystemException
 import org.junit.jupiter.api.Test
 import org.springframework.util.ResourceUtils
-import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import reactor.core.publisher.toFlux
 import reactor.core.publisher.toMono
 
 class DockerRegistryServiceTest {

@@ -25,9 +25,7 @@ import okhttp3.mockwebserver.RecordedRequest
 import org.junit.jupiter.api.Test
 import org.springframework.http.MediaType
 import org.springframework.web.reactive.function.client.WebClient
-import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import reactor.core.publisher.toFlux
 import reactor.core.publisher.toMono
 
 class DockerHttpClientTest {

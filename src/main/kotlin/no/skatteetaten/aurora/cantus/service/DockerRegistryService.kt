@@ -12,7 +12,6 @@ import no.skatteetaten.aurora.cantus.controller.SourceSystemException
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
-import reactor.core.publisher.Signal
 import java.util.HashSet
 
 private val logger = KotlinLogging.logger {}
