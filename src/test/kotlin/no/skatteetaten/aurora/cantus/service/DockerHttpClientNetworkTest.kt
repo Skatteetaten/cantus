@@ -36,7 +36,7 @@ class DockerHttpClientNetworkTest {
         imageTag = "2",
         token = "bearer token",
         authType = Bearer,
-        url = "http://${url.host()}:${url.port()}/v2"
+        url = "http://${url.host}:${url.port}/v2"
     )
 
     private val applicationConfig = ApplicationConfig()

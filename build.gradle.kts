@@ -17,7 +17,6 @@ plugins {
     id("no.skatteetaten.gradle.aurora") version "2.4.2"
 }
 
-
 dependencies {
     implementation("uk.q3c.rest:hal-kotlin:0.5.4.0.db32476")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-slf4j:1.3.1")

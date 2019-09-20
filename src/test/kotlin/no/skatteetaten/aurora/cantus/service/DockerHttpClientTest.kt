@@ -33,13 +33,13 @@ class DockerHttpClientTest {
     private val url = server.url("/")
 
     private val imageRepoCommand = ImageRepoCommand(
-        registry = "${url.host()}:${url.port()}",
+        registry = "${url.host}:${url.port}",
         imageGroup = "no_skatteetaten_aurora_demo",
         imageName = "whoami",
         imageTag = "2",
         token = "bearer token",
         authType = Bearer,
-        url = "http://${url.host()}:${url.port()}/v2"
+        url = "http://${url.host}:${url.port}/v2"
     )
 
     private val applicationConfig = ApplicationConfig()
@@ -289,11 +289,11 @@ class DockerHttpClientTest {
         }
     }
 
-    private fun Assert<List<RecordedRequest>>.retries(retries: Int) = given { requests ->
+    private fun Assert<List<RecordedRequest?>>.retries(retries: Int) = given { requests ->
         assertThat(requests).hasSize(retries + 1)
-        val firstPath = requests.first().path
+        val firstPath = requests.first()?.path
         for (i in 1..retries) {
-            assertThat(firstPath).isEqualTo(requests[i].path)
+            assertThat(firstPath).isEqualTo(requests[i]?.path)
         }
     }
 }
