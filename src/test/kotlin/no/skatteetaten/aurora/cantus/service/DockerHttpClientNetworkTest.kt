@@ -30,7 +30,7 @@ class DockerHttpClientNetworkTest {
     private val url = server.url("/")
 
     private val imageRepoCommand = ImageRepoCommand(
-        registry = "${url.host()}:${url.port()}",
+        registry = "${url.host}:${url.port}",
         imageGroup = "no_skatteetaten_aurora_demo",
         imageName = "whoami",
         imageTag = "2",
