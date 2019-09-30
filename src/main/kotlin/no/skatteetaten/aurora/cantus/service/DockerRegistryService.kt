@@ -135,7 +135,7 @@ class DockerRegistryService(
             )
         }
         val filteredTags = filter?.let { f ->
-            tagsResponse.tags.filter { it.contains(f) }
+            tagsResponse.tags.filter { it.toLowerCase().contains(f.toLowerCase()) }
         } ?: tagsResponse.tags
 
         return ImageTagsWithTypeDto(tags = filteredTags.map {
