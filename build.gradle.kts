@@ -1,5 +1,3 @@
-
-
 plugins {
     id("org.springframework.cloud.contract")
     id("org.jetbrains.kotlin.jvm") version "1.3.50"
@@ -15,6 +13,7 @@ plugins {
     id("se.patrikerdes.use-latest-versions") version "0.2.12"
 
     id("no.skatteetaten.gradle.aurora") version "2.4.2"
+    id("io.gitlab.arturbosch.detekt") version "1.1.1"
 }
 
 dependencies {
@@ -33,4 +32,15 @@ dependencies {
     testImplementation("com.willowtreeapps.assertk:assertk-jvm:0.19")
     testImplementation("com.nhaarman:mockito-kotlin:1.6.0")
     testImplementation("no.skatteetaten.aurora:mockmvc-extensions-kotlin:1.0.0")
+}
+
+detekt {
+    config = files("detekt.yml")
+    buildUponDefaultConfig = true
+}
+
+sonarqube {
+    properties {
+        property("sonar.kotlin.detekt.reportPaths", "build/reports/detekt/detekt.xml")
+    }
 }
