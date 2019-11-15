@@ -81,7 +81,7 @@ class ImageRepoCommandAssembler(
         val repoVariables = this.split("/")
         val repoVariablesSize = repoVariables.size
 
-        if (repoVariablesSize < 3 || repoVariablesSize > 4) throw IllegalArgumentException("repo url=$this malformed pattern=url:port/group/name:tag")
+        require(!(repoVariablesSize < 3 || repoVariablesSize > 4)) { "repo url=$this malformed pattern=url:port/group/name:tag" }
 
         if (repoVariablesSize == 3 && repoVariables[2].contains(":")) {
             val (name, tag) = repoVariables[2].split(":")
