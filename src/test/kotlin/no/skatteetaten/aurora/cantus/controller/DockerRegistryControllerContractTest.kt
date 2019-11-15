@@ -42,8 +42,7 @@ private const val defaultTestRegistry: String = "docker.com"
         ImageTagResourceAssembler::class,
         ImageRepoCommandAssembler::class,
         AuroraIntegration::class
-    ],
-    secure = false
+    ]
 )
 class DockerRegistryControllerContractTest {
 

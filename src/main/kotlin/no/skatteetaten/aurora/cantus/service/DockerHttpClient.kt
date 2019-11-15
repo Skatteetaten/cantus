@@ -196,7 +196,7 @@ class DockerHttpClient(
                 } else {
                     Mono.error(e)
                 }
-            }
+            }.log()
             .blockAndHandleErrorWithRetry(
                 "operation=BLOB_EXIST registry=${imageRepoCommand.artifactRepo} digest=$digest",
                 imageRepoCommand

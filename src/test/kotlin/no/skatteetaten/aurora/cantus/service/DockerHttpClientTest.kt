@@ -10,6 +10,7 @@ import assertk.assertions.isFalse
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
+import assertk.assertions.matches
 import assertk.assertions.message
 import no.skatteetaten.aurora.cantus.ApplicationConfig
 import no.skatteetaten.aurora.cantus.AuroraIntegration.AuthType.Bearer
@@ -26,7 +27,6 @@ import org.junit.jupiter.api.Test
 import org.springframework.http.MediaType
 import org.springframework.web.reactive.function.client.WebClient
 import reactor.core.publisher.Mono
-import reactor.core.publisher.toMono
 
 class DockerHttpClientTest {
     private val server = MockWebServer()
@@ -56,7 +56,7 @@ class DockerHttpClientTest {
     @Test
     fun `verify upload layer will retry`() {
 
-        val content: Mono<ByteArray> = "this is teh content".toByteArray().toMono()
+        val content: Mono<ByteArray> = Mono.just("this is teh content".toByteArray())
 
         val fail = MockResponse().setResponseCode(404)
         // Any response will do here.
@@ -76,7 +76,7 @@ class DockerHttpClientTest {
 
     fun `verify upload layer will retry and fail after 4 times`() {
 
-        val content: Mono<ByteArray> = "this is teh content".toByteArray().toMono()
+        val content: Mono<ByteArray> = Mono.just("this is teh content".toByteArray())
 
         val fail = MockResponse().setResponseCode(404)
 
@@ -92,7 +92,7 @@ class DockerHttpClientTest {
 
     @Test
     fun `verify upload layer`() {
-        val content: Mono<ByteArray> = "this is teh content".toByteArray().toMono()
+        val content: Mono<ByteArray> = Mono.just("this is teh content".toByteArray())
 
         // Any response will do here.
         val response =
@@ -117,7 +117,7 @@ class DockerHttpClientTest {
             assertThat { httpClient.putManifest(imageRepoCommand, manifest) }
                 .isFailure().isNotNull().isInstanceOf(SourceSystemException::class)
                 .message().isNotNull()
-                .contains("cause=NotFound lastError=404 Not Found operation=PUT_MANIFEST")
+                .matches(Regex(".*cause=NotFound lastError=404 Not Found from PUT .* operation=PUT_MANIFEST .*"))
         }
     }
 
@@ -128,7 +128,7 @@ class DockerHttpClientTest {
             assertThat { httpClient.digestExistInRepo(imageRepoCommand, "abc") }
                 .isFailure().isNotNull().isInstanceOf(SourceSystemException::class)
                 .message().isNotNull()
-                .contains("cause=Unauthorized lastError=401 Unauthorized operation=BLOB_EXIST")
+                .matches(Regex(".*cause=Unauthorized lastError=401 Unauthorized from HEAD .* operation=BLOB_EXIST.*"))
         }
     }
 
@@ -154,12 +154,12 @@ class DockerHttpClientTest {
 
     @Test
     fun `Verify get upload UUID header`() {
-        val header = "abcas1456"
-        val response = MockResponse().addHeader(uploadUUIDHeader, header)
+        val expectedHeader = "abcas1456"
+        val response = MockResponse().addHeader(uploadUUIDHeader, expectedHeader)
 
         server.execute(response) {
-            val header = httpClient.getUploadUUID(imageRepoCommand)
-            assertThat(header).isEqualTo(header)
+            val actualHeader = httpClient.getUploadUUID(imageRepoCommand)
+            assertThat(actualHeader).isEqualTo(expectedHeader)
         }
     }
 
