@@ -6,6 +6,7 @@ import io.netty.handler.timeout.ReadTimeoutHandler
 import io.netty.handler.timeout.WriteTimeoutHandler
 import kotlinx.coroutines.newFixedThreadPoolContext
 import mu.KotlinLogging
+import no.skatteetaten.aurora.cantus.controller.BadRequestException
 import no.skatteetaten.aurora.filter.logging.AuroraHeaderFilter
 import no.skatteetaten.aurora.filter.logging.RequestKorrelasjon
 import org.springframework.beans.factory.annotation.Value
@@ -22,7 +23,7 @@ import org.springframework.http.codec.json.Jackson2JsonEncoder
 import org.springframework.web.reactive.function.client.ExchangeFilterFunction
 import org.springframework.web.reactive.function.client.ExchangeStrategies
 import org.springframework.web.reactive.function.client.WebClient
-import reactor.core.publisher.toMono
+import reactor.kotlin.core.publisher.toMono
 import reactor.netty.http.client.HttpClient
 import reactor.netty.tcp.SslProvider
 import reactor.netty.tcp.TcpClient
@@ -35,6 +36,8 @@ import javax.net.ssl.TrustManagerFactory
 import kotlin.math.min
 
 private val logger = KotlinLogging.logger {}
+
+private const val MAX_ACCEPTED_TOKEN_LENGTH = 11
 
 @Configuration
 class ApplicationConfig {
@@ -58,7 +61,8 @@ class ApplicationConfig {
             .exchangeStrategies(exchangeStrategies())
             .filter(ExchangeFilterFunction.ofRequestProcessor {
                 val bearer = it.headers()[HttpHeaders.AUTHORIZATION]?.firstOrNull()?.let { token ->
-                    val (name, value) = token.substring(0, min(token.length, 11)).split(" ")
+                    //TODO: move to a function
+                    val (name, value) = token.substring(0, min(token.length, MAX_ACCEPTED_TOKEN_LENGTH)).split(" ")
                     "$name=$value"
                 } ?: ""
                 logger.debug("HttpRequest method=${it.method()} url=${it.url()} $bearer")
@@ -69,7 +73,6 @@ class ApplicationConfig {
                     HttpClient
                         .from(tcpClient)
                         .compress(true)
-                    //  .wiretap(true) // TODO : REMOVE
                 )
             ).build()
 
@@ -132,6 +135,7 @@ class ApplicationConfig {
     @Profile("openshift")
     @Primary
     @Bean
+    @Suppress("TooGenericExceptionCaught")
     fun openshiftSSLContext(@Value("\${trust.store}") trustStoreLocation: String): KeyStore? =
         KeyStore.getInstance(KeyStore.getDefaultType())?.let { ks ->
             try {

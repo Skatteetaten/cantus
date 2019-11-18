@@ -22,7 +22,9 @@ import org.junit.jupiter.api.Test
 import org.springframework.util.ResourceUtils
 import reactor.core.publisher.Mono
 import reactor.core.publisher.toMono
+import kotlin.contracts.ExperimentalContracts
 
+@ExperimentalContracts
 class DockerRegistryServiceTest {
 
     private val from = ImageRepoCommand(
@@ -40,7 +42,7 @@ class DockerRegistryServiceTest {
     private val objectMapper = jacksonObjectMapper()
 
     private val dtoV2 = ImageManifestResponseDto(
-        contentType = manifestV2,
+        contentType = MANIFEST_V2,
         dockerContentDigest = "sha256",
         manifestBody = objectMapper.readTestResourceAsJson("dockerManifestV2.json")
     )

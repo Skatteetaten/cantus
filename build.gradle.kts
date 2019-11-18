@@ -1,8 +1,12 @@
+repositories {
+    maven("https://repo.spring.io/snapshot")
+    mavenCentral()
+}
 plugins {
     id("org.springframework.cloud.contract")
     id("org.jetbrains.kotlin.jvm") version "1.3.50"
     id("org.jetbrains.kotlin.plugin.spring") version "1.3.50"
-    id("org.jlleitschuh.gradle.ktlint") version "8.2.0"
+    id("org.jlleitschuh.gradle.ktlint") version "9.1.1"
     id("org.sonarqube") version "2.8"
 
     id("org.springframework.boot") version "2.2.1.RELEASE"
@@ -29,6 +33,7 @@ dependencies {
     implementation("io.projectreactor.addons:reactor-extra:3.3.0.RELEASE")
     implementation("org.springframework.boot:spring-boot-starter-web")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    implementation("io.projectreactor.kotlin:reactor-kotlin-extensions:1.0.0.BUILD-SNAPSHOT")
 
     testImplementation("io.mockk:mockk:1.9.3")
     testImplementation("com.willowtreeapps.assertk:assertk-jvm:0.19")

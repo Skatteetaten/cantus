@@ -1,7 +1,10 @@
 package no.skatteetaten.aurora.cantus.controller
 
 import no.skatteetaten.aurora.cantus.AuroraIntegration
+import org.springframework.http.HttpHeaders
+import org.springframework.http.HttpMethod
 import org.springframework.stereotype.Component
+import org.springframework.web.reactive.function.client.WebClient
 
 data class TagCommand(
     val from: String,
@@ -33,6 +36,23 @@ data class ImageRepoCommand(
             "imageName" to imageName,
             "imageTag" to imageTag
         )
+
+    fun createRequest(
+        webClient: WebClient,
+        path: String,
+        method: HttpMethod = HttpMethod.GET,
+        pathVariables: Map<String, String> = emptyMap()
+    ) = webClient
+        .method(method)
+        .uri(
+            "${this.url}/$path",
+            this.mappedTemplateVars + pathVariables
+        )
+        .headers { headers ->
+            this.token?.let {
+                headers.set(HttpHeaders.AUTHORIZATION, "${this.authType} $it")
+            }
+        }
 }
 
 data class ImageRepo(
@@ -45,6 +65,10 @@ data class ImageRepo(
 fun AuroraIntegration.findRegistry(registry: String): AuroraIntegration.DockerRegistry? =
     this.docker.values.find { it.url == registry && it.isEnabled }
 
+private const val SIZE_OF_COMPLETE_IMAGE_REPO = 4
+private const val SIZE_OF_IMAGE_REPO_WITHOUT_TAG = 3
+private const val INDEX_OF_IMAGE_TAG = 3
+
 @Component
 class ImageRepoCommandAssembler(
     val aurora: AuroraIntegration
@@ -56,13 +80,12 @@ class ImageRepoCommandAssembler(
         val imageRepo = url.toImageRepo()
 
         val registry = aurora.findRegistry(imageRepo.registry)
-            ?: throw BadRequestException("Invalid Docker Registry URL url=${imageRepo.registry}")
 
-        if (registry.auth == null)
-            throw BadRequestException("Registry authType is required")
-
-        if (registry.auth != AuroraIntegration.AuthType.None && bearerToken.isNullOrBlank())
-            throw BadRequestException("Registry required authentication")
+        require(registry != null) { "Invalid Docker Registry URL url=${imageRepo.registry}" }
+        require(registry.auth != null) { "Registry authType is required" }
+        require(registry.auth != AuroraIntegration.AuthType.None && bearerToken.isNotNullOrBlank()) {
+            "Registry required authentication"
+        }
 
         val scheme = if (registry.isHttps) "https://" else "http://"
 
@@ -77,27 +100,43 @@ class ImageRepoCommandAssembler(
         )
     }
 
+    private fun String?.isNotNullOrBlank() = !this.isNullOrBlank()
+
     private fun String.toImageRepo(): ImageRepo {
         val repoVariables = this.split("/")
         val repoVariablesSize = repoVariables.size
+        this.verifyUrlPattern(repoVariablesSize)
+        return repoVariables.toImageRepo()
+    }
 
-        require(!(repoVariablesSize < 3 || repoVariablesSize > 4)) { "repo url=$this malformed pattern=url:port/group/name:tag" }
-
-        if (repoVariablesSize == 3 && repoVariables[2].contains(":")) {
-            val (name, tag) = repoVariables[2].split(":")
+    private fun List<String>.toImageRepo(): ImageRepo{
+        if(repoUrlHasColonBetweenNameAndTag(this.size, this)) {
+          val (name, tag) = this[2].split(":")
             return ImageRepo(
-                registry = repoVariables[0],
-                imageGroup = repoVariables[1],
+                registry = this[0],
+                imageGroup = this[1],
                 imageName = name,
                 imageTag = tag
             )
         }
-
         return ImageRepo(
-            registry = repoVariables[0],
-            imageGroup = repoVariables[1],
-            imageName = repoVariables[2],
-            imageTag = repoVariables.getOrNull(3)
+            registry = this[0],
+            imageGroup = this[1],
+            imageName = this[2],
+            imageTag = this.getOrNull(INDEX_OF_IMAGE_TAG)
         )
+    }
+    private fun repoUrlHasColonBetweenNameAndTag(
+        repoVariablesSize: Int,
+        repoVariables: List<String>
+    ) = repoVariablesSize == SIZE_OF_IMAGE_REPO_WITHOUT_TAG && repoVariables[2].contains(":")
+
+    private fun String.verifyUrlPattern(repoVariablesSize: Int) {
+        require(
+            repoVariablesSize == SIZE_OF_IMAGE_REPO_WITHOUT_TAG || repoVariablesSize ==
+                SIZE_OF_COMPLETE_IMAGE_REPO
+        ) {
+            "repo url=$this malformed pattern=url:port/group/name:tag"
+        }
     }
 }

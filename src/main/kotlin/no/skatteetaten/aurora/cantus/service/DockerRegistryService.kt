@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
 import java.util.HashSet
+import kotlin.contracts.ExperimentalContracts
 
 private val logger = KotlinLogging.logger {}
 
@@ -39,6 +40,7 @@ class DockerRegistryService(
     /*
        Inspiration from method in the following blogpost https://www.danlorenc.com/posts/containers-part-2/
      */
+    @ExperimentalContracts
     fun tagImage(from: ImageRepoCommand, to: ImageRepoCommand): Boolean {
 
         val manifest = httpClient.getImageManifest(from)
@@ -109,6 +111,7 @@ class DockerRegistryService(
         return layers.map { it["digest"].textValue() } + manifest.manifestBody.at("/config/digest").textValue()
     }
 
+    @ExperimentalContracts
     fun getImageManifestInformation(
         imageRepoCommand: ImageRepoCommand
     ): ImageManifestDto {
@@ -130,7 +133,8 @@ class DockerRegistryService(
 
         if (tagsResponse == null || tagsResponse.tags.isEmpty()) {
             throw SourceSystemException(
-                message = "Resource could not be found status=${HttpStatus.NOT_FOUND.value()} message=${HttpStatus.NOT_FOUND.reasonPhrase}",
+                message = "Resource could not be found status=${HttpStatus.NOT_FOUND.value()}" + "" +
+                    "message=${HttpStatus.NOT_FOUND.reasonPhrase}",
                 sourceSystem = url
             )
         }

@@ -29,9 +29,11 @@ import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.RequestBuilder
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
+import kotlin.contracts.ExperimentalContracts
 
 private const val defaultTestRegistry: String = "docker.com"
 
+@ExperimentalContracts
 @WebMvcTest(
     value = [
         DockerRegistryController::class,
