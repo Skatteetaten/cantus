@@ -22,7 +22,9 @@ import org.junit.jupiter.params.provider.ValueSource
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.web.reactive.function.client.WebClient
+import kotlin.contracts.ExperimentalContracts
 
+@ExperimentalContracts
 @TestInstance(TestInstance.Lifecycle.PER_METHOD)
 class DockerHttpClientNetworkTest {
 
@@ -62,7 +64,7 @@ class DockerHttpClientNetworkTest {
         val mockResponse = MockResponse()
             .setResponseCode(statusCode)
             .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-            .addHeader(dockerContentDigestLabel, "sha256")
+            .addHeader(DOCKER_CONTENT_DIGEST_HEADER_LABEL, "sha256")
 
         server.execute(mockResponse) {
             assertThat { httpClient.getImageManifest(imageRepoCommand) }
@@ -103,7 +105,7 @@ class DockerHttpClientNetworkTest {
 
         val response = MockResponse()
             .setJsonFileAsBody("dockerManifestV1.json")
-            .addHeader(dockerContentDigestLabel, "SHA::256")
+            .addHeader(DOCKER_CONTENT_DIGEST_HEADER_LABEL, "SHA::256")
             .apply { this.socketPolicy = socketPolicy }
 
         server.execute(response) {

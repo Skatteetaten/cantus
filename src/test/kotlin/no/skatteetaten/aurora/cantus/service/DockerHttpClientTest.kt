@@ -12,6 +12,7 @@ import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
 import assertk.assertions.matches
 import assertk.assertions.message
+import mu.KotlinLogging
 import no.skatteetaten.aurora.cantus.ApplicationConfig
 import no.skatteetaten.aurora.cantus.AuroraIntegration.AuthType.Bearer
 import no.skatteetaten.aurora.cantus.controller.CantusException
@@ -27,7 +28,10 @@ import org.junit.jupiter.api.Test
 import org.springframework.http.MediaType
 import org.springframework.web.reactive.function.client.WebClient
 import reactor.core.publisher.Mono
+import kotlin.contracts.ExperimentalContracts
 
+private val logger = KotlinLogging.logger {}
+@ExperimentalContracts
 class DockerHttpClientTest {
     private val server = MockWebServer()
     private val url = server.url("/")
@@ -109,7 +113,7 @@ class DockerHttpClientTest {
     @Test
     fun `test put manifest failed`() {
 
-        val manifest = ImageManifestResponseDto(manifestV2, "abc", createObjectMapper().readTree("{}"))
+        val manifest = ImageManifestResponseDto(MANIFEST_V2, "abc", createObjectMapper().readTree("{}"))
 
         val response = MockResponse().setResponseCode(404)
             .setBody("{\"errors\":[{\"code\":\"BLOB_UNKNOWN\",\"message\":\"blob unknown to registry\",\"detail\":\"sha256:303510ed0dee065d6dc0dd4fbb1833aa27ff6177e7dfc72881ea4ea0716c82a1\"}]}")
@@ -155,7 +159,7 @@ class DockerHttpClientTest {
     @Test
     fun `Verify get upload UUID header`() {
         val expectedHeader = "abcas1456"
-        val response = MockResponse().addHeader(uploadUUIDHeader, expectedHeader)
+        val response = MockResponse().addHeader(UPLOAD_UUID_HEADER_LABEL, expectedHeader)
 
         server.execute(response) {
             val actualHeader = httpClient.getUploadUUID(imageRepoCommand)
@@ -214,7 +218,7 @@ class DockerHttpClientTest {
             MockResponse()
                 .setJsonFileAsBody("dockerManifestV1.json")
                 .addHeader("Docker-Content-Digest", "SHA::256")
-                .setHeader("Content-Type", MediaType.valueOf(manifestV2))
+                .setHeader("Content-Type", MediaType.valueOf(MANIFEST_V2))
 
         server.execute(response) {
             val jsonResponse = httpClient.getImageManifest(imageRepoCommand)
@@ -243,7 +247,7 @@ class DockerHttpClientTest {
 
     @Test
     fun `Verify that empty manifest response throws SourceSystemException`() {
-        val response = MockResponse().addHeader(dockerContentDigestLabel, "sha::256")
+        val response = MockResponse().addHeader(DOCKER_CONTENT_DIGEST_HEADER_LABEL, "sha::256")
 
         server.execute(response) {
             assertThat { httpClient.getImageManifest(imageRepoCommand) }
@@ -259,6 +263,9 @@ class DockerHttpClientTest {
         server.execute(response) {
             assertThat { httpClient.getImageManifest(imageRepoCommand) }
                 .isFailure()
+                .let {
+                    logger.info(it.name)
+                    it }
                 .isNotNull().isInstanceOf(SourceSystemException::class)
                 .message().isNotNull()
                 .contains("Only v2 manifest is supported. contentType=application/json;charset=UTF-8")

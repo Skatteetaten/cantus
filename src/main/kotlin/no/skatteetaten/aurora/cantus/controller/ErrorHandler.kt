@@ -6,29 +6,34 @@ import org.springframework.web.reactive.function.client.ClientResponse
 import org.springframework.web.reactive.function.client.WebClientResponseException
 import org.springframework.web.reactive.function.client.bodyToMono
 import reactor.core.publisher.Mono
-import reactor.core.publisher.toMono
+import reactor.kotlin.core.publisher.toMono
+import reactor.kotlin.extra.retry.retryExponentialBackoff
 import reactor.retry.RetryExhaustedException
-import reactor.retry.retryExponentialBackoff
 import java.time.Duration
 
-private const val blockTimeout: Long = 300
+private const val BLOCK_TIMEOUT: Long = 300
+private const val RETRY_MAX_ATTEMPTS = 3L
+private const val RETRY_FIRST_TIMEOUT_SECONDS = 100L
+private const val RETRY_MAX_TIMEOUT_SECONDS = 1L
 private val logger = KotlinLogging.logger {}
 
 fun <T : Any?> Mono<T>.blockAndHandleErrorWithRetry(
     message: String,
     imageRepoCommand: ImageRepoCommand? = null,
-    duration: Duration = Duration.ofSeconds(blockTimeout)
+    duration: Duration = Duration.ofSeconds(BLOCK_TIMEOUT)
 ) =
     this.retryRepoCommand(message).blockAndHandleError(duration, imageRepoCommand = imageRepoCommand, message = message)
 
+
 fun <T : Any?> Mono<T>.retryRepoCommand(message: String) = this.retryExponentialBackoff(
-    times = 3,
-    first = Duration.ofMillis(100),
-    max = Duration.ofSeconds(1)
+    times= RETRY_MAX_ATTEMPTS,
+    first= Duration.ofMillis(RETRY_FIRST_TIMEOUT_SECONDS),
+    max = Duration.ofSeconds(RETRY_MAX_TIMEOUT_SECONDS),
+    jitter = false
 ) {
     val e = it.exception()
     val exceptionClass = e::class.simpleName
-    if (it.iteration() == 3L) {
+    if (it.iteration() == RETRY_MAX_ATTEMPTS) {
         logger.warn {
             "Retry=last $message exception=$exceptionClass message=${e.localizedMessage}"
         }
@@ -40,12 +45,13 @@ fun <T : Any?> Mono<T>.retryRepoCommand(message: String) = this.retryExponential
 }
 
 fun <T> Mono<T>.blockAndHandleError(
-    duration: Duration = Duration.ofSeconds(blockTimeout),
+    duration: Duration = Duration.ofSeconds(BLOCK_TIMEOUT),
     imageRepoCommand: ImageRepoCommand? = null,
     message: String? = null
 ) =
     this.handleError(imageRepoCommand, message).toMono().block(duration)
 
+@Suppress("ForbiddenComment")
 // TODO: Se på error handling i hele denne filen
 fun <T> Mono<T>.handleError(imageRepoCommand: ImageRepoCommand?, message: String? = null) =
     this.doOnError {
@@ -72,7 +78,8 @@ private fun RetryExhaustedException.handleException(imageRepoCommand: ImageRepoC
 
 private fun WebClientResponseException.handleException(imageRepoCommand: ImageRepoCommand?, message: String?) {
     val msg =
-        "Error in response, status=$statusCode message=$statusText body=\"${this.responseBodyAsString}\" request_url=\"${this.request?.uri}\" request_method=\"${this.request?.method?.toString()}\" $message"
+        "Error in response, status=$statusCode message=$statusText body=\"${this.responseBodyAsString}\" " +
+            "request_url=\"${this.request?.uri}\" request_method=\"${this.request?.method?.toString()}\" $message"
     logger.warn { msg }
     throw SourceSystemException(
         message = msg,
@@ -83,7 +90,8 @@ private fun WebClientResponseException.handleException(imageRepoCommand: ImageRe
 
 private fun ReadTimeoutException.handleException(imageRepoCommand: ImageRepoCommand?, message: String?) {
     val imageMsg = imageRepoCommand?.let { cmd ->
-        "registry=\"${cmd.registry}\" imageGroup=\"${cmd.imageGroup}\" imageName=\"${cmd.imageName}\" imageTag=\"${cmd.imageTag}\""
+        "registry=\"${cmd.registry}\" imageGroup=\"${cmd.imageGroup}\" imageName=\"${cmd.imageName}\" " +
+            "imageTag=\"${cmd.imageTag}\""
     } ?: "no existing ImageRepoCommand"
     val msg = "Timeout when calling docker registry, $imageMsg $message"
     logger.warn { msg }

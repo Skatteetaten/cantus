@@ -20,11 +20,13 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import kotlin.contracts.ExperimentalContracts
 
 data class TagUrlsWrapper(val tagUrls: List<String>)
 
 private val logger = KotlinLogging.logger {}
 
+@ExperimentalContracts
 @RestController
 class DockerRegistryController(
     val dockerRegistryService: DockerRegistryService,
@@ -35,9 +37,11 @@ class DockerRegistryController(
 ) {
 
     /*
-      TODO: For now the bearer token is only for the push registry, we need to create a composite token in the future if pull demands authroization
+      TODO: For now the bearer token is only for the push registry,
+       we need to create a composite token in the future if pull demands authroization
      */
     @PostMapping("/tag")
+    @Suppress("TooGenericExceptionCaught")
     fun tagDockerImage(
         @RequestBody tagCommand: TagCommand,
         @RequestHeader(required = true, value = HttpHeaders.AUTHORIZATION) bearerToken: String
@@ -135,6 +139,7 @@ class DockerRegistryController(
         }
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private final inline fun <reified T : Any> getResponse(
         bearerToken: String?,
         repoUrl: String,
