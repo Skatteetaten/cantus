@@ -6,7 +6,6 @@ import io.netty.handler.timeout.ReadTimeoutHandler
 import io.netty.handler.timeout.WriteTimeoutHandler
 import kotlinx.coroutines.newFixedThreadPoolContext
 import mu.KotlinLogging
-import no.skatteetaten.aurora.cantus.controller.BadRequestException
 import no.skatteetaten.aurora.filter.logging.AuroraHeaderFilter
 import no.skatteetaten.aurora.filter.logging.RequestKorrelasjon
 import org.springframework.beans.factory.annotation.Value
@@ -23,7 +22,7 @@ import org.springframework.http.codec.json.Jackson2JsonEncoder
 import org.springframework.web.reactive.function.client.ExchangeFilterFunction
 import org.springframework.web.reactive.function.client.ExchangeStrategies
 import org.springframework.web.reactive.function.client.WebClient
-import reactor.kotlin.core.publisher.toMono
+import reactor.core.publisher.toMono
 import reactor.netty.http.client.HttpClient
 import reactor.netty.tcp.SslProvider
 import reactor.netty.tcp.TcpClient
@@ -61,9 +60,7 @@ class ApplicationConfig {
             .exchangeStrategies(exchangeStrategies())
             .filter(ExchangeFilterFunction.ofRequestProcessor {
                 val bearer = it.headers()[HttpHeaders.AUTHORIZATION]?.firstOrNull()?.let { token ->
-                    //TODO: move to a function
-                    val (name, value) = token.substring(0, min(token.length, MAX_ACCEPTED_TOKEN_LENGTH)).split(" ")
-                    "$name=$value"
+                    splitIntoBearerAndToken(token)
                 } ?: ""
                 logger.debug("HttpRequest method=${it.method()} url=${it.url()} $bearer")
                 it.toMono()
@@ -75,6 +72,11 @@ class ApplicationConfig {
                         .compress(true)
                 )
             ).build()
+
+    private fun splitIntoBearerAndToken(token: String): String {
+        val (name, value) = token.substring(0, min(token.length, MAX_ACCEPTED_TOKEN_LENGTH)).split(" ")
+        return "$name=$value"
+    }
 
     private fun exchangeStrategies(): ExchangeStrategies {
         val objectMapper = createObjectMapper()

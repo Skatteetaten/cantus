@@ -6,26 +6,21 @@ import no.skatteetaten.aurora.cantus.controller.ImageRepoCommand
 import no.skatteetaten.aurora.cantus.controller.SourceSystemException
 import no.skatteetaten.aurora.cantus.controller.blockAndHandleError
 import no.skatteetaten.aurora.cantus.controller.blockAndHandleErrorWithRetry
-import no.skatteetaten.aurora.cantus.controller.handleError
-import no.skatteetaten.aurora.cantus.controller.handleStatusCodeError
-import no.skatteetaten.aurora.cantus.controller.retryRepoCommand
 import no.skatteetaten.aurora.cantus.createObjectMapper
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpHeaders.EMPTY
 import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
+import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.BodyInserters
-import org.springframework.web.reactive.function.client.ClientResponse
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.WebClientResponseException
 import org.springframework.web.reactive.function.client.body
 import org.springframework.web.reactive.function.client.bodyToMono
 import reactor.core.publisher.Mono
 import java.time.Duration
-import kotlin.contracts.ExperimentalContracts
-import kotlin.contracts.contract
 
 private val logger = KotlinLogging.logger {}
 
@@ -35,28 +30,14 @@ const val UPLOAD_UUID_HEADER_LABEL = "Docker-Upload-UUID"
 const val DOCKER_CONTENT_DIGEST_HEADER_LABEL = "Docker-Content-Digest"
 
 private const val BLOCK_TIMEOUT_IN_SECONDS = 5L
-private val BLOCK_TIMEOUT_DURATION = Duration.ofSeconds(BLOCK_TIMEOUT_IN_SECONDS)
 
-@ExperimentalContracts
-private inline fun validResponse(
-    value: Boolean,
-    sourceSystem: String,
-    logMessage: String? = null,
-    lazyMessage: () -> Any
-) {
-    contract {
-        returns() implies value
-    }
-    if (!value) {
-        if (logMessage != null) {
-            logger.info { logMessage }
-        }
-        val message = lazyMessage()
-        throw SourceSystemException(message = message.toString(), sourceSystem = sourceSystem)
-    }
-}
+data class ManifestResponse(
+    val body: JsonNode?,
+    val headers: HttpHeaders
+)
 
 @Service
+@Suppress("TooManyFunctions")
 class DockerHttpClient(
     val webClient: WebClient
 ) {
@@ -67,7 +48,7 @@ class DockerHttpClient(
     fun getUploadUUID(
         to: ImageRepoCommand
     ): String {
-        val (_, headers) = to.createRequest(
+        val manifestResponse: ManifestResponse = to.createRequest(
             webClient = webClient,
             method = HttpMethod.POST,
             path = "{imageGroup}/{imageName}/blobs/uploads/"
@@ -75,10 +56,16 @@ class DockerHttpClient(
             .headers { headers ->
                 headers.contentLength = 0L
             }
-            .exchange()
+            .retrieve()
+            .toEntity(JsonNode::class.java)
             .performBodyAndHeader(to)
+            .blockAndHandleErrorWithRetry("operation=GET_UPLOAD_UUUID registry=${to.fullRepoCommand}")
+            ?: ManifestResponse(
+                null,
+                EMPTY
+            )
 
-        return headers[UPLOAD_UUID_HEADER_LABEL]?.first() ?: throw SourceSystemException(
+        return manifestResponse.headers[UPLOAD_UUID_HEADER_LABEL]?.first() ?: throw SourceSystemException(
             message = "Response to generate UUID header did not succeed",
             sourceSystem = to.registry
         )
@@ -130,17 +117,18 @@ class DockerHttpClient(
             ).let { true }
     }
 
-    @ExperimentalContracts
     fun getImageManifest(imageRepoCommand: ImageRepoCommand): ImageManifestResponseDto {
-        require(!imageRepoCommand.imageTag.isNullOrEmpty()) { "Invalid url=${imageRepoCommand.fullRepoCommand}" }
-
         val (body, headers) = imageRepoCommand
             .createRequest(webClient, "{imageGroup}/{imageName}/manifests/{imageTag}")
             .headers {
                 it.accept = dockerManifestAccept
-            }.exchange()
-            .retryRepoCommand("operation=GET_MANIFEST registry=${imageRepoCommand.fullRepoCommand}")
+            }.retrieve().toEntity(JsonNode::class.java)
             .performBodyAndHeader(imageRepoCommand)
+            .blockAndHandleErrorWithRetry("operation=GET_IMAGE_MANIFEST registry=${imageRepoCommand.fullRepoCommand}")
+            ?: ManifestResponse(
+                null,
+                EMPTY
+            )
 
         val (manifest, contentDigestLabel, contentType) =
             parseManifestVariables(body, headers, imageRepoCommand)
@@ -148,36 +136,46 @@ class DockerHttpClient(
         return ImageManifestResponseDto(contentType, contentDigestLabel, manifest)
     }
 
-    @ExperimentalContracts
     private fun parseManifestVariables(
         body: JsonNode?,
         headers: HttpHeaders,
         imageRepoCommand: ImageRepoCommand
     ): Triple<JsonNode, String, String> {
-        val manifest: JsonNode? = body
-        val contentDigestLabel: String? =
-            headers[DOCKER_CONTENT_DIGEST_HEADER_LABEL]?.first()
-        val contentType = headers["Content-Type"]?.first()
-
-        validResponse(
-            value = manifest != null,
+        val manifest = body ?: throw SourceSystemException(
+            message = "Manifest not found for image ${imageRepoCommand.manifestRepo}",
             sourceSystem = imageRepoCommand.registry
-        ) { "Manifest not found for image ${imageRepoCommand.manifestRepo}" }
+        )
 
-        validResponse(value = contentType == MANIFEST_V2, sourceSystem = imageRepoCommand.registry) {
-            "Only v2 manifest is supported. contentType=$contentType" +
-                " image=${imageRepoCommand.artifactRepo}:${imageRepoCommand.imageTag}"
-        }
+        val contentDigestLabel =
+            headers[DOCKER_CONTENT_DIGEST_HEADER_LABEL]?.first()
+                ?: throw SourceSystemException(
+                    message = "Required header=$DOCKER_CONTENT_DIGEST_HEADER_LABEL is not present",
+                    sourceSystem = imageRepoCommand.registry
+                )
 
-        validResponse(
-            value = contentDigestLabel != null,
-            sourceSystem = imageRepoCommand.registry,
-            logMessage = "Old image manifest detected for" +
-                "image=${imageRepoCommand.artifactRepo}:${imageRepoCommand.imageTag}"
-        ) {
-            "Required header=$DOCKER_CONTENT_DIGEST_HEADER_LABEL is not present"
-        }
+        val contentType = verifyManifestIsV2(headers["Content-Type"]?.first(), imageRepoCommand)
+
         return Triple(manifest, contentDigestLabel, contentType)
+    }
+
+    private fun verifyManifestIsV2(
+        contentType: String?,
+        imageRepoCommand: ImageRepoCommand
+    ): String {
+        if (contentType != MANIFEST_V2) {
+            logger.info {
+                "Old image manfiest detected for image=${imageRepoCommand.artifactRepo}:${imageRepoCommand
+                    .registry}"
+            }
+
+            throw SourceSystemException(
+                message = "Only v2 manifest is supported. contentType=$contentType " +
+                    "image=${imageRepoCommand.artifactRepo}:${imageRepoCommand.imageTag}",
+                sourceSystem = imageRepoCommand.registry
+            )
+        }
+
+        return contentType
     }
 
     fun getImageTags(imageRepoCommand: ImageRepoCommand): ImageTagsResponseDto? = imageRepoCommand
@@ -249,18 +247,8 @@ class DockerHttpClient(
         return result ?: false
     }
 
-    private fun Mono<ClientResponse>.performBodyAndHeader(imageRepoCommand: ImageRepoCommand) =
-        this.flatMap { resp: ClientResponse ->
-            if (!resp.statusCode().is2xxSuccessful) {
-                resp.handleStatusCodeError<Pair<JsonNode?, HttpHeaders>>(imageRepoCommand.registry)
-            } else {
-                resp.bodyToMono<JsonNode>().map { body ->
-                    body to resp.headers().asHttpHeaders()
-                }.switchIfEmpty(Mono.just(null to resp.headers().asHttpHeaders()))
-            }
-        }.handleError(imageRepoCommand)
-            .block(BLOCK_TIMEOUT_DURATION)
-            ?: null to EMPTY
-    // The line above must be here to get the types to align
-    // but it will never happen. We switch on Empty in the flagMap block
+    private fun Mono<ResponseEntity<JsonNode>>.performBodyAndHeader(imageRepoCommand: ImageRepoCommand) =
+        this.map { resp: ResponseEntity<JsonNode> ->
+            ManifestResponse(resp.body, resp.headers)
+        }
 }

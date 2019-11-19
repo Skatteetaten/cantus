@@ -20,13 +20,12 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
-import kotlin.contracts.ExperimentalContracts
 
 data class TagUrlsWrapper(val tagUrls: List<String>)
 
 private val logger = KotlinLogging.logger {}
 
-@ExperimentalContracts
+
 @RestController
 class DockerRegistryController(
     val dockerRegistryService: DockerRegistryService,
@@ -50,8 +49,8 @@ class DockerRegistryController(
         val to = imageRepoCommandAssembler.createAndValidateCommand(tagCommand.to, bearerToken)
 
         return try {
-            if (from.imageTag == null) throw BadRequestException("From spec=${tagCommand.from} does not contain a tag")
-            if (to.imageTag == null) throw BadRequestException("To spec=${tagCommand.from} does not contain a tag")
+            require(from.imageTag != null) { "From spec=${tagCommand.from} does not contain a tag" }
+            require(to.imageTag != null) { "To spec=${tagCommand.to} does not contain a tag" }
 
             val result = dockerRegistryService.tagImage(from, to)
             ResponseEntity(
@@ -64,12 +63,11 @@ class DockerRegistryController(
             )
         } catch (e: Exception) {
             logger.debug("Failed tagging exception occured")
-            val status = if (e is BadRequestException) {
+            val status = if (e is IllegalArgumentException) {
                 HttpStatus.BAD_REQUEST
             } else {
                 HttpStatus.INTERNAL_SERVER_ERROR
             }
-            // TODO: the http error in here is an authentication error then we should perhaps throw another status?
             ResponseEntity(
                 AuroraResponse(success = false, failure = listOf(CantusFailure(to.fullRepoCommand, e))),
                 status
@@ -88,7 +86,9 @@ class DockerRegistryController(
             runBlocking(MDCContext() + threadPoolContext) {
                 val deferred =
                     tagUrlsWrapper.tagUrls.map {
-                        async { getImageTagResource(bearerToken, it) }
+                        async {
+                            getImageTagResource(bearerToken, it)
+                        }
                     }
                 deferred.map { it.await() }
             }
@@ -106,8 +106,12 @@ class DockerRegistryController(
     private fun getImageTagResource(
         bearerToken: String?,
         tagUrl: String
-    ): Try<ImageTagResource, CantusFailure> {
-        return getResponse(bearerToken, tagUrl) { dockerService, imageRepoCommand ->
+    ): Try<ImageTagResource, CantusFailure> =
+        getResponse(bearerToken, tagUrl) { dockerService, imageRepoCommand ->
+            require(imageRepoCommand.imageTag != null) {
+                "ImageRepo with spec=${imageRepoCommand.fullRepoCommand} does not contain a tag"
+            }
+
             dockerService.getImageManifestInformation(imageRepoCommand)
                 .let { imageManifestDto ->
                     imageTagResourceAssembler.toImageTagResource(
@@ -116,7 +120,6 @@ class DockerRegistryController(
                     )
                 }
         }
-    }
 
     @GetMapping("/tags")
     fun getImageTags(

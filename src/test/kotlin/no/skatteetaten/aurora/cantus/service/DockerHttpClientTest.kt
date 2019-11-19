@@ -28,10 +28,9 @@ import org.junit.jupiter.api.Test
 import org.springframework.http.MediaType
 import org.springframework.web.reactive.function.client.WebClient
 import reactor.core.publisher.Mono
-import kotlin.contracts.ExperimentalContracts
 
 private val logger = KotlinLogging.logger {}
-@ExperimentalContracts
+
 class DockerHttpClientTest {
     private val server = MockWebServer()
     private val url = server.url("/")

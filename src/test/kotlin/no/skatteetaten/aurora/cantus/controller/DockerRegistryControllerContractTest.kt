@@ -31,11 +31,10 @@ import org.springframework.context.annotation.Bean
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.test.web.servlet.MockMvc
-import kotlin.contracts.ExperimentalContracts
 
 private const val defaultTestRegistry: String = "docker.com"
 
-@ExperimentalContracts
+
 @AutoConfigureRestDocs
 @WebMvcTest(
     value = [
