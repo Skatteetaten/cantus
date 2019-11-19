@@ -22,9 +22,7 @@ import org.junit.jupiter.params.provider.ValueSource
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.web.reactive.function.client.WebClient
-import kotlin.contracts.ExperimentalContracts
 
-@ExperimentalContracts
 @TestInstance(TestInstance.Lifecycle.PER_METHOD)
 class DockerHttpClientNetworkTest {
 

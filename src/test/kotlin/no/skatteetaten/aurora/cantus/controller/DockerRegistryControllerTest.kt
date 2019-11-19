@@ -29,11 +29,9 @@ import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.RequestBuilder
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
-import kotlin.contracts.ExperimentalContracts
 
 private const val defaultTestRegistry: String = "docker.com"
 
-@ExperimentalContracts
 @WebMvcTest(
     value = [
         DockerRegistryController::class,
@@ -62,7 +60,7 @@ class DockerRegistryControllerTest {
     private val tags = ImageTagsWithTypeDtoBuilder("no_skatteetaten_aurora_demo", "whoami").build()
 
     @Test
-    fun `Get request given invalid repoUrl throw BadRequestException when missing registryUrl`() {
+    fun `Get request given invalid repoUrl throw IllegalArgumentException when missing registryUrl`() {
         val path = "/tags?repoUrl=no_skatteetaten_aurora_demo/whaomi"
         val repoUrl = path.split("=")[1]
 
@@ -77,7 +75,7 @@ class DockerRegistryControllerTest {
     }
 
     @Test
-    fun `Get request given invalid repoUrl throw BadRequestException when missing name`() {
+    fun `Get request given invalid repoUrl throw IllegalArgumentException when missing name`() {
 
         val path = "/tags/?repoUrl=$defaultTestRegistry/no_skatteetaten_aurora"
         val repoUrl = path.split("=")[1]
@@ -124,7 +122,7 @@ class DockerRegistryControllerTest {
         val tagUrlsWrapper = TagUrlsWrapper(listOf(""))
 
         given(dockerService.getImageManifestInformation(any()))
-            .willThrow(BadRequestException("Invalid url=${tagUrlsWrapper.tagUrls.first()}"))
+            .willThrow(IllegalArgumentException("Invalid url=${tagUrlsWrapper.tagUrls.first()}"))
 
         mockMvc.post(
             path = Path("/manifest"),

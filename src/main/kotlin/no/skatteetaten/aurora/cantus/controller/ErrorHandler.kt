@@ -2,18 +2,16 @@ package no.skatteetaten.aurora.cantus.controller
 
 import io.netty.handler.timeout.ReadTimeoutException
 import mu.KotlinLogging
-import org.springframework.web.reactive.function.client.ClientResponse
 import org.springframework.web.reactive.function.client.WebClientResponseException
-import org.springframework.web.reactive.function.client.bodyToMono
 import reactor.core.publisher.Mono
-import reactor.kotlin.core.publisher.toMono
-import reactor.kotlin.extra.retry.retryExponentialBackoff
+import reactor.core.publisher.toMono
 import reactor.retry.RetryExhaustedException
+import reactor.retry.retryExponentialBackoff
 import java.time.Duration
 
 private const val BLOCK_TIMEOUT: Long = 300
 private const val RETRY_MAX_ATTEMPTS = 3L
-private const val RETRY_FIRST_TIMEOUT_SECONDS = 100L
+private const val RETRY_FIRST_TIMEOUT_MILLISECONDS = 100L
 private const val RETRY_MAX_TIMEOUT_SECONDS = 1L
 private val logger = KotlinLogging.logger {}
 
@@ -24,25 +22,24 @@ fun <T : Any?> Mono<T>.blockAndHandleErrorWithRetry(
 ) =
     this.retryRepoCommand(message).blockAndHandleError(duration, imageRepoCommand = imageRepoCommand, message = message)
 
-
 fun <T : Any?> Mono<T>.retryRepoCommand(message: String) = this.retryExponentialBackoff(
-    times= RETRY_MAX_ATTEMPTS,
-    first= Duration.ofMillis(RETRY_FIRST_TIMEOUT_SECONDS),
+    times = RETRY_MAX_ATTEMPTS,
+    first = Duration.ofMillis(RETRY_FIRST_TIMEOUT_MILLISECONDS),
     max = Duration.ofSeconds(RETRY_MAX_TIMEOUT_SECONDS),
-    jitter = false
-) {
-    val e = it.exception()
-    val exceptionClass = e::class.simpleName
-    if (it.iteration() == RETRY_MAX_ATTEMPTS) {
-        logger.warn {
-            "Retry=last $message exception=$exceptionClass message=${e.localizedMessage}"
+    jitter = false,
+    doOnRetry = {
+        val e = it.exception()
+        val exceptionClass = e::class.simpleName
+        if (it.iteration() == RETRY_MAX_ATTEMPTS) {
+            logger.warn {
+                "Retry=last $message exception=$exceptionClass message=${e.localizedMessage}"
+            }
+        } else {
+            logger.info {
+                "Retry=${it.iteration()} $message exception=$exceptionClass message=\"${e.message}\""
+            }
         }
-    } else {
-        logger.info {
-            "Retry=${it.iteration()} $message exception=$exceptionClass message=\"${e.message}\""
-        }
-    }
-}
+    })
 
 fun <T> Mono<T>.blockAndHandleError(
     duration: Duration = Duration.ofSeconds(BLOCK_TIMEOUT),
@@ -116,14 +113,3 @@ private fun Throwable.handleException(message: String?) {
     }
 }
 
-fun <T> ClientResponse.handleStatusCodeError(sourceSystem: String?): Mono<T> {
-    val statusCode = this.statusCode()
-    return this.bodyToMono<String>().switchIfEmpty(Mono.just("")).flatMap { body ->
-        Mono.error<T>(
-            SourceSystemException(
-                message = "body=$body status=${statusCode.value()} message=${statusCode.reasonPhrase}",
-                sourceSystem = sourceSystem
-            )
-        )
-    }
-}

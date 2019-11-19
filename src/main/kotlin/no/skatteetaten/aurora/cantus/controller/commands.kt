@@ -1,11 +1,13 @@
 package no.skatteetaten.aurora.cantus.controller
 
+import mu.KotlinLogging
 import no.skatteetaten.aurora.cantus.AuroraIntegration
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient
 
+private val logger = KotlinLogging.logger {}
 data class TagCommand(
     val from: String,
     val to: String
@@ -63,7 +65,7 @@ data class ImageRepo(
 )
 
 fun AuroraIntegration.findRegistry(registry: String): AuroraIntegration.DockerRegistry? =
-    this.docker.values.find { it.url == registry && it.isEnabled }
+    this.docker.values.find { it.url == registry && it.enabled}
 
 private const val SIZE_OF_COMPLETE_IMAGE_REPO = 4
 private const val SIZE_OF_IMAGE_REPO_WITHOUT_TAG = 3
@@ -79,6 +81,7 @@ class ImageRepoCommandAssembler(
     ): ImageRepoCommand {
         val imageRepo = url.toImageRepo()
 
+        logger.info { aurora.docker.values }
         val registry = aurora.findRegistry(imageRepo.registry)
 
         require(registry != null) { "Invalid Docker Registry URL url=${imageRepo.registry}" }
@@ -87,7 +90,7 @@ class ImageRepoCommandAssembler(
             "Registry required authentication"
         }
 
-        val scheme = if (registry.isHttps) "https://" else "http://"
+        val scheme = if (registry.https) "https://" else "http://"
 
         return ImageRepoCommand(
             registry = imageRepo.registry,

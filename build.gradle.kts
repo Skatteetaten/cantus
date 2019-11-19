@@ -22,8 +22,8 @@ plugins {
 
 dependencies {
     implementation("uk.q3c.rest:hal-kotlin:0.5.4.0.db32476")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-slf4j:1.3.2-1.3.60-eap-76")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.2-1.3.60-eap-76")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-slf4j:1.3.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.2")
 
     testImplementation("com.squareup.okhttp3:mockwebserver:4.2.2")
     testImplementation("com.squareup.okhttp3:okhttp:4.2.2")
@@ -33,7 +33,6 @@ dependencies {
     implementation("io.projectreactor.addons:reactor-extra:3.3.0.RELEASE")
     implementation("org.springframework.boot:spring-boot-starter-web")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
-    implementation("io.projectreactor.kotlin:reactor-kotlin-extensions:1.0.0.BUILD-SNAPSHOT")
 
     testImplementation("io.mockk:mockk:1.9.3")
     testImplementation("com.willowtreeapps.assertk:assertk-jvm:0.19")
