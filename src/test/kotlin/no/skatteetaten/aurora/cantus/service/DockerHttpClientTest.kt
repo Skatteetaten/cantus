@@ -255,7 +255,6 @@ class DockerHttpClientTest {
     }
 
     @Test
-    // TODO: this is possibly wrong, should this test content digest or content type, check coverage
     fun `Verify that non existing Docker-Content-Digest throws SourceSystemException`() {
         val response = MockResponse()
             .setJsonFileAsBody("dockerManifestV1.json")
