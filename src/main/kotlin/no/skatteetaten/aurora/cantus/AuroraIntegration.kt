@@ -14,11 +14,11 @@ data class AuroraIntegration(
 
     data class DockerRegistry(
         val url: String,
-        val guiUrlPattern: String?,
-        val auth: AuthType? ,
-        val https: Boolean,
-        val readOnly: Boolean,
-        val enabled: Boolean = false
+        val guiUrlPattern: String? = null,
+        val auth: AuthType? = AuthType.None,
+        val https: Boolean = true,
+        val readOnly: Boolean = true,
+        val enabled: Boolean = true
     )
 }
 

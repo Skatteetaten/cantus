@@ -80,12 +80,11 @@ class ImageRepoCommandAssembler(
         bearerToken: String? = null
     ): ImageRepoCommand {
         val imageRepo = url.toImageRepo()
-
         val registry = aurora.findRegistry(imageRepo.registry)
-
         require(registry != null) { "Invalid Docker Registry URL url=${imageRepo.registry}" }
         require(registry.auth != null) { "Registry authType is required" }
-        require(registry.auth == AuroraIntegration.AuthType.None && bearerToken.isNotNullOrBlank()) {
+
+        require(registry.auth == AuroraIntegration.AuthType.None || bearerToken.isNotNullOrBlank()) {
             "Registry required authentication"
         }
 
