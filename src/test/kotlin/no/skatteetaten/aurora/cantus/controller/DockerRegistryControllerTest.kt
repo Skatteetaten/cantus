@@ -19,6 +19,7 @@ import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.BDDMockito.given
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.boot.test.mock.mockito.MockBean
@@ -44,6 +45,7 @@ private const val defaultTestRegistry: String = "docker.com"
 class DockerRegistryControllerTest {
 
     @TestConfiguration
+    @EnableConfigurationProperties(AuroraIntegration::class)
     class DockerRegistryControllerTestConfiguration {
 
         @Bean

@@ -23,6 +23,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.BDDMockito.given
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.autoconfigure.restdocs.AutoConfigureRestDocs
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.boot.test.context.TestConfiguration
@@ -48,6 +49,7 @@ private const val defaultTestRegistry: String = "docker.com"
 class DockerRegistryControllerContractTest {
 
     @TestConfiguration
+    @EnableConfigurationProperties(AuroraIntegration::class)
     class DockerRegistryControllerContractTestConfiguration {
         @Bean
         fun threadPoolContext() = newFixedThreadPoolContext(2, "cantus")
