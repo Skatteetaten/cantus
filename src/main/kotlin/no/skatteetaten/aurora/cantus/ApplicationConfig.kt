@@ -10,6 +10,7 @@ import no.skatteetaten.aurora.filter.logging.AuroraHeaderFilter
 import no.skatteetaten.aurora.filter.logging.RequestKorrelasjon
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Primary
@@ -39,6 +40,7 @@ private val logger = KotlinLogging.logger {}
 private const val MAX_ACCEPTED_TOKEN_LENGTH = 11
 
 @Configuration
+@ConfigurationPropertiesScan
 class ApplicationConfig {
 
     @Bean

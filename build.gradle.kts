@@ -1,7 +1,3 @@
-repositories {
-    maven("https://repo.spring.io/snapshot")
-    mavenCentral()
-}
 plugins {
     id("org.springframework.cloud.contract")
     id("org.jetbrains.kotlin.jvm") version "1.3.50"

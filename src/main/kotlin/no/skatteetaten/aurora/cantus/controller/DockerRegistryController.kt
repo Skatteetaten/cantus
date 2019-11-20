@@ -9,6 +9,7 @@ import no.skatteetaten.aurora.cantus.AuroraIntegration
 import no.skatteetaten.aurora.cantus.service.DockerRegistryService
 import no.skatteetaten.aurora.cantus.service.ImageManifestDto
 import no.skatteetaten.aurora.cantus.service.ImageTagsWithTypeDto
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -27,6 +28,7 @@ private val logger = KotlinLogging.logger {}
 
 
 @RestController
+@ConfigurationPropertiesScan
 class DockerRegistryController(
     val dockerRegistryService: DockerRegistryService,
     val imageTagResourceAssembler: ImageTagResourceAssembler,
@@ -158,6 +160,7 @@ class DockerRegistryController(
 }
 
 @Component
+@ConfigurationPropertiesScan
 class ImageTagResourceAssembler(val auroraResponseAssembler: AuroraResponseAssembler) {
     fun imageTagResourceToAuroraResponse(resources: List<Try<ImageTagResource, CantusFailure>>) =
         auroraResponseAssembler.toAuroraResponse(resources)
