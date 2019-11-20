@@ -1,10 +1,12 @@
 package no.skatteetaten.aurora.cantus
 
 import org.springframework.boot.context.properties.ConfigurationProperties
+import org.springframework.boot.context.properties.ConstructorBinding
+import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.stereotype.Component
 
 @ConfigurationProperties("integrations")
-@Component
+@ConstructorBinding
 data class AuroraIntegration(
     val docker: Map<String, DockerRegistry>
 ) {
@@ -12,11 +14,11 @@ data class AuroraIntegration(
 
     data class DockerRegistry(
         val url: String,
-        val guiUrlPattern: String? = null,
-        val auth: AuthType,
+        val guiUrlPattern: String?,
+        val auth: AuthType? ,
         val https: Boolean,
         val readOnly: Boolean,
-        val enabled: Boolean
+        val enabled: Boolean = false
     )
 }
 

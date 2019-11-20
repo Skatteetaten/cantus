@@ -146,14 +146,13 @@ class DockerHttpClient(
             sourceSystem = imageRepoCommand.registry
         )
 
+        val contentType = verifyManifestIsV2(headers["Content-Type"]?.first(), imageRepoCommand)
         val contentDigestLabel =
             headers[DOCKER_CONTENT_DIGEST_HEADER_LABEL]?.first()
                 ?: throw SourceSystemException(
                     message = "Required header=$DOCKER_CONTENT_DIGEST_HEADER_LABEL is not present",
                     sourceSystem = imageRepoCommand.registry
                 )
-
-        val contentType = verifyManifestIsV2(headers["Content-Type"]?.first(), imageRepoCommand)
 
         return Triple(manifest, contentDigestLabel, contentType)
     }
