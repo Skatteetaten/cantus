@@ -255,20 +255,33 @@ class DockerHttpClientTest {
     }
 
     @Test
-    //TODO: this is possibly wrong, should this test content digest or content type, check coverage
+    // TODO: this is possibly wrong, should this test content digest or content type, check coverage
     fun `Verify that non existing Docker-Content-Digest throws SourceSystemException`() {
         val response = MockResponse()
             .setJsonFileAsBody("dockerManifestV1.json")
+            .setHeader("Content-Type", "application/vnd.docker.distribution.manifest.v2+json")
 
         server.execute(response) {
             assertThat { httpClient.getImageManifest(imageRepoCommand) }
                 .isFailure()
-                .let {
-                    logger.info(it.name)
-                    it }
                 .isNotNull().isInstanceOf(SourceSystemException::class)
                 .message().isNotNull()
-                .contains("Only v2 manifest is supported. contentType=application/json;charset=UTF-8")
+                .contains("Required header=Docker-Content-Digest is not present")
+        }
+    }
+
+    @Test
+    fun `Verify that wrong content-type throws SourceSystemException`() {
+        val response = MockResponse()
+            .setJsonFileAsBody("dockerManifestV1.json")
+            .addHeader("Docker-Content-Digest", "sha256")
+
+        server.execute(response) {
+            assertThat { httpClient.getImageManifest(imageRepoCommand) }
+                .isFailure()
+                .isNotNull().isInstanceOf(SourceSystemException::class)
+                .message().isNotNull()
+                .contains("Only v2 manifest is supported. contentType=")
         }
     }
 

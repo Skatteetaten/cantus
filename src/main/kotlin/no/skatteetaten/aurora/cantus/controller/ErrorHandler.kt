@@ -1,13 +1,13 @@
 package no.skatteetaten.aurora.cantus.controller
 
 import io.netty.handler.timeout.ReadTimeoutException
+import java.time.Duration
 import mu.KotlinLogging
 import org.springframework.web.reactive.function.client.WebClientResponseException
 import reactor.core.publisher.Mono
 import reactor.core.publisher.toMono
 import reactor.retry.RetryExhaustedException
 import reactor.retry.retryExponentialBackoff
-import java.time.Duration
 
 private const val BLOCK_TIMEOUT: Long = 300
 private const val RETRY_MAX_ATTEMPTS = 3L
@@ -112,4 +112,3 @@ private fun Throwable.handleException(message: String?) {
         throw CantusException(msg, this)
     }
 }
-

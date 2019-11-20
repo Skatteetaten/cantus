@@ -35,7 +35,6 @@ import org.springframework.test.web.servlet.MockMvc
 
 private const val defaultTestRegistry: String = "docker.com"
 
-
 @AutoConfigureRestDocs
 @WebMvcTest(
     value = [
