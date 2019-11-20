@@ -4,6 +4,13 @@ import io.netty.channel.ChannelOption
 import io.netty.handler.ssl.SslContextBuilder
 import io.netty.handler.timeout.ReadTimeoutHandler
 import io.netty.handler.timeout.WriteTimeoutHandler
+import java.io.FileInputStream
+import java.security.KeyStore
+import java.security.cert.CertificateFactory
+import java.security.cert.X509Certificate
+import java.util.concurrent.TimeUnit
+import javax.net.ssl.TrustManagerFactory
+import kotlin.math.min
 import kotlinx.coroutines.newFixedThreadPoolContext
 import mu.KotlinLogging
 import no.skatteetaten.aurora.filter.logging.AuroraHeaderFilter
@@ -27,13 +34,6 @@ import reactor.core.publisher.toMono
 import reactor.netty.http.client.HttpClient
 import reactor.netty.tcp.SslProvider
 import reactor.netty.tcp.TcpClient
-import java.io.FileInputStream
-import java.security.KeyStore
-import java.security.cert.CertificateFactory
-import java.security.cert.X509Certificate
-import java.util.concurrent.TimeUnit
-import javax.net.ssl.TrustManagerFactory
-import kotlin.math.min
 
 private val logger = KotlinLogging.logger {}
 

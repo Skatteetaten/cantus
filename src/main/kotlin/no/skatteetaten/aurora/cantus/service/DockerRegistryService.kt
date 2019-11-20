@@ -2,6 +2,7 @@ package no.skatteetaten.aurora.cantus.service
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ArrayNode
+import java.util.HashSet
 import kotlinx.coroutines.ExecutorCoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
@@ -12,8 +13,6 @@ import no.skatteetaten.aurora.cantus.controller.SourceSystemException
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
-import java.util.HashSet
-import kotlin.contracts.ExperimentalContracts
 
 private val logger = KotlinLogging.logger {}
 
@@ -106,7 +105,6 @@ class DockerRegistryService(val httpClient: DockerHttpClient, val threadPoolCont
         val layers: ArrayNode = manifest.manifestBody["layers"] as ArrayNode
         return layers.map { it["digest"].textValue() } + manifest.manifestBody.at("/config/digest").textValue()
     }
-
 
     fun getImageManifestInformation(
         imageRepoCommand: ImageRepoCommand

@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient
 
 private val logger = KotlinLogging.logger {}
+
 data class TagCommand(
     val from: String,
     val to: String
@@ -65,7 +66,7 @@ data class ImageRepo(
 )
 
 fun AuroraIntegration.findRegistry(registry: String): AuroraIntegration.DockerRegistry? =
-    this.docker.values.find { it.url == registry && it.enabled}
+    this.docker.values.find { it.url == registry && it.enabled }
 
 private const val SIZE_OF_COMPLETE_IMAGE_REPO = 4
 private const val SIZE_OF_IMAGE_REPO_WITHOUT_TAG = 3
@@ -110,9 +111,9 @@ class ImageRepoCommandAssembler(
         return repoVariables.toImageRepo()
     }
 
-    private fun List<String>.toImageRepo(): ImageRepo{
-        if(repoUrlHasColonBetweenNameAndTag(this.size, this)) {
-          val (name, tag) = this[2].split(":")
+    private fun List<String>.toImageRepo(): ImageRepo {
+        if (repoUrlHasColonBetweenNameAndTag(this.size, this)) {
+            val (name, tag) = this[2].split(":")
             return ImageRepo(
                 registry = this[0],
                 imageGroup = this[1],
@@ -127,6 +128,7 @@ class ImageRepoCommandAssembler(
             imageTag = this.getOrNull(INDEX_OF_IMAGE_TAG)
         )
     }
+
     private fun repoUrlHasColonBetweenNameAndTag(
         repoVariablesSize: Int,
         repoVariables: List<String>
