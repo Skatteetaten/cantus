@@ -57,7 +57,7 @@ class DockerHttpClient(
             }
             .retrieve()
             .toEntity(JsonNode::class.java)
-            .performBodyAndHeader(to)
+            .performBodyAndHeader()
             .blockAndHandleErrorWithRetry("operation=GET_UPLOAD_UUUID registry=${to.fullRepoCommand}")
             ?: ManifestResponse(
                 null,
@@ -122,7 +122,7 @@ class DockerHttpClient(
             .headers {
                 it.accept = dockerManifestAccept
             }.retrieve().toEntity(JsonNode::class.java)
-            .performBodyAndHeader(imageRepoCommand)
+            .performBodyAndHeader()
             .blockAndHandleErrorWithRetry("operation=GET_IMAGE_MANIFEST registry=${imageRepoCommand.fullRepoCommand}")
             ?: ManifestResponse(
                 null,
@@ -245,7 +245,7 @@ class DockerHttpClient(
         return result ?: false
     }
 
-    private fun Mono<ResponseEntity<JsonNode>>.performBodyAndHeader(imageRepoCommand: ImageRepoCommand) =
+    private fun Mono<ResponseEntity<JsonNode>>.performBodyAndHeader() =
         this.map { resp: ResponseEntity<JsonNode> ->
             ManifestResponse(resp.body, resp.headers)
         }
