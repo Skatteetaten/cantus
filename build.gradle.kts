@@ -12,8 +12,8 @@ plugins {
     id("com.github.ben-manes.versions") version "0.27.0"
     id("se.patrikerdes.use-latest-versions") version "0.2.13"
 
-    id("no.skatteetaten.gradle.aurora") version "3.2.0"
-    id("io.gitlab.arturbosch.detekt") version "1.1.1"
+id("io.gitlab.arturbosch.detekt") version "1.1.1"
+    id("no.skatteetaten.gradle.aurora") version "local-snapshot4"
 }
 
 dependencies {
@@ -36,8 +36,3 @@ dependencies {
     testImplementation("no.skatteetaten.aurora:mockmvc-extensions-kotlin:1.0.2")
 }
 
-sonarqube {
-    properties {
-        property("sonar.kotlin.detekt.reportPaths", "build/reports/detekt/detekt.xml")
-    }
-}

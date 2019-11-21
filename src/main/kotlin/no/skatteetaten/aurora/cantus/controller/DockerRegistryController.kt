@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import uk.q3c.rest.hal.HalResource
 
 data class TagUrlsWrapper(val tagUrls: List<String>)
 
@@ -39,7 +40,7 @@ class DockerRegistryController(
        we need to create a composite token in the future if pull demands authroization
      */
     @PostMapping("/tag")
-    @Suppress("TooGenericExceptionCaught")
+    @Suppress("TooGenericExceptionCaught", "ReturnCount")
     fun tagDockerImage(
         @RequestBody tagCommand: TagCommand,
         @RequestHeader(required = true, value = HttpHeaders.AUTHORIZATION) bearerToken: String
@@ -47,10 +48,10 @@ class DockerRegistryController(
         val from = imageRepoCommandAssembler.createAndValidateCommand(tagCommand.from)
         val to = imageRepoCommandAssembler.createAndValidateCommand(tagCommand.to, bearerToken)
 
-        return try {
-            require(from.imageTag != null) { "From spec=${tagCommand.from} does not contain a tag" }
-            require(to.imageTag != null) { "To spec=${tagCommand.to} does not contain a tag" }
+        if (from.imageTag == null) return imageTagIsNullResponse(from)
+        if (to.imageTag == null) return imageTagIsNullResponse(to)
 
+        return try {
             val result = dockerRegistryService.tagImage(from, to)
             ResponseEntity(
                 AuroraResponse(
@@ -62,17 +63,21 @@ class DockerRegistryController(
             )
         } catch (e: Exception) {
             logger.debug("Failed tagging exception occured")
-            val status = if (e is IllegalArgumentException) {
-                HttpStatus.BAD_REQUEST
-            } else {
-                HttpStatus.INTERNAL_SERVER_ERROR
-            }
             ResponseEntity(
                 AuroraResponse(success = false, failure = listOf(CantusFailure(to.fullRepoCommand, e))),
-                status
+                HttpStatus.INTERNAL_SERVER_ERROR
             )
         }
     }
+
+    fun <T : HalResource> imageTagIsNullResponse(imageRepoCommand: ImageRepoCommand) = ResponseEntity(
+        AuroraResponse<T>(
+            success = false,
+            failure = listOf(CantusFailure(imageRepoCommand.fullRepoCommand)),
+            message = "spec=${imageRepoCommand.fullRepoCommand} does not contain a tag"
+        ),
+        HttpStatus.BAD_REQUEST
+    )
 
     @PostMapping("/manifest")
     fun getManifestInformationList(
