@@ -8,7 +8,6 @@ import no.skatteetaten.aurora.cantus.ApplicationConfig
 import no.skatteetaten.aurora.cantus.AuroraIntegration.AuthType.Bearer
 import no.skatteetaten.aurora.cantus.controller.CantusException
 import no.skatteetaten.aurora.cantus.controller.ImageRepoCommand
-import no.skatteetaten.aurora.cantus.controller.SourceSystemException
 import no.skatteetaten.aurora.mockmvc.extensions.mockwebserver.execute
 import no.skatteetaten.aurora.mockmvc.extensions.mockwebserver.setJsonFileAsBody
 import okhttp3.mockwebserver.MockResponse
@@ -68,7 +67,7 @@ class DockerHttpClientNetworkTest {
             assertThat { httpClient.getImageManifest(imageRepoCommand) }
                 .isFailure()
                 .isNotNull()
-                .isInstanceOf(SourceSystemException::class)
+                .isInstanceOf(CantusException::class)
         }
     }
 
