@@ -96,7 +96,7 @@ private fun ReadTimeoutException.handleException(imageRepoCommand: ImageRepoComm
 private fun Throwable.handleException(message: String?) {
     val msg = "Error in response or request name=${this::class.simpleName} errorMessage=${this.message} $message"
     if (this is SourceSystemException) {
-        if (this.message?.contains("MANIFEST_UNKNOWN") == true) logger.info(this) { }
+        if (this.message?.contains("MANIFEST_UNKNOWN") == true) logger.info("The image or image metadata is not present in Docker Registry errorMessage=${this.message}")
         else logger.error(this) { }
         throw this
     } else {
