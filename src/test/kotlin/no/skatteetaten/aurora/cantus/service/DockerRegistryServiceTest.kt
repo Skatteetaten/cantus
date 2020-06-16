@@ -40,7 +40,7 @@ class DockerRegistryServiceTest {
     private val objectMapper = jacksonObjectMapper()
 
     private val dtoV2 = ImageManifestResponseDto(
-        contentType = MANIFEST_V2,
+        contentType = MANIFEST_V2_MEDIATYPE_VALUE,
         dockerContentDigest = "sha256",
         manifestBody = objectMapper.readTestResourceAsJson("dockerManifestV2.json")
     )

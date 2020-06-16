@@ -36,13 +36,13 @@ class DockerHttpClientTest {
     private val url = server.url("/")
 
     private val imageRepoCommand = ImageRepoCommand(
-        registry = "${url.host}:${url.port}",
+        registry = "${url.host()}:${url.port()}",
         imageGroup = "no_skatteetaten_aurora_demo",
         imageName = "whoami",
         imageTag = "2",
         token = "bearer token",
         authType = Bearer,
-        url = "http://${url.host}:${url.port}/v2"
+        url = "http://${url.host()}:${url.port()}/v2"
     )
 
     private val applicationConfig = ApplicationConfig()
@@ -112,7 +112,7 @@ class DockerHttpClientTest {
     @Test
     fun `test put manifest failed`() {
 
-        val manifest = ImageManifestResponseDto(MANIFEST_V2, "abc", createObjectMapper().readTree("{}"))
+        val manifest = ImageManifestResponseDto(MANIFEST_V2_MEDIATYPE_VALUE, "abc", createObjectMapper().readTree("{}"))
 
         val response = MockResponse().setResponseCode(404)
             .setBody("{\"errors\":[{\"code\":\"BLOB_UNKNOWN\",\"message\":\"blob unknown to registry\",\"detail\":\"sha256:303510ed0dee065d6dc0dd4fbb1833aa27ff6177e7dfc72881ea4ea0716c82a1\"}]}")
@@ -158,7 +158,7 @@ class DockerHttpClientTest {
     @Test
     fun `Verify get upload UUID header`() {
         val expectedHeader = "abcas1456"
-        val response = MockResponse().addHeader(UPLOAD_UUID_HEADER_LABEL, expectedHeader)
+        val response = MockResponse().addHeader("Docker-Upload-UUID", expectedHeader)
 
         server.execute(response) {
             val actualHeader = httpClient.getUploadUUID(imageRepoCommand)
@@ -217,7 +217,7 @@ class DockerHttpClientTest {
             MockResponse()
                 .setJsonFileAsBody("dockerManifestV1.json")
                 .addHeader("Docker-Content-Digest", "SHA::256")
-                .setHeader("Content-Type", MediaType.valueOf(MANIFEST_V2))
+                .setHeader("Content-Type", MediaType.valueOf(MANIFEST_V2_MEDIATYPE_VALUE))
 
         server.execute(response) {
             val jsonResponse = httpClient.getImageManifest(imageRepoCommand)
@@ -246,7 +246,7 @@ class DockerHttpClientTest {
 
     @Test
     fun `Verify that empty manifest response throws SourceSystemException`() {
-        val response = MockResponse().addHeader(DOCKER_CONTENT_DIGEST_HEADER_LABEL, "sha::256")
+        val response = MockResponse().addHeader("Docker-Content-Digest", "sha::256")
 
         server.execute(response) {
             assertThat { httpClient.getImageManifest(imageRepoCommand) }

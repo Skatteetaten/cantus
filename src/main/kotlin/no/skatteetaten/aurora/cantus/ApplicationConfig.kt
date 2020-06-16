@@ -4,17 +4,8 @@ import io.netty.channel.ChannelOption
 import io.netty.handler.ssl.SslContextBuilder
 import io.netty.handler.timeout.ReadTimeoutHandler
 import io.netty.handler.timeout.WriteTimeoutHandler
-import java.io.FileInputStream
-import java.security.KeyStore
-import java.security.cert.CertificateFactory
-import java.security.cert.X509Certificate
-import java.util.concurrent.TimeUnit
-import javax.net.ssl.TrustManagerFactory
-import kotlin.math.min
 import kotlinx.coroutines.newFixedThreadPoolContext
 import mu.KotlinLogging
-import no.skatteetaten.aurora.filter.logging.AuroraHeaderFilter
-import no.skatteetaten.aurora.filter.logging.RequestKorrelasjon
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
@@ -30,10 +21,17 @@ import org.springframework.http.codec.json.Jackson2JsonEncoder
 import org.springframework.web.reactive.function.client.ExchangeFilterFunction
 import org.springframework.web.reactive.function.client.ExchangeStrategies
 import org.springframework.web.reactive.function.client.WebClient
-import reactor.core.publisher.toMono
+import reactor.kotlin.core.publisher.toMono
 import reactor.netty.http.client.HttpClient
 import reactor.netty.tcp.SslProvider
 import reactor.netty.tcp.TcpClient
+import java.io.FileInputStream
+import java.security.KeyStore
+import java.security.cert.CertificateFactory
+import java.security.cert.X509Certificate
+import java.util.concurrent.TimeUnit
+import javax.net.ssl.TrustManagerFactory
+import kotlin.math.min
 
 private val logger = KotlinLogging.logger {}
 
@@ -55,16 +53,16 @@ class ApplicationConfig {
         @Value("\${application.version:}") applicationVersion: String
     ) =
         builder
-            .defaultHeader(HttpHeaders.USER_AGENT, "cantus/$applicationVersion")
-            .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-            .defaultHeader("KlientID", applicationName)
-            .defaultHeader(AuroraHeaderFilter.KORRELASJONS_ID, RequestKorrelasjon.getId())
             .exchangeStrategies(exchangeStrategies())
             .filter(ExchangeFilterFunction.ofRequestProcessor {
                 val bearer = it.headers()[HttpHeaders.AUTHORIZATION]?.firstOrNull()?.let { token ->
-                    splitIntoBearerAndToken(token)
+                    val (bearer, tokenValue) = token.substring(0, min(token.length, MAX_ACCEPTED_TOKEN_LENGTH))
+                        .split(" ")
+                    "$bearer=$tokenValue"
                 } ?: ""
+
                 logger.debug("HttpRequest method=${it.method()} url=${it.url()} $bearer")
+
                 it.toMono()
             })
             .clientConnector(
@@ -74,11 +72,6 @@ class ApplicationConfig {
                         .compress(true)
                 )
             ).build()
-
-    private fun splitIntoBearerAndToken(token: String): String {
-        val (name, value) = token.substring(0, min(token.length, MAX_ACCEPTED_TOKEN_LENGTH)).split(" ")
-        return "$name=$value"
-    }
 
     private fun exchangeStrategies(): ExchangeStrategies {
         val objectMapper = createObjectMapper()
@@ -139,7 +132,6 @@ class ApplicationConfig {
     @Profile("openshift")
     @Primary
     @Bean
-    @Suppress("TooGenericExceptionCaught")
     fun openshiftSSLContext(@Value("\${trust.store}") trustStoreLocation: String): KeyStore? =
         KeyStore.getInstance(KeyStore.getDefaultType())?.let { ks ->
             try {

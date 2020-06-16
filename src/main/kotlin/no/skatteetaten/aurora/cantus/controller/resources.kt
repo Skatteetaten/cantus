@@ -1,13 +1,12 @@
 package no.skatteetaten.aurora.cantus.controller
 
 import com.fasterxml.jackson.annotation.JsonIgnore
-import java.time.Instant
-import java.time.format.DateTimeParseException
 import mu.KotlinLogging
 import no.skatteetaten.aurora.cantus.service.ImageManifestDto
 import no.skatteetaten.aurora.cantus.service.ImageTagType
 import org.springframework.stereotype.Component
 import uk.q3c.rest.hal.HalResource
+import java.time.Instant
 
 private val logger = KotlinLogging.logger {}
 
@@ -63,12 +62,12 @@ data class ImageBuildTimeline(
             return ImageBuildTimeline(
                 try {
                     Instant.parse(dto.buildStarted)
-                } catch (e: DateTimeParseException) {
+                } catch (e: Exception) {
                     null
                 },
                 try {
                     Instant.parse(dto.buildEnded)
-                } catch (e: DateTimeParseException) {
+                } catch (e: Exception) {
                     null
                 }
             )

@@ -8,6 +8,7 @@ import no.skatteetaten.aurora.cantus.controller.blockAndHandleError
 import no.skatteetaten.aurora.cantus.controller.blockAndHandleErrorWithRetry
 import no.skatteetaten.aurora.cantus.createObjectMapper
 import org.springframework.http.HttpHeaders
+import org.springframework.http.HttpHeaders.AUTHORIZATION
 import org.springframework.http.HttpHeaders.EMPTY
 import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
@@ -23,10 +24,7 @@ import reactor.core.publisher.Mono
 
 private val logger = KotlinLogging.logger {}
 
-const val MANIFEST_V2 = "application/vnd.docker.distribution.manifest.v2+json"
-
-const val UPLOAD_UUID_HEADER_LABEL = "Docker-Upload-UUID"
-const val DOCKER_CONTENT_DIGEST_HEADER_LABEL = "Docker-Content-Digest"
+const val MANIFEST_V2_MEDIATYPE_VALUE = "application/vnd.docker.distribution.manifest.v2+json"
 
 private const val BLOCK_TIMEOUT_IN_SECONDS = 5L
 
@@ -36,25 +34,18 @@ data class ManifestResponse(
 )
 
 @Service
-@Suppress("TooManyFunctions")
 class DockerHttpClient(
     val webClient: WebClient
 ) {
-    val dockerManifestAccept: List<MediaType> = listOf(
-        MediaType.valueOf(MANIFEST_V2)
-    )
 
     fun getUploadUUID(
         to: ImageRepoCommand
     ): String {
         val manifestResponse: ManifestResponse = to.createRequest(
-            webClient = webClient,
             method = HttpMethod.POST,
             path = "{imageGroup}/{imageName}/blobs/uploads/"
         )
-            .headers { headers ->
-                headers.contentLength = 0L
-            }
+            .body(BodyInserters.empty<Unit>())
             .retrieve()
             .toEntity(JsonNode::class.java)
             .performBodyAndHeader()
@@ -64,7 +55,7 @@ class DockerHttpClient(
                 EMPTY
             )
 
-        return manifestResponse.headers[UPLOAD_UUID_HEADER_LABEL]?.first() ?: throw SourceSystemException(
+        return manifestResponse.headers["Docker-Upload-UUID"]?.first() ?: throw SourceSystemException(
             message = "Response to generate UUID header did not succeed",
             sourceSystem = to.registry
         )
@@ -76,7 +67,6 @@ class DockerHttpClient(
     ): Boolean {
         val manifestBody = createObjectMapper().writeValueAsString(manifest.manifestBody)
         return to.createRequest(
-            webClient = webClient,
             method = HttpMethod.PUT,
             path = "{imageGroup}/{imageName}/manifests/{imageTag}"
         )
@@ -100,7 +90,6 @@ class DockerHttpClient(
         data: Mono<ByteArray>
     ): Boolean {
         return to.createRequest(
-            webClient = webClient,
             method = HttpMethod.PUT, path = "{imageGroup}/{imageName}/blobs/uploads/{uuid}?digest={digest}",
             pathVariables = mapOf("uuid" to uuid, "digest" to digest)
         )
@@ -118,10 +107,11 @@ class DockerHttpClient(
 
     fun getImageManifest(imageRepoCommand: ImageRepoCommand): ImageManifestResponseDto {
         val (body, headers) = imageRepoCommand
-            .createRequest(webClient, "{imageGroup}/{imageName}/manifests/{imageTag}")
+            .createRequest("{imageGroup}/{imageName}/manifests/{imageTag}")
             .headers {
-                it.accept = dockerManifestAccept
-            }.retrieve().toEntity(JsonNode::class.java)
+                it.accept = listOf(MediaType.valueOf(MANIFEST_V2_MEDIATYPE_VALUE))
+            }.retrieve()
+            .toEntity(JsonNode::class.java)
             .performBodyAndHeader()
             .blockAndHandleErrorWithRetry("operation=GET_IMAGE_MANIFEST registry=${imageRepoCommand.fullRepoCommand}")
             ?: ManifestResponse(
@@ -147,9 +137,9 @@ class DockerHttpClient(
 
         val contentType = verifyManifestIsV2(headers["Content-Type"]?.first(), imageRepoCommand)
         val contentDigestLabel =
-            headers[DOCKER_CONTENT_DIGEST_HEADER_LABEL]?.first()
+            headers["Docker-Content-Digest"]?.first()
                 ?: throw SourceSystemException(
-                    message = "Required header=$DOCKER_CONTENT_DIGEST_HEADER_LABEL is not present",
+                    message = "Required header=Docker-Content-Digest is not present",
                     sourceSystem = imageRepoCommand.registry
                 )
 
@@ -160,7 +150,7 @@ class DockerHttpClient(
         contentType: String?,
         imageRepoCommand: ImageRepoCommand
     ): String {
-        if (contentType != MANIFEST_V2) {
+        if (contentType != MANIFEST_V2_MEDIATYPE_VALUE) {
             logger.info {
                 "Old image manfiest detected for image=${imageRepoCommand.artifactRepo}:${imageRepoCommand
                     .registry}"
@@ -177,7 +167,7 @@ class DockerHttpClient(
     }
 
     fun getImageTags(imageRepoCommand: ImageRepoCommand): ImageTagsResponseDto? = imageRepoCommand
-        .createRequest(webClient = webClient, path = "/{imageGroup}/{imageName}/tags/list")
+        .createRequest(path = "/{imageGroup}/{imageName}/tags/list")
         .retrieve()
         .bodyToMono<ImageTagsResponseDto>()
         .blockAndHandleError(imageRepoCommand = imageRepoCommand)
@@ -194,7 +184,6 @@ class DockerHttpClient(
 
     fun getLayer(imageRepoCommand: ImageRepoCommand, digest: String): Mono<ByteArray> =
         imageRepoCommand.createRequest(
-            webClient = webClient,
             path = "{imageGroup}/{imageName}/blobs/{digest}",
             pathVariables = mapOf("digest" to digest)
         )
@@ -206,7 +195,6 @@ class DockerHttpClient(
         digest: String
     ): ByteArray? {
         return imageRepoCommand.createRequest(
-            webClient = webClient,
             path = "{imageGroup}/{imageName}/blobs/{digest}",
             pathVariables = mapOf("digest" to digest)
         )
@@ -223,7 +211,6 @@ class DockerHttpClient(
         digest: String
     ): Boolean {
         val result = imageRepoCommand.createRequest(
-            webClient = webClient,
             method = HttpMethod.HEAD,
             path = "{imageGroup}/{imageName}/blobs/$digest"
         )
@@ -244,6 +231,22 @@ class DockerHttpClient(
             )
         return result ?: false
     }
+
+    private fun ImageRepoCommand.createRequest(
+        path: String,
+        method: HttpMethod = HttpMethod.GET,
+        pathVariables: Map<String, String> = emptyMap()
+    ) = webClient
+        .method(method)
+        .uri(
+            "${this.url}/$path",
+            this.mappedTemplateVars + pathVariables
+        )
+        .headers { headers ->
+            this.token?.let {
+                headers.set(AUTHORIZATION, "${this.authType} $it")
+            }
+        }
 
     private fun Mono<ResponseEntity<JsonNode>>.performBodyAndHeader() =
         this.map { resp: ResponseEntity<JsonNode> ->

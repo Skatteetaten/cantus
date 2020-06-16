@@ -2,10 +2,7 @@ package no.skatteetaten.aurora.cantus.controller
 
 import mu.KotlinLogging
 import no.skatteetaten.aurora.cantus.AuroraIntegration
-import org.springframework.http.HttpHeaders
-import org.springframework.http.HttpMethod
 import org.springframework.stereotype.Component
-import org.springframework.web.reactive.function.client.WebClient
 
 private val logger = KotlinLogging.logger {}
 
@@ -39,23 +36,6 @@ data class ImageRepoCommand(
             "imageName" to imageName,
             "imageTag" to imageTag
         )
-
-    fun createRequest(
-        webClient: WebClient,
-        path: String,
-        method: HttpMethod = HttpMethod.GET,
-        pathVariables: Map<String, String> = emptyMap()
-    ) = webClient
-        .method(method)
-        .uri(
-            "${this.url}/$path",
-            this.mappedTemplateVars + pathVariables
-        )
-        .headers { headers ->
-            this.token?.let {
-                headers.set(HttpHeaders.AUTHORIZATION, "${this.authType} $it")
-            }
-        }
 }
 
 data class ImageRepo(

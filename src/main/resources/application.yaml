@@ -8,6 +8,9 @@ spring:
     profiles:
         active: local
 
+    application:
+        name: cantus
+
 logging:
     level:
         no.skatteetaten.aurora.cantus: DEBUG
@@ -19,6 +22,17 @@ logging:
                 catalina: WARN
                 velocity: WARN
 
+
+
+aurora:
+    webflux:
+        header:
+            webclient:
+                interceptor:
+                    enabled: true
+            span:
+                interceptor:
+                    enabled: false
 integrations:
     docker:
         cluster:
@@ -67,6 +81,7 @@ cantus:
 
 server:
     port: 8080
+    # Er denne gammel også?
     max-http-header-size: 200000
 
 logging:

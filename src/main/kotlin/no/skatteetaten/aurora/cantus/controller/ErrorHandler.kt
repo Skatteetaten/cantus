@@ -11,8 +11,6 @@ import reactor.retry.retryExponentialBackoff
 
 private const val BLOCK_TIMEOUT: Long = 300
 private const val RETRY_MAX_ATTEMPTS = 3L
-private const val RETRY_FIRST_TIMEOUT_MILLISECONDS = 100L
-private const val RETRY_MAX_TIMEOUT_SECONDS = 1L
 private val logger = KotlinLogging.logger {}
 
 fun <T : Any?> Mono<T>.blockAndHandleErrorWithRetry(
@@ -24,8 +22,8 @@ fun <T : Any?> Mono<T>.blockAndHandleErrorWithRetry(
 
 fun <T : Any?> Mono<T>.retryRepoCommand(message: String) = this.retryExponentialBackoff(
     times = RETRY_MAX_ATTEMPTS,
-    first = Duration.ofMillis(RETRY_FIRST_TIMEOUT_MILLISECONDS),
-    max = Duration.ofSeconds(RETRY_MAX_TIMEOUT_SECONDS),
+    first = Duration.ofMillis(100L),
+    max = Duration.ofSeconds(1L),
     jitter = false,
     doOnRetry = {
         val e = it.exception()
@@ -48,7 +46,6 @@ fun <T> Mono<T>.blockAndHandleError(
 ) =
     this.handleError(imageRepoCommand, message).toMono().block(duration)
 
-@Suppress("ForbiddenComment")
 // TODO: Se på error handling i hele denne filen
 fun <T> Mono<T>.handleError(imageRepoCommand: ImageRepoCommand?, message: String? = null) =
     this.doOnError {

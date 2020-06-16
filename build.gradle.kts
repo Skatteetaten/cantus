@@ -1,38 +1,40 @@
 plugins {
     id("org.springframework.cloud.contract")
-    id("org.jetbrains.kotlin.jvm") version "1.3.50"
-    id("org.jetbrains.kotlin.plugin.spring") version "1.3.50"
-    id("org.jlleitschuh.gradle.ktlint") version "9.1.1"
-    id("org.sonarqube") version "2.8"
 
-    id("org.springframework.boot") version "2.2.1.RELEASE"
-    id("org.asciidoctor.convert") version "2.3.0"
+    id("org.jetbrains.kotlin.jvm") version "1.3.72"
+    id("org.jetbrains.kotlin.plugin.spring") version "1.3.72"
 
-    id("com.gorylenko.gradle-git-properties") version "2.2.0"
-    id("com.github.ben-manes.versions") version "0.27.0"
-    id("se.patrikerdes.use-latest-versions") version "0.2.13"
+    id("org.jlleitschuh.gradle.ktlint") version "9.2.1"
+    id("org.sonarqube") version "3.0"
 
-id("io.gitlab.arturbosch.detekt") version "1.1.1"
-    id("no.skatteetaten.gradle.aurora") version "local-snapshot4"
+    id("org.springframework.boot") version "2.3.1.RELEASE"
+
+    id("com.gorylenko.gradle-git-properties") version "2.2.2"
+    id("com.github.ben-manes.versions") version "0.28.0"
+    id("se.patrikerdes.use-latest-versions") version "0.2.14"
+
+    id("no.skatteetaten.gradle.aurora") version "3.6.0"
 }
 
 dependencies {
+    implementation("no.skatteetaten.aurora.springboot:aurora-spring-boot-webflux-starter:1.0.2")
+
     implementation("uk.q3c.rest:hal-kotlin:0.5.4.0.db32476")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-slf4j:1.3.2")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.2")
 
-    testImplementation("com.squareup.okhttp3:mockwebserver:4.2.2")
-    testImplementation("com.squareup.okhttp3:okhttp:4.2.2")
+    implementation("io.projectreactor.kotlin:reactor-kotlin-extensions:1.0.2.RELEASE")
+    implementation("io.projectreactor.addons:reactor-extra:3.3.3.RELEASE")
 
-    testImplementation("org.jetbrains.kotlin:kotlin-test:1.3.60")
-    implementation("org.springframework.boot:spring-boot-starter-webflux")
-    implementation("io.projectreactor.addons:reactor-extra:3.3.0.RELEASE")
+    // Coroutines
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-slf4j:1.3.7")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.7")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:1.3.7")
+    // Testing
+    testImplementation("no.skatteetaten.aurora:mockmvc-extensions-kotlin:1.1.0")
+    testImplementation("io.mockk:mockk:1.10.0")
+    testImplementation("com.willowtreeapps.assertk:assertk-jvm:0.22")
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.7.2")
+
+    // Spring
     implementation("org.springframework.boot:spring-boot-starter-web")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
-
-    testImplementation("io.mockk:mockk:1.9.3")
-    testImplementation("com.willowtreeapps.assertk:assertk-jvm:0.19")
-    testImplementation("com.nhaarman:mockito-kotlin:1.6.0")
-    testImplementation("no.skatteetaten.aurora:mockmvc-extensions-kotlin:1.0.2")
 }
-
