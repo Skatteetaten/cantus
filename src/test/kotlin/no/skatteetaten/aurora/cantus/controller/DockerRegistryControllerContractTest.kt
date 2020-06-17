@@ -1,7 +1,7 @@
 package no.skatteetaten.aurora.cantus.controller
 
+import com.ninjasquad.springmockk.MockkBean
 import io.mockk.every
-import io.mockk.mockk
 import kotlinx.coroutines.newFixedThreadPoolContext
 import no.skatteetaten.aurora.cantus.AuroraIntegration
 import no.skatteetaten.aurora.cantus.ImageManifestDtoBuilder
@@ -11,6 +11,7 @@ import no.skatteetaten.aurora.cantus.service.DockerRegistryService
 import no.skatteetaten.aurora.mockmvc.extensions.Path
 import no.skatteetaten.aurora.mockmvc.extensions.TestObjectMapperConfigurer
 import no.skatteetaten.aurora.mockmvc.extensions.contentTypeJson
+import no.skatteetaten.aurora.mockmvc.extensions.get
 import no.skatteetaten.aurora.mockmvc.extensions.post
 import no.skatteetaten.aurora.mockmvc.extensions.responseJsonPath
 import no.skatteetaten.aurora.mockmvc.extensions.statusIsOk
@@ -46,18 +47,13 @@ class DockerRegistryControllerContractTest {
     class DockerRegistryControllerContractTestConfiguration {
         @Bean
         fun threadPoolContext() = newFixedThreadPoolContext(2, "cantus")
-
-        @Bean
-        fun dockerService() = mockk<DockerRegistryService>()
     }
 
-    @Autowired
+    @MockkBean
     private lateinit var dockerService: DockerRegistryService
 
     @Autowired
     private lateinit var mockMvc: MockMvc
-
-    private val tags = ImageTagsWithTypeDtoBuilder("no_skatteetaten_aurora_demo", "whoami").build()
 
     init {
         TestObjectMapperConfigurer.objectMapper = createObjectMapper()
@@ -69,7 +65,7 @@ class DockerRegistryControllerContractTest {
     }
 
     @Test
-    fun `Get docker registry image manifest with POST`() {
+    fun `Get docker registry image manifest with POST  and one malformed url return Partial Success`() {
         val manifest = ImageManifestDtoBuilder().build()
         val tagUrlsWrapper = TagUrlsWrapper(
             listOf(
@@ -92,59 +88,50 @@ class DockerRegistryControllerContractTest {
             body = createObjectMapper().writeValueAsString(tagUrlsWrapper)
         ) {
             statusIsOk()
-                .responseJsonPath()
-            // .responseJsonPath("$.success").equalsValue(false)
-            // .responseJsonPath("$.items").isNotEmpty()
-            // .responseJsonPath("$.failureCount").equalsValue(1)
-            // .responseJsonPath("$.successCount").equalsValue(1)
+                .responseJsonPath("$.success").equalsValue(false)
+                .responseJsonPath("$.items").isNotEmpty()
+                .responseJsonPath("$.failureCount").equalsValue(1)
+                .responseJsonPath("$.successCount").equalsValue(1)
         }
-
-        // verify(dockerService, times(2)).getImageManifestInformation(any())
     }
 
     @Test
     fun `Get docker registry image tags with GET`() {
-        val path = "/tags?repoUrl=url/namespace/name"
-/*
 
-        given(dockerService.getImageTags(any(), any())).willReturn(tags)
-*/
+        every {
+            dockerService.getImageTags(any(), any())
+        } returns ImageTagsWithTypeDtoBuilder(
+            tags = listOf(
+                "dev-SNAPSHOT",
+                "SNAPSHOT--dev-20170912.120730-1-b1.4.1-wingnut-8.141.1",
+                "latest",
+                "1",
+                "1.0.0",
+                "1.1.0-b1.4.1-wingnut-8.141.1",
+                "1.2"
+            )
+        ).build()
 
-/*
-        val tagResource = given(mockedImageTagResourceAssembler.tagResourceToAuroraResponse(any()))
-            .withContractResponse("tagresource/TagResource") {
-                willReturn(content)
-            }.mockResponse
-
-        mockMvc.get(Path(path)) {
+        mockMvc.get(Path("/tags?repoUrl={registryUrl}/{namespace}/{name}", defaultTestRegistry, "namespace", "name")) {
             statusIsOk()
-                .responseJsonPath("$").equalsObject(tagResource)
+                .responseJsonPath("$.successCount").equalsValue(7)
         }
-*/
     }
 
     @Test
     fun `Get docker registry image tags with GET given missing resource`() {
-        val path = "/tags?repoUrl=url/namespace/missing"
-        val notFoundStatus = HttpStatus.NOT_FOUND
 
-/*
-        given(dockerService.getImageTags(any(), any())).willThrow(
-            SourceSystemException(
-                message = "Resource could not be found status=${notFoundStatus.value()} message=${notFoundStatus.reasonPhrase}",
-                sourceSystem = "https://docker.com"
-            )
+        every {
+            dockerService.getImageTags(any(), any())
+        } throws SourceSystemException(
+            message = "Resource could not be found status=${HttpStatus.NOT_FOUND} message=${HttpStatus.NOT_FOUND.reasonPhrase}",
+            sourceSystem = "https://docker.com"
         )
 
-        val tagResourceNotFound = given(mockedImageTagResourceAssembler.tagResourceToAuroraResponse(any()))
-            .withContractResponse("tagresource/TagResourceNotFound") {
-                willReturn(content)
-            }.mockResponse
-
-        mockMvc.get(Path(path)) {
+        mockMvc.get(Path("/tags?repoUrl=url/namespace/missing")) {
             statusIsOk()
-                .responseJsonPath("$").equalsObject(tagResourceNotFound)
+                .responseJsonPath("$.failureCount").equalsValue(1)
+                .responseJsonPath("$.failure[0].errorMessage").contains(HttpStatus.NOT_FOUND.name)
         }
-*/
     }
 }

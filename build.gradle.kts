@@ -7,13 +7,13 @@ plugins {
     id("org.jlleitschuh.gradle.ktlint") version "9.2.1"
     id("org.sonarqube") version "3.0"
 
-    id("org.springframework.boot") version "2.3.1.RELEASE"
+    id("org.springframework.boot") version "2.2.6.RELEASE"
 
     id("com.gorylenko.gradle-git-properties") version "2.2.2"
     id("com.github.ben-manes.versions") version "0.28.0"
     id("se.patrikerdes.use-latest-versions") version "0.2.14"
 
-    id("no.skatteetaten.gradle.aurora") version "3.6.0"
+    id("no.skatteetaten.gradle.aurora") version "3.5.2"
 }
 
 dependencies {
@@ -29,10 +29,11 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.7")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:1.3.7")
     // Testing
-    testImplementation("no.skatteetaten.aurora:mockmvc-extensions-kotlin:1.1.0")
+    testImplementation("no.skatteetaten.aurora:mockmvc-extensions-kotlin:1.0.13")
     testImplementation("io.mockk:mockk:1.10.0")
     testImplementation("com.willowtreeapps.assertk:assertk-jvm:0.22")
     testImplementation("com.squareup.okhttp3:mockwebserver:4.7.2")
+    testImplementation("com.ninja-squad:springmockk:2.0.1")
 
     // Spring
     implementation("org.springframework.boot:spring-boot-starter-web")

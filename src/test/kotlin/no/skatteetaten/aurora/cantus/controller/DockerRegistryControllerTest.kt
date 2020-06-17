@@ -64,12 +64,12 @@ class DockerRegistryControllerTest {
         val repoUrl = path.split("=")[1]
 
         mockMvc.get(Path(path)) {
-            // statusIsOk()
-                // .responseJsonPath("$.items").isEmpty()
-                // .responseJsonPath("$.success").isFalse()
-                // .responseJsonPath("$.failure[0].url").equalsValue(repoUrl)
-                // .responseJsonPath("$.failure[0].errorMessage")
-                // .equalsValue("repo url=no_skatteetaten_aurora_demo/whaomi malformed pattern=url:port/group/name:tag")
+            statusIsOk()
+                .responseJsonPath("$.items").isEmpty()
+                .responseJsonPath("$.success").isFalse()
+                .responseJsonPath("$.failure[0].url").equalsValue(repoUrl)
+                .responseJsonPath("$.failure[0].errorMessage")
+                .equalsValue("repo url=no_skatteetaten_aurora_demo/whaomi malformed pattern=url:port/group/name:tag")
         }
     }
 

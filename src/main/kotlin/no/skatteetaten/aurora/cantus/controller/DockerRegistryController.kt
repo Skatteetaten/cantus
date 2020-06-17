@@ -84,8 +84,24 @@ class DockerRegistryController(
         val responses = runBlocking(MDCContext() + threadPoolContext) {
             tagUrlsWrapper.tagUrls.map {
                 runBlocking {
-                    val imageRepoCommand = imageRepoCommandAssembler.createAndValidateCommand(it, bearerToken)
-                    getImageTagResource(imageRepoCommand)
+                    try {
+                        val imageRepoCommand = imageRepoCommandAssembler.createAndValidateCommand(it, bearerToken)
+                        require(imageRepoCommand.imageTag != null) {
+                            "ImageRepo with spec=${imageRepoCommand.fullRepoCommand} does not contain a tag"
+                        }
+
+                        Try.Success(
+                            dockerRegistryService.getImageManifestInformation(imageRepoCommand)
+                                .let { imageManifestDto ->
+                                    imageTagResourceAssembler.toImageTagResource(
+                                        manifestDto = imageManifestDto,
+                                        requestUrl = imageRepoCommand.fullRepoCommand
+                                    )
+                                }
+                        )
+                    } catch (e: Throwable) {
+                        Try.Failure(CantusFailure(it, e))
+                    }
                 }
             }
         }
@@ -97,28 +113,6 @@ class DockerRegistryController(
                     ","
                 )}"
             }
-        }
-    }
-
-    private fun getImageTagResource(
-        imageRepoCommand: ImageRepoCommand
-    ): Try<ImageTagResource, CantusFailure> {
-        return try {
-            require(imageRepoCommand.imageTag != null) {
-                "ImageRepo with spec=${imageRepoCommand.fullRepoCommand} does not contain a tag"
-            }
-
-            Try.Success(
-                dockerRegistryService.getImageManifestInformation(imageRepoCommand)
-                    .let { imageManifestDto ->
-                        imageTagResourceAssembler.toImageTagResource(
-                            manifestDto = imageManifestDto,
-                            requestUrl = imageRepoCommand.fullRepoCommand
-                        )
-                    }
-            )
-        } catch (e: Throwable) {
-            Try.Failure(CantusFailure(imageRepoCommand.fullRepoCommand, e))
         }
     }
 
