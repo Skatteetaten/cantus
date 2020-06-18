@@ -81,15 +81,12 @@ cantus:
 
 server:
     port: 8080
-    # Er denne gammel også?
-    max-http-header-size: 200000
 
 logging:
     level:
     #reactor.netty.http.client.HttpClient: DEBUG # Needs wiretap in ApplicationConfig
     pattern:
         console: "%d [%-9.9thread] %highlight(%-5level) %cyan(%logger:%L) %X - %msg %n%rEx{full}"
-    # add mokey.openshift.token to ~/.spring-boot-devtools.properties
 
 ---
 spring:

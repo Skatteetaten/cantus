@@ -27,7 +27,6 @@ data class TagUrlsWrapper(val tagUrls: List<String>)
 private val logger = KotlinLogging.logger {}
 
 @RestController
-@RequestMapping()
 class DockerRegistryController(
     val dockerRegistryService: DockerRegistryService,
     val imageTagResourceAssembler: ImageTagResourceAssembler,

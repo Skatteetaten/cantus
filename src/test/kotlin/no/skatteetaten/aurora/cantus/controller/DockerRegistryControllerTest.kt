@@ -1,5 +1,6 @@
 package no.skatteetaten.aurora.cantus.controller
 
+import com.ninjasquad.springmockk.MockkBean
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.newFixedThreadPoolContext
@@ -45,12 +46,9 @@ class DockerRegistryControllerTest {
         @Bean
         fun threadPoolContext(@Value("\${cantus.threadPoolSize:6}") threadPoolSize: Int) =
             newFixedThreadPoolContext(threadPoolSize, "cantus")
-
-        @Bean
-        fun dockerService() = mockk<DockerRegistryService>()
     }
 
-    @Autowired
+    @MockkBean
     private lateinit var dockerService: DockerRegistryService
 
     @Autowired
@@ -75,7 +73,6 @@ class DockerRegistryControllerTest {
 
     @Test
     fun `Get request given invalid repoUrl throw IllegalArgumentException when missing name`() {
-
         val path = "/tags/?repoUrl=$defaultTestRegistry/no_skatteetaten_aurora"
         val repoUrl = path.split("=")[1]
 
