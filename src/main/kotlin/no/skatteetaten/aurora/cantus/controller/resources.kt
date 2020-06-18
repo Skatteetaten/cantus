@@ -14,12 +14,6 @@ data class TagCommandResource(val result: Boolean) : HalResource()
 
 data class TagResource(val name: String, val type: ImageTagType = ImageTagType.typeOf(name)) : HalResource()
 
-data class GroupedTagResource(
-    val group: String,
-    val tagResource: List<TagResource>,
-    val itemsInGroup: Int = tagResource.size
-) : HalResource()
-
 data class ImageTagResource(
     val auroraVersion: String? = null,
     val appVersion: String? = null,
@@ -89,39 +83,6 @@ data class NodeJsImage(
     }
 }
 
-sealed class Try<out A, out B> {
-    class Success<A>(val value: A) : Try<A, Nothing>()
-    class Failure<B>(val value: B) : Try<Nothing, B>()
-}
-
-fun <S : Any, T : Any> List<Try<S, T>>.getSuccessAndFailures(): Pair<List<S>, List<T>> {
-    val items = this.mapNotNull {
-        if (it is Try.Success) {
-            it.value
-        } else null
-    }
-
-    val failure = this.mapNotNull {
-        if (it is Try.Failure) {
-            if (it.value is CantusFailure) logger.debug(it.value.error) { "An error has occurred" }
-            it.value
-        } else null
-    }
-
-    return Pair(items, failure)
-}
-
-fun <S, T> Try<S, T>.getSuccessAndFailures(): Pair<List<S>, List<T>> {
-    val item = if (this is Try.Success) {
-        listOf(this.value)
-    } else emptyList()
-    val failure = if (this is Try.Failure) {
-        listOf(this.value)
-    } else emptyList()
-
-    return Pair(item, failure)
-}
-
 data class CantusFailure(
     val url: String,
     @JsonIgnore val error: Throwable? = null
@@ -141,10 +102,16 @@ data class AuroraResponse<T : HalResource?>(
 
 @Component
 class AuroraResponseAssembler {
-
-    fun <T : HalResource> toAuroraResponse(responses: List<Try<T, CantusFailure>>): AuroraResponse<T> {
-        val (items, failures) = responses.getSuccessAndFailures()
-
+    fun <T : HalResource> toAuroraResponse(responses: List<Result<T>>): AuroraResponse<T> {
+        val items = responses.mapNotNull { it.getOrNull() }
+        val failures = responses
+            .mapNotNull { it.exceptionOrNull() }
+            .map {
+                when (it) {
+                    is RequestResultException -> CantusFailure(it.repoUrl, it.cause)
+                    else -> CantusFailure("Unrecognized error happened", it.cause)
+                }
+            }
         return AuroraResponse(
             success = failures.isEmpty(),
             message = if (failures.isNotEmpty()) failures.first().errorMessage else "Success",
@@ -153,16 +120,14 @@ class AuroraResponseAssembler {
         )
     }
 
-    fun <T : HalResource> toAuroraResponse(responses: Try<List<T>, CantusFailure>): AuroraResponse<T> {
-        val itemsAndFailure = responses.getSuccessAndFailures()
-        val items = itemsAndFailure.first.firstOrNull() ?: emptyList()
-        val failures = itemsAndFailure.second
-
-        return AuroraResponse(
-            success = failures.isEmpty(),
-            message = if (failures.isNotEmpty()) failures.first().errorMessage else "Success",
-            items = items,
-            failure = failures
+    fun <T : HalResource> toAuroraResponse(responses: Result<List<T>>): AuroraResponse<T> =
+        toAuroraResponse(
+            responses.getOrNull()?.map {
+                Result.success(it)
+            } ?: listOf(
+                Result.failure(
+                    responses.exceptionOrNull() ?: CantusException("Result did not contain any data")
+                )
+            )
         )
-    }
 }

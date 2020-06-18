@@ -3,6 +3,7 @@ package no.skatteetaten.aurora.cantus.controller
 import kotlinx.coroutines.ExecutorCoroutineDispatcher
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.slf4j.MDCContext
+import kotlinx.coroutines.withContext
 import mu.KotlinLogging
 import no.skatteetaten.aurora.cantus.AuroraIntegration
 import no.skatteetaten.aurora.cantus.service.DockerRegistryService
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestHeader
+import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
@@ -25,6 +27,7 @@ data class TagUrlsWrapper(val tagUrls: List<String>)
 private val logger = KotlinLogging.logger {}
 
 @RestController
+@RequestMapping()
 class DockerRegistryController(
     val dockerRegistryService: DockerRegistryService,
     val imageTagResourceAssembler: ImageTagResourceAssembler,
@@ -79,39 +82,34 @@ class DockerRegistryController(
         @RequestBody tagUrlsWrapper: TagUrlsWrapper,
         @RequestHeader(required = false, value = HttpHeaders.AUTHORIZATION) bearerToken: String?
     ): AuroraResponse<ImageTagResource> {
+        return runBlocking {
+            val watch = StopWatch().apply { this.start() }
+            val responses =
+                tagUrlsWrapper.tagUrls.map {
+                    withContext(MDCContext() + threadPoolContext) {
+                        runCatching {
+                            val imageRepoCommand = imageRepoCommandAssembler.createAndValidateCommand(it, bearerToken)
+                            require(imageRepoCommand.imageTag != null) {
+                                "ImageRepo with spec=${imageRepoCommand.fullRepoCommand} does not contain a tag"
+                            }
 
-        val watch = StopWatch().apply { this.start() }
-        val responses = runBlocking(MDCContext() + threadPoolContext) {
-            tagUrlsWrapper.tagUrls.map {
-                runBlocking {
-                    try {
-                        val imageRepoCommand = imageRepoCommandAssembler.createAndValidateCommand(it, bearerToken)
-                        require(imageRepoCommand.imageTag != null) {
-                            "ImageRepo with spec=${imageRepoCommand.fullRepoCommand} does not contain a tag"
+                            imageTagResourceAssembler.toImageTagResource(
+                                manifestDto = dockerRegistryService.getImageManifestInformation(imageRepoCommand),
+                                requestUrl = imageRepoCommand.fullRepoCommand
+                            )
                         }
-
-                        Try.Success(
-                            dockerRegistryService.getImageManifestInformation(imageRepoCommand)
-                                .let { imageManifestDto ->
-                                    imageTagResourceAssembler.toImageTagResource(
-                                        manifestDto = imageManifestDto,
-                                        requestUrl = imageRepoCommand.fullRepoCommand
-                                    )
-                                }
-                        )
-                    } catch (e: Throwable) {
-                        Try.Failure(CantusFailure(it, e))
+                    }.recoverCatching { ex ->
+                        throw RequestResultException(repoUrl = it, cause = ex)
                     }
                 }
-            }
-        }
 
-        return imageTagResourceAssembler.imageTagResourceToAuroraResponse(responses).also {
-            watch.stop()
-            logger.debug {
-                "Get imageManifest tookMs=${watch.totalTimeMillis} urls=${tagUrlsWrapper.tagUrls.joinToString(
-                    ","
-                )}"
+            imageTagResourceAssembler.toAuroraResponse(responses).also {
+                watch.stop()
+                logger.debug {
+                    "Get imageManifest tookMs=${watch.totalTimeMillis} urls=${tagUrlsWrapper.tagUrls.joinToString(
+                        ","
+                    )}"
+                }
             }
         }
     }
@@ -123,19 +121,15 @@ class DockerRegistryController(
         @RequestHeader(required = false, value = HttpHeaders.AUTHORIZATION) bearerToken: String?
     ): AuroraResponse<TagResource> {
         val watch = StopWatch().apply { this.start() }
-        val response = try {
+        val response = runCatching {
             val imageRepoCommand = imageRepoCommandAssembler.createAndValidateCommand(repoUrl, bearerToken)
-            Try.Success(
-                dockerRegistryService.getImageTags(imageRepoCommand, filter).let { tags ->
-                    val tagResponse = imageTagResourceAssembler.toTagResource(tags)
-                    tagResponse
-                }
+            imageTagResourceAssembler.toTagResource(
+                dockerRegistryService.getImageTags(imageRepoCommand, filter)
             )
-        } catch (e: Throwable) {
-            Try.Failure(CantusFailure(repoUrl, e))
+        }.recoverCatching {
+            throw RequestResultException(repoUrl, it)
         }
-
-        return imageTagResourceAssembler.tagResourceToAuroraResponse(response).also {
+        return imageTagResourceAssembler.toAuroraResponse(response).also {
             watch.stop()
             logger.debug { "Get imageTags tookMs=${watch.totalTimeMillis} url=$repoUrl" }
         }
@@ -144,10 +138,10 @@ class DockerRegistryController(
 
 @Component
 class ImageTagResourceAssembler(val auroraResponseAssembler: AuroraResponseAssembler) {
-    fun imageTagResourceToAuroraResponse(resources: List<Try<ImageTagResource, CantusFailure>>) =
+    fun toAuroraResponse(resources: Result<List<TagResource>>): AuroraResponse<TagResource> =
         auroraResponseAssembler.toAuroraResponse(resources)
 
-    fun tagResourceToAuroraResponse(resources: Try<List<TagResource>, CantusFailure>) =
+    fun toAuroraResponse(resources: List<Result<ImageTagResource>>): AuroraResponse<ImageTagResource> =
         auroraResponseAssembler.toAuroraResponse(resources)
 
     fun toTagResource(imageTagsWithTypeDto: ImageTagsWithTypeDto) =

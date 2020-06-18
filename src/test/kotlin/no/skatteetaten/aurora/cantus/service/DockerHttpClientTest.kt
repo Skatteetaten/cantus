@@ -280,7 +280,7 @@ class DockerHttpClientTest {
                 .isFailure()
                 .isNotNull().isInstanceOf(SourceSystemException::class)
                 .message().isNotNull()
-                .contains("Only v2 manifest is supported. contentType=application/json;charset=UTF-8")
+                .contains("Only v2 manifest is supported. contentType=application/json")
         }
     }
 
