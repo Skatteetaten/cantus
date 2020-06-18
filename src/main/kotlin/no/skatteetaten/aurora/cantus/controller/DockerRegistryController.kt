@@ -1,9 +1,9 @@
 package no.skatteetaten.aurora.cantus.controller
 
 import kotlinx.coroutines.ExecutorCoroutineDispatcher
+import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.slf4j.MDCContext
-import kotlinx.coroutines.withContext
 import mu.KotlinLogging
 import no.skatteetaten.aurora.cantus.AuroraIntegration
 import no.skatteetaten.aurora.cantus.service.DockerRegistryService
@@ -80,28 +80,31 @@ class DockerRegistryController(
         @RequestBody tagUrlsWrapper: TagUrlsWrapper,
         @RequestHeader(required = false, value = HttpHeaders.AUTHORIZATION) bearerToken: String?
     ): AuroraResponse<ImageTagResource> {
-        return runBlocking {
+        return runBlocking(MDCContext() + threadPoolContext) {
             val watch = StopWatch().apply { this.start() }
-            val responses =
-                tagUrlsWrapper.tagUrls.map {
-                    withContext(MDCContext() + threadPoolContext) {
-                        runCatching {
-                            val imageRepoCommand = imageRepoCommandAssembler.createAndValidateCommand(it, bearerToken)
-                            require(imageRepoCommand.imageTag != null) {
-                                "ImageRepo with spec=${imageRepoCommand.fullRepoCommand} does not contain a tag"
-                            }
-
-                            imageTagResourceAssembler.toImageTagResource(
-                                manifestDto = dockerRegistryService.getImageManifestInformation(imageRepoCommand),
-                                requestUrl = imageRepoCommand.fullRepoCommand
-                            )
+            val deferredResponses = tagUrlsWrapper.tagUrls.map {
+                async {
+                    runCatching {
+                        val imageRepoCommand = imageRepoCommandAssembler.createAndValidateCommand(it, bearerToken)
+                        require(imageRepoCommand.imageTag != null) {
+                            "ImageRepo with spec=${imageRepoCommand.fullRepoCommand} does not contain a tag"
                         }
+
+                        imageTagResourceAssembler.toImageTagResource(
+                            manifestDto = dockerRegistryService.getImageManifestInformation(imageRepoCommand),
+                            requestUrl = imageRepoCommand.fullRepoCommand
+                        )
                     }.recoverCatching { ex ->
                         throw RequestResultException(repoUrl = it, cause = ex)
                     }
                 }
+            }
 
-            imageTagResourceAssembler.toAuroraResponse(responses).also {
+            val response = runBlocking {
+                deferredResponses.map { it.await() }
+            }
+
+            imageTagResourceAssembler.toAuroraResponse(response).also {
                 watch.stop()
                 logger.debug {
                     "Get imageManifest tookMs=${watch.totalTimeMillis} urls=${tagUrlsWrapper.tagUrls.joinToString(
