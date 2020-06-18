@@ -27,6 +27,7 @@ dependencies {
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-slf4j:1.3.7")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.7")
+
     // Testing
     testImplementation("no.skatteetaten.aurora:mockmvc-extensions-kotlin:1.0.13")
     testImplementation("io.mockk:mockk:1.10.0")

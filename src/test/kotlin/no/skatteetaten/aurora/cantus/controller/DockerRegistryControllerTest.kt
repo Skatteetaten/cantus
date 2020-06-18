@@ -2,7 +2,6 @@ package no.skatteetaten.aurora.cantus.controller
 
 import com.ninjasquad.springmockk.MockkBean
 import io.mockk.every
-import io.mockk.mockk
 import kotlinx.coroutines.newFixedThreadPoolContext
 import no.skatteetaten.aurora.cantus.AuroraIntegration
 import no.skatteetaten.aurora.cantus.ImageTagsWithTypeDtoBuilder
