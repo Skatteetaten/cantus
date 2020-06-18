@@ -87,7 +87,7 @@ class DockerRegistryController(
             val responses =
                 tagUrlsWrapper.tagUrls.map {
                     withContext(MDCContext() + threadPoolContext) {
-                        runCatching {
+                        runAsResult {
                             val imageRepoCommand = imageRepoCommandAssembler.createAndValidateCommand(it, bearerToken)
                             require(imageRepoCommand.imageTag != null) {
                                 "ImageRepo with spec=${imageRepoCommand.fullRepoCommand} does not contain a tag"
@@ -158,4 +158,10 @@ class ImageTagResourceAssembler(val auroraResponseAssembler: AuroraResponseAssem
             node = NodeJsImage.fromDto(manifestDto),
             requestUrl = requestUrl
         )
+}
+
+inline fun <T, R> T.runAsResult(block: T.() -> R): Result<R> = try {
+    Result.success(block())
+} catch (e: Throwable) {
+    Result.failure(e)
 }
