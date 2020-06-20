@@ -61,7 +61,7 @@ class DockerHttpClientTest {
 
         val content: Mono<ByteArray> = Mono.just("this is teh content".toByteArray())
 
-        val fail = MockResponse().setResponseCode(404)
+        val fail = MockResponse().setResponseCode(500)
         // Any response will do here.
         val response =
             MockResponse()
@@ -81,7 +81,7 @@ class DockerHttpClientTest {
 
         val content: Mono<ByteArray> = Mono.just("this is teh content".toByteArray())
 
-        val fail = MockResponse().setResponseCode(404)
+        val fail = MockResponse().setResponseCode(500)
 
         val requests = server.execute(fail, fail, fail, fail) {
             assertThat { httpClient.uploadLayer(imageRepoCommand, "uuid", "digest", content) }
@@ -114,24 +114,24 @@ class DockerHttpClientTest {
 
         val manifest = ImageManifestResponseDto(MANIFEST_V2_MEDIATYPE_VALUE, "abc", createObjectMapper().readTree("{}"))
 
-        val response = MockResponse().setResponseCode(404)
+        val response = MockResponse().setResponseCode(500)
             .setBody("{\"errors\":[{\"code\":\"BLOB_UNKNOWN\",\"message\":\"blob unknown to registry\",\"detail\":\"sha256:303510ed0dee065d6dc0dd4fbb1833aa27ff6177e7dfc72881ea4ea0716c82a1\"}]}")
         server.execute(response, response, response, response) {
             assertThat { httpClient.putManifest(imageRepoCommand, manifest) }
                 .isFailure().isNotNull().isInstanceOf(SourceSystemException::class)
                 .message().isNotNull()
-                .matches(Regex(".*cause=NotFound lastError=404 Not Found from PUT .* operation=PUT_MANIFEST .*"))
+                .matches(Regex(".*cause=InternalServerError lastError=500 Internal Server Error from PUT .* operation=PUT_MANIFEST .*"))
         }
     }
 
     @Test
     fun `test digest authentication failed`() {
         val response = MockResponse().setResponseCode(401).setBody("Unauthorized")
-        server.execute(response, response, response, response) {
+        server.execute(response) {
             assertThat { httpClient.digestExistInRepo(imageRepoCommand, "abc") }
                 .isFailure().isNotNull().isInstanceOf(SourceSystemException::class)
                 .message().isNotNull()
-                .matches(Regex(".*cause=Unauthorized lastError=401 Unauthorized from HEAD .* operation=BLOB_EXIST.*"))
+                .matches(Regex(".*status=401 UNAUTHORIZED .* operation=BLOB_EXIST.*"))
         }
     }
 
@@ -192,7 +192,7 @@ class DockerHttpClientTest {
             MockResponse()
                 .setResponseCode(404)
 
-        server.execute(response, response, response, response) {
+        server.execute(response) {
             assertThat { httpClient.getConfig(imageRepoCommand, "SHA::256") }
                 .isFailure().isNotNull().isInstanceOf(SourceSystemException::class)
         }

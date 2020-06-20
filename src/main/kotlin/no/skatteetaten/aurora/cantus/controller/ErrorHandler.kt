@@ -1,50 +1,79 @@
 package no.skatteetaten.aurora.cantus.controller
 
 import io.netty.handler.timeout.ReadTimeoutException
-import java.time.Duration
 import mu.KotlinLogging
 import org.springframework.web.reactive.function.client.WebClientResponseException
 import reactor.core.publisher.Mono
-import reactor.core.publisher.toMono
+import reactor.kotlin.core.publisher.toMono
+import reactor.retry.Retry
+import reactor.retry.RetryContext
 import reactor.retry.RetryExhaustedException
-import reactor.retry.retryExponentialBackoff
+import java.time.Duration
 
 private const val BLOCK_TIMEOUT: Long = 300
-private const val RETRY_MAX_ATTEMPTS = 3L
 private val logger = KotlinLogging.logger {}
+
+fun <T> Mono<T>.retryWithLog(
+    retryConfiguration: RetryConfiguration,
+    ignoreAllWebClientResponseException: Boolean = false,
+    context: String = ""
+): Mono<T> {
+    if (retryConfiguration.times == 0L) {
+        return this
+    }
+
+    return this.retryWhen(Retry.onlyIf<Mono<T>> {
+        logger.trace(it.exception()) {
+            val e = it.exception()
+            "retryWhen called with exception ${e?.javaClass?.simpleName}, message: ${e?.message}"
+        }
+
+        if (ignoreAllWebClientResponseException) {
+            it.exception() !is WebClientResponseException
+        } else {
+            it.isServerError() || it.exception() !is WebClientResponseException
+        }
+    }
+        .exponentialBackoff(retryConfiguration.min, retryConfiguration.max)
+        .retryMax(retryConfiguration.times)
+        .doOnRetry {
+            logger.debug {
+                val e = it.exception()
+                val msg = "Retrying failed request times=${it.iteration()}, context=$context " +
+                    "errorType=${e.javaClass.simpleName} errorMessage=${e.message}"
+                if (e is WebClientResponseException) {
+                    "$msg, method=${e.request?.method} uri=${e.request?.uri}"
+                } else {
+                    msg
+                }
+            }
+        }
+    )
+}
+
+data class RetryConfiguration(
+    var times: Long = 3L,
+    var min: Duration = Duration.ofMillis(100),
+    var max: Duration = Duration.ofSeconds(1)
+)
+
+fun <T> RetryContext<Mono<T>>.isServerError() =
+    this.exception() is WebClientResponseException && (this.exception() as WebClientResponseException).statusCode.is5xxServerError
 
 fun <T : Any?> Mono<T>.blockAndHandleErrorWithRetry(
     message: String,
     imageRepoCommand: ImageRepoCommand? = null,
     duration: Duration = Duration.ofSeconds(BLOCK_TIMEOUT)
 ) =
-    this.retryRepoCommand(message).blockAndHandleError(duration, imageRepoCommand = imageRepoCommand, message = message)
-
-fun <T : Any?> Mono<T>.retryRepoCommand(message: String) = this.retryExponentialBackoff(
-    times = RETRY_MAX_ATTEMPTS,
-    first = Duration.ofMillis(100L),
-    max = Duration.ofSeconds(1L),
-    jitter = false,
-    doOnRetry = {
-        val e = it.exception()
-        val exceptionClass = e::class.simpleName
-        if (it.iteration() == RETRY_MAX_ATTEMPTS) {
-            logger.warn {
-                "Retry=last $message exception=$exceptionClass message=${e.localizedMessage}"
-            }
-        } else {
-            logger.info {
-                "Retry=${it.iteration()} $message exception=$exceptionClass message=\"${e.message}\""
-            }
-        }
-    })
+    this.retryWithLog(RetryConfiguration(), context = message)
+        .blockAndHandleError(duration, imageRepoCommand = imageRepoCommand, message = message)
 
 fun <T> Mono<T>.blockAndHandleError(
     duration: Duration = Duration.ofSeconds(BLOCK_TIMEOUT),
     imageRepoCommand: ImageRepoCommand? = null,
     message: String? = null
 ) =
-    this.handleError(imageRepoCommand, message).toMono().block(duration)
+    this.handleError(imageRepoCommand, message).toMono<T>().block(duration)
 
 // TODO: Se på error handling i hele denne filen
 fun <T> Mono<T>.handleError(imageRepoCommand: ImageRepoCommand?, message: String? = null) =
