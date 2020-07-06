@@ -3,11 +3,10 @@ package no.skatteetaten.aurora.cantus.controller
 import io.netty.handler.timeout.ReadTimeoutException
 import mu.KotlinLogging
 import org.springframework.web.reactive.function.client.WebClientResponseException
+import reactor.core.Exceptions
 import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.toMono
-import reactor.retry.Retry
-import reactor.retry.RetryContext
-import reactor.retry.RetryExhaustedException
+import reactor.util.retry.Retry
 import java.time.Duration
 
 private const val BLOCK_TIMEOUT: Long = 300
@@ -22,32 +21,31 @@ fun <T> Mono<T>.retryWithLog(
         return this
     }
 
-    return this.retryWhen(Retry.onlyIf<Mono<T>> {
-        logger.trace(it.exception()) {
-            val e = it.exception()
-            "retryWhen called with exception ${e?.javaClass?.simpleName}, message: ${e?.message}"
-        }
+    return this.retryWhen(
+        Retry.backoff(retryConfiguration.times, retryConfiguration.min)
+            .maxBackoff(retryConfiguration.max)
+            .filter {
+                logger.trace(it) {
+                    "retryWhen called with exception ${it?.javaClass?.simpleName}, message: ${it?.message}"
+                }
 
-        if (ignoreAllWebClientResponseException) {
-            it.exception() !is WebClientResponseException
-        } else {
-            it.isServerError() || it.exception() !is WebClientResponseException
-        }
-    }
-        .exponentialBackoff(retryConfiguration.min, retryConfiguration.max)
-        .retryMax(retryConfiguration.times)
-        .doOnRetry {
-            logger.debug {
-                val e = it.exception()
-                val msg = "Retrying failed request times=${it.iteration()}, context=$context " +
-                    "errorType=${e.javaClass.simpleName} errorMessage=${e.message}"
-                if (e is WebClientResponseException) {
-                    "$msg, method=${e.request?.method} uri=${e.request?.uri}"
+                if (ignoreAllWebClientResponseException) {
+                    it !is WebClientResponseException
                 } else {
-                    msg
+                    it.isServerError() || it !is WebClientResponseException
+                }
+            }.doBeforeRetry {
+                logger.debug {
+                    val e = it.failure()
+                    val msg = "Retrying failed request times=${it.totalRetries()}, context=$context " +
+                        "errorType=${e.javaClass.simpleName} errorMessage=${e.message}"
+                    if (e is WebClientResponseException) {
+                        "$msg, method=${e.request?.method} uri=${e.request?.uri}"
+                    } else {
+                        msg
+                    }
                 }
             }
-        }
     )
 }
 
@@ -57,8 +55,8 @@ data class RetryConfiguration(
     var max: Duration = Duration.ofSeconds(1)
 )
 
-fun <T> RetryContext<Mono<T>>.isServerError() =
-    this.exception() is WebClientResponseException && (this.exception() as WebClientResponseException).statusCode.is5xxServerError
+private fun Throwable.isServerError() =
+    this is WebClientResponseException && this.statusCode.is5xxServerError
 
 fun <T : Any?> Mono<T>.blockAndHandleErrorWithRetry(
     message: String,
@@ -78,15 +76,15 @@ fun <T> Mono<T>.blockAndHandleError(
 // TODO: Se på error handling i hele denne filen
 fun <T> Mono<T>.handleError(imageRepoCommand: ImageRepoCommand?, message: String? = null) =
     this.doOnError {
-        when (it) {
-            is WebClientResponseException -> it.handleException(imageRepoCommand, message)
-            is ReadTimeoutException -> it.handleException(imageRepoCommand, message)
-            is RetryExhaustedException -> it.handleException(imageRepoCommand, message)
+        when {
+            Exceptions.isRetryExhausted(it) -> it.handleException(imageRepoCommand, message)
+            it is WebClientResponseException -> it.handleException(imageRepoCommand, message)
+            it is ReadTimeoutException -> it.handleException(imageRepoCommand, message)
             else -> it.handleException(message)
         }
     }
 
-private fun RetryExhaustedException.handleException(imageRepoCommand: ImageRepoCommand?, message: String?) {
+private fun Throwable.handleException(imageRepoCommand: ImageRepoCommand?, message: String?) {
     val cause = this.cause!!
     val msg =
         "Retry failed after 4 attempts cause=${cause::class.simpleName} lastError=${cause.localizedMessage} $message"
