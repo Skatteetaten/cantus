@@ -1,5 +1,6 @@
 package no.skatteetaten.aurora.cantus.controller
 
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExecutorCoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
@@ -79,11 +80,11 @@ class DockerRegistryController(
     fun getManifestInformationList(
         @RequestBody tagUrlsWrapper: TagUrlsWrapper,
         @RequestHeader(required = false, value = HttpHeaders.AUTHORIZATION) bearerToken: String?
-    ): AuroraResponse<ImageTagResource> {
-        return runBlocking(MDCContext() + threadPoolContext) {
-            val watch = StopWatch().apply { this.start() }
-            val deferredResponses = tagUrlsWrapper.tagUrls.map {
-                async {
+    ): AuroraResponse<ImageTagResource> = runBlocking(MDCContext() + threadPoolContext) {
+        val watch = StopWatch().apply { this.start() }
+        val response = tagUrlsWrapper.tagUrls
+            .map {
+                async(Dispatchers.Default) {
                     runCatching {
                         val imageRepoCommand = imageRepoCommandAssembler.createAndValidateCommand(it, bearerToken)
                         require(imageRepoCommand.imageTag != null) {
@@ -98,19 +99,14 @@ class DockerRegistryController(
                         throw RequestResultException(repoUrl = it, cause = ex)
                     }
                 }
-            }
+            }.map { it.await() }
 
-            val response = runBlocking {
-                deferredResponses.map { it.await() }
-            }
-
-            imageTagResourceAssembler.toAuroraResponse(response).also {
-                watch.stop()
-                logger.debug {
-                    "Get imageManifest tookMs=${watch.totalTimeMillis} urls=${tagUrlsWrapper.tagUrls.joinToString(
-                        ","
-                    )}"
-                }
+        imageTagResourceAssembler.toAuroraResponse(response).also {
+            watch.stop()
+            logger.debug {
+                "Get imageManifest tookMs=${watch.totalTimeMillis} urls=${tagUrlsWrapper.tagUrls.joinToString(
+                    ","
+                )}"
             }
         }
     }
@@ -120,7 +116,7 @@ class DockerRegistryController(
         @RequestParam repoUrl: String,
         @RequestParam filter: String?,
         @RequestHeader(required = false, value = HttpHeaders.AUTHORIZATION) bearerToken: String?
-    ): AuroraResponse<TagResource> {
+    ): AuroraResponse<TagResource> = runBlocking(MDCContext() + threadPoolContext) {
         val watch = StopWatch().apply { this.start() }
         val response = runCatching {
             val imageRepoCommand = imageRepoCommandAssembler.createAndValidateCommand(repoUrl, bearerToken)
@@ -130,7 +126,7 @@ class DockerRegistryController(
         }.recoverCatching {
             throw RequestResultException(repoUrl, it)
         }
-        return imageTagResourceAssembler.toAuroraResponse(response).also {
+        imageTagResourceAssembler.toAuroraResponse(response).also {
             watch.stop()
             logger.debug { "Get imageTags tookMs=${watch.totalTimeMillis} url=$repoUrl" }
         }

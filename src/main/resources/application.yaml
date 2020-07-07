@@ -11,6 +11,9 @@ spring:
     application:
         name: cantus
 
+    codec:
+        max-in-memory-size: 30MB
+
 logging:
     level:
         no.skatteetaten.aurora.cantus: DEBUG
