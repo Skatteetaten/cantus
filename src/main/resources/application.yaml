@@ -12,7 +12,7 @@ spring:
         name: cantus
 
     codec:
-        max-in-memory-size: 30MB
+        max-in-memory-size: 1MB
 
 logging:
     level:

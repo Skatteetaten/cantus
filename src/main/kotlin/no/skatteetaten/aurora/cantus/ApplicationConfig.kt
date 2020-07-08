@@ -14,12 +14,8 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Primary
 import org.springframework.context.annotation.Profile
 import org.springframework.http.HttpHeaders
-import org.springframework.http.MediaType
 import org.springframework.http.client.reactive.ReactorClientHttpConnector
-import org.springframework.http.codec.json.Jackson2JsonDecoder
-import org.springframework.http.codec.json.Jackson2JsonEncoder
 import org.springframework.web.reactive.function.client.ExchangeFilterFunction
-import org.springframework.web.reactive.function.client.ExchangeStrategies
 import org.springframework.web.reactive.function.client.WebClient
 import reactor.kotlin.core.publisher.toMono
 import reactor.netty.http.client.HttpClient
@@ -52,9 +48,7 @@ class ApplicationConfig {
         @Value("\${spring.application.name}") applicationName: String,
         @Value("\${application.version:}") applicationVersion: String
     ) =
-        builder
-            .exchangeStrategies(exchangeStrategies())
-            .filter(ExchangeFilterFunction.ofRequestProcessor {
+        builder.filter(ExchangeFilterFunction.ofRequestProcessor {
                 val bearer = it.headers()[HttpHeaders.AUTHORIZATION]?.firstOrNull()?.let { token ->
                     val (bearer, tokenValue) = token.substring(0, min(token.length, MAX_ACCEPTED_TOKEN_LENGTH))
                         .split(" ")
@@ -72,32 +66,6 @@ class ApplicationConfig {
                         .compress(true)
                 )
             ).build()
-
-    private fun exchangeStrategies(): ExchangeStrategies {
-        val objectMapper = createObjectMapper()
-
-        return ExchangeStrategies
-            .builder()
-            .codecs {
-                it.defaultCodecs().jackson2JsonDecoder(
-                    Jackson2JsonDecoder(
-                        objectMapper,
-                        MediaType.valueOf("application/vnd.docker.distribution.manifest.v1+json"),
-                        MediaType.valueOf("application/vnd.docker.distribution.manifest.v1+prettyjws"),
-                        MediaType.valueOf("application/vnd.docker.distribution.manifest.v2+json"),
-                        MediaType.valueOf("application/vnd.docker.container.image.v1+json"),
-                        MediaType.valueOf("application/json")
-                    )
-                )
-                it.defaultCodecs().jackson2JsonEncoder(
-                    Jackson2JsonEncoder(
-                        objectMapper,
-                        MediaType.valueOf("application/json")
-                    )
-                )
-            }
-            .build()
-    }
 
     @Bean
     fun tcpClient(
