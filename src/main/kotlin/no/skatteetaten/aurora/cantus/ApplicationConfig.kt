@@ -68,6 +68,9 @@ class ApplicationConfig {
             ).build()
 
     @Bean
+    fun objectMapper() = createObjectMapper()
+
+    @Bean
     fun tcpClient(
         @Value("\${cantus.httpclient.readTimeout:5000}") readTimeout: Long,
         @Value("\${cantus.httpclient.writeTimeout:5000}") writeTimeout: Long,
