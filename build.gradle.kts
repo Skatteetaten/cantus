@@ -17,7 +17,6 @@ plugins {
 }
 
 dependencies {
-    implementation("no.skatteetaten.aurora.springboot:aurora-spring-boot-webflux-starter:1.0.2")
 
     implementation("uk.q3c.rest:hal-kotlin:0.5.4.0.db32476")
 
@@ -35,6 +34,5 @@ dependencies {
     testImplementation("com.ninja-squad:springmockk:2.0.1")
 
     // Spring
-    implementation("org.springframework.boot:spring-boot-starter-webflux")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
 }
