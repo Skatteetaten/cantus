@@ -10,6 +10,7 @@ import no.skatteetaten.aurora.mockmvc.extensions.Path
 import no.skatteetaten.aurora.mockmvc.extensions.contentType
 import no.skatteetaten.aurora.mockmvc.extensions.get
 import no.skatteetaten.aurora.mockmvc.extensions.post
+import no.skatteetaten.aurora.mockmvc.extensions.printResponseBody
 import no.skatteetaten.aurora.mockmvc.extensions.responseJsonPath
 import no.skatteetaten.aurora.mockmvc.extensions.statusIsOk
 import org.junit.jupiter.api.Test
@@ -200,9 +201,10 @@ class DockerRegistryControllerTest {
             body = tagUrlsWrapper,
             headers = HttpHeaders().contentType()
         ) {
-            responseJsonPath("$.failure[0].errorMessage").equalsValue("An error has occurred")
+            responseJsonPath("$.failure[0].errorMessage").isNotEmpty()
                 .responseJsonPath("$.items").isEmpty()
                 .responseJsonPath("$.success").isFalse()
+                .printResponseBody()
         }
     }
 

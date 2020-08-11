@@ -100,7 +100,10 @@ class DockerHttpClient(
                 it.accept = listOf(MediaType.valueOf(MANIFEST_V2_MEDIATYPE_VALUE))
             }.retrieve()
             .toEntity(JsonNode::class.java)
-            .blockAndHandleErrorWithRetry("operation=GET_IMAGE_MANIFEST registry=${imageRepoCommand.fullRepoCommand}")
+            .blockAndHandleErrorWithRetry(
+                "operation=GET_IMAGE_MANIFEST registry=${imageRepoCommand.fullRepoCommand}",
+                imageRepoCommand
+            )
 
         val headers = response?.headers ?: EMPTY
 
@@ -109,21 +112,10 @@ class DockerHttpClient(
             sourceSystem = imageRepoCommand.registry
         )
 
-        val contentType = when (val contentTypeMediatype = headers.contentType) {
-            MediaType.valueOf(MANIFEST_V2_MEDIATYPE_VALUE) -> contentTypeMediatype.toString()
-            else -> {
-                logger.info {
-                    "Old image manfiest detected for image=${imageRepoCommand.artifactRepo}:${imageRepoCommand
-                        .registry}"
-                }
-
-                throw SourceSystemException(
-                    message = "Only v2 manifest is supported. contentType=${headers.contentType} " +
-                        "image=${imageRepoCommand.artifactRepo}:${imageRepoCommand.imageTag}",
-                    sourceSystem = imageRepoCommand.registry
-                )
-            }
-        }
+        val contentType = headers.contentType ?: throw SourceSystemException(
+            message = "Required header=Content-Type is not present",
+            sourceSystem = imageRepoCommand.registry
+        )
 
         val contentDigestLabel = headers.getFirst("Docker-Content-Digest")
             ?: throw SourceSystemException(
@@ -131,7 +123,7 @@ class DockerHttpClient(
                 sourceSystem = imageRepoCommand.registry
             )
 
-        return ImageManifestResponseDto(contentType, contentDigestLabel, manifest)
+        return ImageManifestResponseDto(contentType.toString(), contentDigestLabel, manifest)
     }
 
     fun getImageTags(imageRepoCommand: ImageRepoCommand): ImageTagsResponseDto? = webClient

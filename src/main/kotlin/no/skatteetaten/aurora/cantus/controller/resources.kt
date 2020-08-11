@@ -32,18 +32,16 @@ data class JavaImage(
     val jolokia: String?
 ) {
     companion object {
-        fun fromDto(dto: ImageManifestDto): JavaImage? {
-            if (dto.java == null) {
-                return null
+        fun fromDto(dto: ImageManifestDto): JavaImage? =
+            when (dto.java) {
+                null -> null
+                else -> JavaImage(
+                    major = dto.java.major,
+                    minor = dto.java.minor,
+                    build = dto.java.build,
+                    jolokia = dto.jolokiaVersion
+                )
             }
-
-            return JavaImage(
-                major = dto.java.major,
-                minor = dto.java.minor,
-                build = dto.java.build,
-                jolokia = dto.jolokiaVersion
-            )
-        }
     }
 }
 
@@ -52,20 +50,11 @@ data class ImageBuildTimeline(
     val buildEnded: Instant?
 ) {
     companion object {
-        fun fromDto(dto: ImageManifestDto): ImageBuildTimeline {
-            return ImageBuildTimeline(
-                try {
-                    Instant.parse(dto.buildStarted)
-                } catch (e: Exception) {
-                    null
-                },
-                try {
-                    Instant.parse(dto.buildEnded)
-                } catch (e: Exception) {
-                    null
-                }
+        fun fromDto(dto: ImageManifestDto): ImageBuildTimeline =
+            ImageBuildTimeline(
+                buildStarted = runCatching { Instant.parse(dto.buildStarted) }.getOrNull(),
+                buildEnded = runCatching { Instant.parse(dto.buildEnded) }.getOrNull()
             )
-        }
     }
 }
 
@@ -73,13 +62,8 @@ data class NodeJsImage(
     val nodeJsVersion: String
 ) {
     companion object {
-        fun fromDto(dto: ImageManifestDto): NodeJsImage? {
-            if (dto.nodeVersion == null) {
-                return null
-            }
-
-            return NodeJsImage(dto.nodeVersion)
-        }
+        fun fromDto(dto: ImageManifestDto): NodeJsImage? =
+            dto.nodeVersion?.let { NodeJsImage(it) }
     }
 }
 

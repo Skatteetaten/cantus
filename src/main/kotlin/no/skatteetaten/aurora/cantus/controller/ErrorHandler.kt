@@ -2,6 +2,7 @@ package no.skatteetaten.aurora.cantus.controller
 
 import io.netty.handler.timeout.ReadTimeoutException
 import mu.KotlinLogging
+import org.springframework.web.reactive.function.UnsupportedMediaTypeException
 import org.springframework.web.reactive.function.client.WebClientResponseException
 import reactor.core.Exceptions
 import reactor.core.publisher.Mono
@@ -32,7 +33,7 @@ fun <T> Mono<T>.retryWithLog(
                 if (ignoreAllWebClientResponseException) {
                     it !is WebClientResponseException
                 } else {
-                    it.isServerError() || it !is WebClientResponseException
+                    (it.isServerError() || it !is WebClientResponseException) && it !is UnsupportedMediaTypeException
                 }
             }.doBeforeRetry {
                 logger.debug {
@@ -80,9 +81,22 @@ fun <T> Mono<T>.handleError(imageRepoCommand: ImageRepoCommand?, message: String
             Exceptions.isRetryExhausted(it) -> it.handleException(imageRepoCommand, message)
             it is WebClientResponseException -> it.handleException(imageRepoCommand, message)
             it is ReadTimeoutException -> it.handleException(imageRepoCommand, message)
+            it is UnsupportedMediaTypeException -> it.handleException(imageRepoCommand, message)
             else -> it.handleException(message)
         }
     }
+
+private fun UnsupportedMediaTypeException.handleException(imageRepoCommand: ImageRepoCommand?, message: String?) {
+    logger.info {
+        "Old image manfiest detected for image=${imageRepoCommand?.artifactRepo}:${imageRepoCommand?.imageTag}"
+    }
+
+    throw SourceSystemException(
+        message = "Only v2 manifest is supported. contentType=${this.contentType} " +
+            "image=${imageRepoCommand?.artifactRepo}:${imageRepoCommand?.imageTag}",
+        sourceSystem = imageRepoCommand?.registry
+    )
+}
 
 private fun Throwable.handleException(imageRepoCommand: ImageRepoCommand?, message: String?) {
     val cause = this.cause!!

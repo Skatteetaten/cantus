@@ -48,7 +48,8 @@ class ApplicationConfig {
         @Value("\${spring.application.name}") applicationName: String,
         @Value("\${application.version:}") applicationVersion: String
     ) =
-        builder.filter(ExchangeFilterFunction.ofRequestProcessor {
+        builder.filter(
+            ExchangeFilterFunction.ofRequestProcessor {
                 val bearer = it.headers()[HttpHeaders.AUTHORIZATION]?.firstOrNull()?.let { token ->
                     val (bearer, tokenValue) = token.substring(0, min(token.length, MAX_ACCEPTED_TOKEN_LENGTH))
                         .split(" ")
@@ -58,14 +59,14 @@ class ApplicationConfig {
                 logger.debug("HttpRequest method=${it.method()} url=${it.url()} $bearer")
 
                 it.toMono()
-            })
-            .clientConnector(
-                ReactorClientHttpConnector(
-                    HttpClient
-                        .from(tcpClient)
-                        .compress(true)
-                )
-            ).build()
+            }
+        ).clientConnector(
+            ReactorClientHttpConnector(
+                HttpClient
+                    .from(tcpClient)
+                    .compress(true)
+            )
+        ).build()
 
     @Bean
     fun objectMapper() = createObjectMapper()
