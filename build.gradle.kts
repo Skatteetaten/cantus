@@ -13,7 +13,7 @@ plugins {
     id("com.github.ben-manes.versions") version "0.29.0"
     id("se.patrikerdes.use-latest-versions") version "0.2.14"
 
-    id("no.skatteetaten.gradle.aurora") version "3.6.5"
+    id("no.skatteetaten.gradle.aurora") version "3.6.6"
 }
 
 dependencies {
