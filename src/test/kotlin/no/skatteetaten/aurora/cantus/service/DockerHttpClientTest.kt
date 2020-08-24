@@ -273,6 +273,7 @@ class DockerHttpClientTest {
     fun `Verify that wrong content-type throws SourceSystemException`() {
         val response = MockResponse()
             .setJsonFileAsBody("dockerManifestV1.json")
+            .setHeader("Content-Type", "application/vnd.docker.distribution.manifest.v1+prettyjws")
             .addHeader("Docker-Content-Digest", "sha256")
 
         server.execute(response) {
@@ -280,7 +281,7 @@ class DockerHttpClientTest {
                 .isFailure()
                 .isNotNull().isInstanceOf(SourceSystemException::class)
                 .message().isNotNull()
-                .contains("Only v2 manifest is supported. contentType=application/json")
+                .contains("Only v2 manifest is supported. contentType=application/vnd.docker.distribution.manifest.v1+prettyjws")
         }
     }
 
