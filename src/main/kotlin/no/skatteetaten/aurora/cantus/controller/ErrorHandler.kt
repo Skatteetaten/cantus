@@ -19,6 +19,7 @@ fun <T> Mono<T>.retryWithLog(
     context: String = ""
 ): Mono<T> {
     if (retryConfiguration.times == 0L) {
+        logger.debug("Do not retry")
         return this
     }
 
@@ -47,7 +48,16 @@ fun <T> Mono<T>.retryWithLog(
                     }
                 }
             }
-    )
+    ).doOnError {
+        logger.info {
+            val msg = "Retrying failed request, ${it.message}, message=${it.cause?.message}"
+            if (it is WebClientResponseException) {
+                "message=$msg, method=${it.request?.method} uri=${it.request?.uri} code=${it.statusCode}"
+            } else {
+                msg
+            }
+        }
+    }
 }
 
 data class RetryConfiguration(
