@@ -48,16 +48,7 @@ fun <T> Mono<T>.retryWithLog(
                     }
                 }
             }
-    ).doOnError {
-        logger.info {
-            val msg = "Retrying failed request, ${it.message}, message=${it.cause?.message}"
-            if (it is WebClientResponseException) {
-                "message=$msg, method=${it.request?.method} uri=${it.request?.uri} code=${it.statusCode}"
-            } else {
-                msg
-            }
-        }
-    }
+    )
 }
 
 data class RetryConfiguration(
@@ -92,6 +83,7 @@ fun <T> Mono<T>.handleError(imageRepoCommand: ImageRepoCommand?, message: String
             it is WebClientResponseException -> it.handleException(imageRepoCommand, message)
             it is ReadTimeoutException -> it.handleException(imageRepoCommand, message)
             it is UnsupportedMediaTypeException -> it.handleException(imageRepoCommand, message)
+
             else -> it.handleException(message)
         }
     }
