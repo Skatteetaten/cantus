@@ -78,16 +78,12 @@ fun <T> Mono<T>.blockAndHandleError(
 // TODO: Se på error handling i hele denne filen
 fun <T> Mono<T>.handleError(imageRepoCommand: ImageRepoCommand?, message: String? = null) =
     this.doOnError {
+        val cause = it.cause
         when {
             Exceptions.isRetryExhausted(it) -> it.handleException(imageRepoCommand, message)
-            it is WebClientResponseException -> {
-                val cause = it.cause
-                when (cause) {
-                    is UnsupportedMediaTypeException -> cause.handleException(imageRepoCommand, message)
-                    else -> it.handleException(imageRepoCommand, message)
-                }
-            }
-            it is ReadTimeoutException -> it.handleException(imageRepoCommand, message)
+            cause is UnsupportedMediaTypeException -> cause.handleException(imageRepoCommand, message)
+            cause is ReadTimeoutException -> cause.handleException(imageRepoCommand, message)
+            it is WebClientResponseException -> it.handleException(imageRepoCommand, message)
             else -> it.handleException(message)
         }
     }
