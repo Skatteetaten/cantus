@@ -80,10 +80,14 @@ fun <T> Mono<T>.handleError(imageRepoCommand: ImageRepoCommand?, message: String
     this.doOnError {
         when {
             Exceptions.isRetryExhausted(it) -> it.handleException(imageRepoCommand, message)
-            it is WebClientResponseException -> it.handleException(imageRepoCommand, message)
+            it is WebClientResponseException -> {
+                val cause = it.cause
+                when (cause) {
+                    is UnsupportedMediaTypeException -> cause.handleException(imageRepoCommand, message)
+                    else -> it.handleException(imageRepoCommand, message)
+                }
+            }
             it is ReadTimeoutException -> it.handleException(imageRepoCommand, message)
-            it is UnsupportedMediaTypeException -> it.handleException(imageRepoCommand, message)
-
             else -> it.handleException(message)
         }
     }
