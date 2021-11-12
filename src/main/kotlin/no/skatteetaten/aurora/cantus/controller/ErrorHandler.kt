@@ -19,6 +19,7 @@ fun <T> Mono<T>.retryWithLog(
     context: String = ""
 ): Mono<T> {
     if (retryConfiguration.times == 0L) {
+        logger.debug("Do not retry")
         return this
     }
 
@@ -77,11 +78,12 @@ fun <T> Mono<T>.blockAndHandleError(
 // TODO: Se på error handling i hele denne filen
 fun <T> Mono<T>.handleError(imageRepoCommand: ImageRepoCommand?, message: String? = null) =
     this.doOnError {
+        val cause = it.cause
         when {
             Exceptions.isRetryExhausted(it) -> it.handleException(imageRepoCommand, message)
+            cause is UnsupportedMediaTypeException -> cause.handleException(imageRepoCommand, message)
+            cause is ReadTimeoutException -> cause.handleException(imageRepoCommand, message)
             it is WebClientResponseException -> it.handleException(imageRepoCommand, message)
-            it is ReadTimeoutException -> it.handleException(imageRepoCommand, message)
-            it is UnsupportedMediaTypeException -> it.handleException(imageRepoCommand, message)
             else -> it.handleException(message)
         }
     }

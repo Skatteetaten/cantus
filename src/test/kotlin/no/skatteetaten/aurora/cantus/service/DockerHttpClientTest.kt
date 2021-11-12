@@ -27,6 +27,7 @@ import okhttp3.mockwebserver.RecordedRequest
 import org.junit.jupiter.api.Test
 import org.springframework.http.MediaType
 import org.springframework.web.reactive.function.client.WebClient
+import okhttp3.mockwebserver.SocketPolicy
 import reactor.core.publisher.Mono
 
 private val logger = KotlinLogging.logger {}
@@ -241,6 +242,21 @@ class DockerHttpClientTest {
                 assertThat(it.tags[1]).isEqualTo("0.0")
                 assertThat(it.tags[2]).isEqualTo("0.0.0")
             }
+        }
+    }
+
+    @Test
+    fun `Verify that no response causes read timeout`() {
+        val response =
+            MockResponse().setJsonFileAsBody("dockerTagList.json")
+                .setSocketPolicy(SocketPolicy.NO_RESPONSE)
+
+        server.execute(response) {
+            assertThat { httpClient.getImageTags(imageRepoCommand) }
+                .isFailure()
+                .isNotNull().isInstanceOf(SourceSystemException::class)
+                .message().isNotNull()
+                .contains("Timeout when calling docker registry")
         }
     }
 

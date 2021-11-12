@@ -8,13 +8,6 @@ import no.skatteetaten.aurora.cantus.ImageManifestDtoBuilder
 import no.skatteetaten.aurora.cantus.ImageTagsWithTypeDtoBuilder
 import no.skatteetaten.aurora.cantus.createObjectMapper
 import no.skatteetaten.aurora.cantus.service.DockerRegistryService
-import no.skatteetaten.aurora.mockmvc.extensions.Path
-import no.skatteetaten.aurora.mockmvc.extensions.TestObjectMapperConfigurer
-import no.skatteetaten.aurora.mockmvc.extensions.contentTypeJson
-import no.skatteetaten.aurora.mockmvc.extensions.get
-import no.skatteetaten.aurora.mockmvc.extensions.post
-import no.skatteetaten.aurora.mockmvc.extensions.responseJsonPath
-import no.skatteetaten.aurora.mockmvc.extensions.statusIsOk
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -25,6 +18,13 @@ import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.http.HttpHeaders
 import org.springframework.test.web.servlet.MockMvc
+import no.skatteetaten.aurora.mockmvc.extensions.Path
+import no.skatteetaten.aurora.mockmvc.extensions.TestObjectMapperConfigurer
+import no.skatteetaten.aurora.mockmvc.extensions.contentTypeJson
+import no.skatteetaten.aurora.mockmvc.extensions.get
+import no.skatteetaten.aurora.mockmvc.extensions.post
+import no.skatteetaten.aurora.mockmvc.extensions.responseJsonPath
+import no.skatteetaten.aurora.mockmvc.extensions.statusIsOk
 
 private const val defaultTestRegistry: String = "docker.com"
 
