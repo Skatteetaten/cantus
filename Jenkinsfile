@@ -14,7 +14,8 @@ def overrides = [
       [ branch: 'master', versionHint: '1' ]
     ],
     compilePropertiesIq:  '-x test',
-    docs: false
+    docs: false,
+    uploadLeveransepakke: true
 ]
 
 fileLoader.withGit(overrides.pipelineScript,, overrides.scriptVersion) {
