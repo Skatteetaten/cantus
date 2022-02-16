@@ -1,7 +1,6 @@
 package no.skatteetaten.aurora.cantus.service
 
 import com.fasterxml.jackson.databind.JsonNode
-import mu.KotlinLogging
 import no.skatteetaten.aurora.cantus.controller.ImageRepoCommand
 import no.skatteetaten.aurora.cantus.controller.SourceSystemException
 import no.skatteetaten.aurora.cantus.controller.blockAndHandleError
@@ -20,11 +19,7 @@ import org.springframework.web.reactive.function.client.body
 import org.springframework.web.reactive.function.client.bodyToMono
 import reactor.core.publisher.Mono
 
-private val logger = KotlinLogging.logger {}
-
 const val MANIFEST_V2_MEDIATYPE_VALUE = "application/vnd.docker.distribution.manifest.v2+json"
-
-private const val BLOCK_TIMEOUT_IN_SECONDS = 5L
 
 @Service
 class DockerHttpClient(
@@ -175,7 +170,8 @@ class DockerHttpClient(
         val result = webClient.request(
             imageRepoCommand = imageRepoCommand,
             method = HttpMethod.HEAD,
-            path = "{imageGroup}/{imageName}/blobs/$digest"
+            pathVariables = mapOf("digest" to digest),
+            path = "{imageGroup}/{imageName}/blobs/{digest}"
         ).retrieve()
             .bodyToMono<ByteArray>()
             .map { true } // We need this to turn it into a boolean
