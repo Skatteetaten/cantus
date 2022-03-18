@@ -12,22 +12,18 @@ class NexusClient(webClientBuilder: WebClient.Builder) {
         .defaultHeaders { it.setBearerAuth("") }
         .build()
 
-    fun getVersions(namespace: String, name: String, continuationToken: String?): Mono<NexusSearchResponse> {
+    fun getVersions(namespace: String, name: String, repository: String, continuationToken: String?): Mono<NexusSearchResponse> {
         val continuationQuery = if (continuationToken != null) "&continuationToken=$continuationToken" else ""
 
         return client
             .get()
-            .uri("/service/rest/v1/search?name=$namespace/$name&sort=version&repository=internal-group-private$continuationQuery")
+            .uri("/service/rest/v1/search?name=$namespace/$name&sort=version&repository=$repository$continuationQuery")
             .retrieve()
             .bodyToMono(NexusSearchResponse::class.java)
             .handleError()
     }
 
-    private fun <T> Mono<T>.handleError(): Mono<T> {
-        return this.doOnError {
-            throw NexusClientException()
-        }
-    }
+    private fun <T> Mono<T>.handleError(): Mono<T> = doOnError { throw NexusClientException() }
 }
 
 data class NexusSearchResponse(

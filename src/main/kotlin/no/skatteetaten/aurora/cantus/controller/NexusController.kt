@@ -28,13 +28,16 @@ class NexusController(val nexusClient: NexusClient) {
             .toEpochSecond()
             .toInt()
 
+        val repositories = listOf("internal-hosted-release", "internal-hosted-snapshot")
+        var repositoryIndex = 0
+
         return nexusClient
-            .getVersions(namespace, name, null)
+            .getVersions(namespace, name, repositories[0], null)
             .expand {
-                if (it.continuationToken == null) Mono.empty()
-                else nexusClient.getVersions(namespace, name, it.continuationToken)
+                if (it.continuationToken == null) repositoryIndex += 1
+                if (repositoryIndex == repositories.size) Mono.empty()
+                else nexusClient.getVersions(namespace, name, repositories[repositoryIndex], it.continuationToken)
             }
             .flatMapIterable { response -> response.items.map { Version(it.version, it.assets[0].lastModified) } }
-            .sort { o1, o2 -> o2.lastModifiedToInt() - o1.lastModifiedToInt() }
     }
 }
