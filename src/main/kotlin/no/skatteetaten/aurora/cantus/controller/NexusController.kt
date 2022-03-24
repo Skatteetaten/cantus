@@ -6,8 +6,6 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
 
 data class Version(
     val name: String,
@@ -22,11 +20,6 @@ class NexusController(val nexusClient: NexusClient) {
         @RequestParam namespace: String,
         @RequestParam name: String
     ): Flux<Version> {
-
-        fun Version.lastModifiedToInt() = ZonedDateTime
-            .parse(lastModified, DateTimeFormatter.ISO_OFFSET_DATE_TIME)
-            .toEpochSecond()
-            .toInt()
 
         val repositories = listOf("internal-hosted-release", "internal-hosted-snapshot")
         var repositoryIndex = 0
