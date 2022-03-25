@@ -1,0 +1,67 @@
+{
+  "items" : [ {
+    "id" : "aW50ZXJuYWwtaG9zdGVkLXNuYXBzaG90OmQwYTMwZTE5M2UxOWI5ZTMxNWJmMWRlZTNiZTEzZWNi",
+    "repository" : "internal-hosted-snapshot",
+    "format" : "docker",
+    "group" : null,
+    "name" : "no_skatteetaten_aurora/test",
+    "version" : "1",
+    "assets" : [ {
+      "downloadUrl" : "https://container-nexus.sits.no/repository/internal-hosted-snapshot/v2/no_skatteetaten_aurora/test/manifests/1",
+      "path" : "v2/no_skatteetaten_aurora/test/manifests/1",
+      "id" : "aW50ZXJuYWwtaG9zdGVkLXNuYXBzaG90OmI1NzU3MGQwMDBiOWM5NTY2ZjA0NDZkZTMxNmUxNzFi",
+      "repository" : "internal-hosted-snapshot",
+      "format" : "docker",
+      "checksum" : {
+        "sha1" : "7bcbc7c9a9bc5b36844f50fd182dafe06b79b63c",
+        "sha256" : "e40425cf2f578d48e6942af646b2d11b61e91d1d66827b00a988216432fb4b4f"
+      },
+      "contentType" : "application/vnd.docker.distribution.manifest.v2+json",
+      "lastModified" : "2021-11-17T08:45:45.104+00:00"
+    } ],
+    "tags" : [ ]
+  }, {
+    "id" : "aW50ZXJuYWwtaG9zdGVkLXNuYXBzaG90OmQwYTMwZTE5M2UxOWI5ZTNkMjc2ZTYzYjE1YzMzNWYw",
+    "repository" : "internal-hosted-snapshot",
+    "format" : "docker",
+    "group" : null,
+    "name" : "no_skatteetaten_aurora/test",
+    "version" : "2",
+    "assets" : [ {
+      "downloadUrl" : "https://container-nexus.sits.no/repository/internal-hosted-snapshot/v2/no_skatteetaten_aurora/test/manifests/2",
+      "path" : "v2/no_skatteetaten_aurora/test/manifests/2",
+      "id" : "aW50ZXJuYWwtaG9zdGVkLXNuYXBzaG90OjJhNzRhMzI1NTMzMjczODc4MjA1MGE2NjhlMzJlNDZk",
+      "repository" : "internal-hosted-snapshot",
+      "format" : "docker",
+      "checksum" : {
+        "sha1" : "e88a48a6d05128fee8073068a5d4cdc6b1b1d86c",
+        "sha256" : "9d57fa5ee60dcdb464bae6dd9276eed4a33f92eccbe11c0de47aafc715689f3f"
+      },
+      "contentType" : "application/vnd.docker.distribution.manifest.v2+json",
+      "lastModified" : "2021-11-17T10:21:24.837+00:00"
+    } ],
+    "tags" : [ ]
+  }, {
+    "id" : "aW50ZXJuYWwtaG9zdGVkLXNuYXBzaG90OmQwYTMwZTE5M2UxOWI5ZTNmNGM4YzQ5ZTZlOWJjNmU3",
+    "repository" : "internal-hosted-snapshot",
+    "format" : "docker",
+    "group" : null,
+    "name" : "no_skatteetaten_aurora/test",
+    "version" : "3",
+    "assets" : [ {
+      "downloadUrl" : "https://container-nexus.sits.no/repository/internal-hosted-snapshot/v2/no_skatteetaten_aurora/test/manifests/3",
+      "path" : "v2/no_skatteetaten_aurora/boober/manifests/3",
+      "id" : "aW50ZXJuYWwtaG9zdGVkLXNuYXBzaG90OjU2NjkwZjRmOTI3ZWUzNGY0YTBjMjQ3NzQ5ODIyNzVm",
+      "repository" : "internal-hosted-snapshot",
+      "format" : "docker",
+      "checksum" : {
+        "sha1" : "9875076a575f21971e8ca007a946d9cf916ee146",
+        "sha256" : "7104eea92c28c23c286538466443650321b24864fdf05597eecb226898d72f4d"
+      },
+      "contentType" : "application/vnd.docker.distribution.manifest.v2+json",
+      "lastModified" : "2022-02-09T22:12:14.140+00:00"
+    } ],
+    "tags" : [ ]
+  } ],
+  "continuationToken": "123abc"
+}

@@ -1,14 +1,19 @@
 package no.skatteetaten.aurora.cantus.service
 
+import no.skatteetaten.aurora.cantus.controller.handleError
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient
 import reactor.core.publisher.Mono
 
 @Component
-class NexusClient(webClientBuilder: WebClient.Builder) {
+class NexusClient(
+    webClientBuilder: WebClient.Builder,
+    @Value("\${integrations.nexus.url}") nexusUrl: String
+) {
 
     private val client = webClientBuilder
-        .baseUrl("https://container-nexus.sits.no")
+        .baseUrl(nexusUrl)
         .defaultHeaders { it.setBearerAuth("") }
         .build()
 
@@ -28,9 +33,10 @@ class NexusClient(webClientBuilder: WebClient.Builder) {
         )
         .retrieve()
         .bodyToMono(NexusSearchResponse::class.java)
-        .handleError()
-
-    private fun <T> Mono<T>.handleError(): Mono<T> = doOnError { throw NexusClientException() }
+        .handleError(
+            imageRepoCommand = null,
+            message = "operation=GET_VERSIONS_FROM_NEXUS namespace=$namespace name=$name repository=$repository continuationToken=$continuationToken"
+        )
 }
 
 data class NexusSearchResponse(
@@ -46,5 +52,3 @@ data class NexusItem(
 data class NexusAsset(
     val lastModified: String
 )
-
-class NexusClientException : Exception()
