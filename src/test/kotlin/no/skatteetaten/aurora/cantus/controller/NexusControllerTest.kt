@@ -110,7 +110,7 @@ class NexusControllerTest {
 
         webTestClient
             .get()
-            .uri("/versions?namespace=no_skatteetaten_aurora&name=test")
+            .uri("/versions?imageGroup=no_skatteetaten_aurora&name=test")
             .exchange()
             .expectStatus().isOk
             .expectBody()
@@ -143,7 +143,7 @@ class NexusControllerTest {
 
         webTestClient
             .get()
-            .uri("/versions?namespace=no_skatteetaten_aurora&name=test")
+            .uri("/versions?imageGroup=no_skatteetaten_aurora&name=test")
             .exchange()
             .expectStatus().is5xxServerError
             .expectBody()

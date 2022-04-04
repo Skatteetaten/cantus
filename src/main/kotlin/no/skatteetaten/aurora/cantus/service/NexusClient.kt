@@ -12,31 +12,31 @@ class NexusClient(
     @Value("\${integrations.nexus.url}") nexusUrl: String
 ) {
 
-    private val client = webClientBuilder
-        .baseUrl(nexusUrl)
-        .defaultHeaders { it.setBearerAuth("") }
-        .build()
+    private val client = webClientBuilder.baseUrl(nexusUrl).build()
 
     fun getVersions(
-        namespace: String,
+        imageGroup: String,
         name: String,
         repository: String,
         continuationToken: String?
-    ): Mono<NexusSearchResponse> = client
-        .get()
-        .uri(
-            "/service/rest/v1/search?name={namespace}/{name}&sort=version&repository={repository}{continuationQuery}",
-            namespace,
-            name,
-            repository,
-            if (continuationToken != null) "&continuationToken=$continuationToken" else ""
-        )
-        .retrieve()
-        .bodyToMono(NexusSearchResponse::class.java)
-        .handleError(
-            imageRepoCommand = null,
-            message = "operation=GET_VERSIONS_FROM_NEXUS namespace=$namespace name=$name repository=$repository continuationToken=$continuationToken"
-        )
+    ): Mono<NexusSearchResponse> {
+        val continuationQuery = if (continuationToken == null) "" else "&continuationToken={continuationToken}"
+        return client
+            .get()
+            .uri(
+                "/service/rest/v1/search?name={imageGroup}/{name}&sort=version&repository={repository}$continuationQuery",
+                imageGroup,
+                name,
+                repository,
+                continuationToken
+            )
+            .retrieve()
+            .bodyToMono(NexusSearchResponse::class.java)
+            .handleError(
+                imageRepoCommand = null,
+                message = "operation=GET_VERSIONS_FROM_NEXUS namespace=$imageGroup name=$name repository=$repository continuationToken=$continuationToken"
+            )
+    }
 }
 
 data class NexusSearchResponse(

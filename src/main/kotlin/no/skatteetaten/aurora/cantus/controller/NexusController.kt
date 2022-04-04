@@ -17,7 +17,7 @@ class NexusController(val nexusClient: NexusClient) {
 
     @GetMapping("/versions")
     fun getVersions(
-        @RequestParam namespace: String,
+        @RequestParam imageGroup: String,
         @RequestParam name: String
     ): Flux<Version> {
 
@@ -25,11 +25,13 @@ class NexusController(val nexusClient: NexusClient) {
         var repositoryIndex = 0
 
         return nexusClient
-            .getVersions(namespace, name, repositories[0], null)
+            .getVersions(imageGroup, name, repositories[0], null)
             .expand {
                 if (it.continuationToken == null) repositoryIndex += 1
-                if (repositoryIndex == repositories.size) Mono.empty()
-                else nexusClient.getVersions(namespace, name, repositories[repositoryIndex], it.continuationToken)
+                if (repositoryIndex == repositories.size)
+                    Mono.empty()
+                else
+                    nexusClient.getVersions(imageGroup, name, repositories[repositoryIndex], it.continuationToken)
             }
             .flatMapIterable { response -> response.items.map { Version(it.version, it.assets[0].lastModified) } }
     }
