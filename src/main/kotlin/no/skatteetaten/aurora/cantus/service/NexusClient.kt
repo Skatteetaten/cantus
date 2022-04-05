@@ -38,17 +38,3 @@ class NexusClient(
             )
     }
 }
-
-data class NexusSearchResponse(
-    val items: List<NexusItem>,
-    val continuationToken: String?
-)
-
-data class NexusItem(
-    val version: String,
-    val assets: List<NexusAsset>
-)
-
-data class NexusAsset(
-    val lastModified: String
-)

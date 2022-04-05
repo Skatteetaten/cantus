@@ -2,21 +2,19 @@ package no.skatteetaten.aurora.cantus.controller
 
 import com.ninjasquad.springmockk.MockkBean
 import io.mockk.every
-import no.skatteetaten.aurora.cantus.service.NexusAsset
-import no.skatteetaten.aurora.cantus.service.NexusClient
-import no.skatteetaten.aurora.cantus.service.NexusItem
-import no.skatteetaten.aurora.cantus.service.NexusSearchResponse
+import no.skatteetaten.aurora.cantus.service.NexusService
+import no.skatteetaten.aurora.cantus.service.Version
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest
 import org.springframework.test.web.reactive.server.WebTestClient
-import reactor.core.publisher.Mono
+import reactor.core.publisher.Flux
 
 @WebFluxTest(controllers = [NexusController::class])
 class NexusControllerTest {
 
     @MockkBean
-    private lateinit var nexusClient: NexusClient
+    private lateinit var nexusService: NexusService
 
     @Autowired
     private lateinit var webTestClient: WebTestClient
@@ -25,87 +23,27 @@ class NexusControllerTest {
     fun `Call getVersions recursively and respond with a complete list of versions`() {
 
         every {
-            nexusClient.getVersions(
+            nexusService.getAllVersions(
                 "no_skatteetaten_aurora",
                 "test",
-                "internal-hosted-release",
-                null
+                "internal-hosted-release"
             )
-        } returns Mono.just(
-            NexusSearchResponse(
-                items = listOf(
-                    NexusItem(
-                        version = "test1",
-                        assets = listOf(NexusAsset("2022-02-22T20:22:02.000+00:00"))
-                    ),
-                    NexusItem(
-                        version = "test2",
-                        assets = listOf(NexusAsset("2022-02-11T20:22:02.000+00:00"))
-                    )
-                ),
-                continuationToken = "ct1"
-            )
+        } returns Flux.just(
+            Version("test1", "2022-02-22T20:22:02.000+00:00"),
+            Version("test2", "2022-02-11T20:22:02.000+00:00"),
+            Version("test3", "2022-01-22T10:22:02.000+00:00"),
+            Version("test4", "2011-02-22T20:11:02.000+00:00")
         )
 
         every {
-            nexusClient.getVersions(
+            nexusService.getAllVersions(
                 "no_skatteetaten_aurora",
                 "test",
-                "internal-hosted-release",
-                "ct1"
+                "internal-hosted-snapshot"
             )
-        } returns Mono.just(
-            NexusSearchResponse(
-                items = listOf(
-                    NexusItem(
-                        version = "test3",
-                        assets = listOf(NexusAsset("2022-01-22T10:22:02.000+00:00"))
-                    )
-                ),
-                continuationToken = null
-            )
-        )
-
-        every {
-            nexusClient.getVersions(
-                "no_skatteetaten_aurora",
-                "test",
-                "internal-hosted-snapshot",
-                null
-            )
-        } returns Mono.just(
-            NexusSearchResponse(
-                items = listOf(
-                    NexusItem(
-                        version = "test4",
-                        assets = listOf(NexusAsset("2011-02-22T20:11:02.000+00:00"))
-                    ),
-                    NexusItem(
-                        version = "test5",
-                        assets = listOf(NexusAsset("2011-02-11T20:11:02.000+00:00"))
-                    )
-                ),
-                continuationToken = "ct2"
-            )
-        )
-
-        every {
-            nexusClient.getVersions(
-                "no_skatteetaten_aurora",
-                "test",
-                "internal-hosted-snapshot",
-                "ct2"
-            )
-        } returns Mono.just(
-            NexusSearchResponse(
-                items = listOf(
-                    NexusItem(
-                        version = "test6",
-                        assets = listOf(NexusAsset("2011-01-22T10:11:02.000+00:00"))
-                    )
-                ),
-                continuationToken = null
-            )
+        } returns Flux.just(
+            Version("test5", "2011-02-11T20:11:02.000+00:00"),
+            Version("test6", "2011-01-22T10:11:02.000+00:00")
         )
 
         webTestClient
@@ -130,14 +68,13 @@ class NexusControllerTest {
     }
 
     @Test
-    fun `Respond with error status 500 when getVersions returns a CantusException`() {
+    fun `Respond with error status 500 when getAllVersions throws a CantusException`() {
 
         every {
-            nexusClient.getVersions(
+            nexusService.getAllVersions(
                 "no_skatteetaten_aurora",
                 "test",
-                "internal-hosted-release",
-                null
+                "internal-hosted-release"
             )
         } throws CantusException("Test error message")
 
