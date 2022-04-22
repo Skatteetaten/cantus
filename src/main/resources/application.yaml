@@ -71,6 +71,7 @@ integrations:
             https: true
             auth: Basic
             readOnly: false
+    nexus.url: https://container-nexus.sits.no
 
 
 ---

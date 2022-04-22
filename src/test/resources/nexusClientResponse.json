@@ -1,0 +1,67 @@
+{
+  "items" : [ {
+    "id" : "KpeFw3GFqVobmEZt7K4dR73hCiEUquT3nR0X3m3xhd2alR0nomWIPElXJPb6LxaltzGjTH2jbv9J",
+    "repository" : "internal-hosted-snapshot",
+    "format" : "docker",
+    "group" : null,
+    "name" : "no_skatteetaten_aurora/test",
+    "version" : "1",
+    "assets" : [ {
+      "downloadUrl" : "https://dette-er.en/nexus-url/1",
+      "path" : "dette/er/en/sti/1",
+      "id" : "hDd7va1N5tjFpN9Cfa8wDAXHDwxc63KMP4wdDhABN2ePpdVaWvYKwrnsTbrRQHy22FcZq0CghqLE",
+      "repository" : "internal-hosted-snapshot",
+      "format" : "docker",
+      "checksum" : {
+        "sha1" : "455156dddc4b1464272c81c41658e6df1d628e0d",
+        "sha256" : "bab50ee5ddda745838edee1533add4db6fef34049f14d4b37ab48369cf7231ba"
+      },
+      "contentType" : "application/vnd.docker.distribution.manifest.v2+json",
+      "lastModified" : "2021-11-17T08:45:45.104+00:00"
+    } ],
+    "tags" : [ ]
+  }, {
+    "id" : "rscDp4jUNhy7GkcYQ0LQL7zUsDakWxoMEfI0BAsqmf3m3mEzg4PENgbMKfhQmh1fTeo3d19j93yy",
+    "repository" : "internal-hosted-snapshot",
+    "format" : "docker",
+    "group" : null,
+    "name" : "no_skatteetaten_aurora/test",
+    "version" : "2",
+    "assets" : [ {
+      "downloadUrl" : "https://dette-er.en/nexus-url/2",
+      "path" : "dette/er/en/sti/2",
+      "id" : "CMShCyjPXDh1iWGoMihEFH6ysDXx4rN1iutzgMrSdcBxh5yQupcMpDPjMbUjyco5j8Fk0b7POMJB",
+      "repository" : "internal-hosted-snapshot",
+      "format" : "docker",
+      "checksum" : {
+        "sha1" : "18ac01eff7c8026e798cde5822d1d5c206a04ee9",
+        "sha256" : "b5450eb090a3180f61592dfb47e80796d0fbea2d914aa9d5a08a85f33e0845a1"
+      },
+      "contentType" : "application/vnd.docker.distribution.manifest.v2+json",
+      "lastModified" : "2021-11-17T10:21:24.837+00:00"
+    } ],
+    "tags" : [ ]
+  }, {
+    "id" : "pny43k8ciz3D9BE9vYOoD20nNNARg7HbN3RSPcXFDStRYqKwjVIDgYEhPtzfr4WpAtFqbJBrrWdU",
+    "repository" : "internal-hosted-snapshot",
+    "format" : "docker",
+    "group" : null,
+    "name" : "no_skatteetaten_aurora/test",
+    "version" : "3",
+    "assets" : [ {
+      "downloadUrl" : "https://dette-er.en/nexus-url/3",
+      "path" : "dette/er/en/sti/3",
+      "id" : "Ce3CkcKGeh4BGpUaKHD6e1xkB6rmcLGF9m5oGnbttjTUqbqJ0wtwKhU5znCIVPRt0e5FoanxF3Je",
+      "repository" : "internal-hosted-snapshot",
+      "format" : "docker",
+      "checksum" : {
+        "sha1" : "80d640cc23772f41c4edfa7d92a6534ed4610b0f",
+        "sha256" : "12b02b2ccca267b54a029315fa1cc9c5d767363004aaea7aad54e15552745aef"
+      },
+      "contentType" : "application/vnd.docker.distribution.manifest.v2+json",
+      "lastModified" : "2022-02-09T22:12:14.140+00:00"
+    } ],
+    "tags" : [ ]
+  } ],
+  "continuationToken": "123abc"
+}

@@ -122,7 +122,7 @@ class DockerHttpClient(
     }
 
     fun getImageTags(imageRepoCommand: ImageRepoCommand): ImageTagsResponseDto? = webClient
-        .request(imageRepoCommand, "/{imageGroup}/{imageName}/tags/list")
+        .request(imageRepoCommand, "{imageGroup}/{imageName}/tags/list")
         .retrieve()
         .bodyToMono<ImageTagsResponseDto>()
         .blockAndHandleError(imageRepoCommand = imageRepoCommand)
