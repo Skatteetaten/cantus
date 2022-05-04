@@ -34,14 +34,8 @@ class NexusServiceTest {
         } returns Mono.just(
             NexusSearchResponse(
                 items = listOf(
-                    NexusItem(
-                        version = "test1",
-                        assets = listOf(NexusAsset("2022-02-22T20:22:02.000+00:00"))
-                    ),
-                    NexusItem(
-                        version = "test2",
-                        assets = listOf(NexusAsset("2022-02-11T20:22:02.000+00:00"))
-                    )
+                    getNexusItem("name1", "test1", "2022-02-22T20:22:02.000+00:00"),
+                    getNexusItem("name2", "test2", "2022-02-11T20:22:02.000+00:00")
                 ),
                 continuationToken = "ct1"
             )
@@ -57,10 +51,7 @@ class NexusServiceTest {
         } returns Mono.just(
             NexusSearchResponse(
                 items = listOf(
-                    NexusItem(
-                        version = "test3",
-                        assets = listOf(NexusAsset("2022-01-22T10:22:02.000+00:00"))
-                    )
+                    getNexusItem("name3", "test3", "2022-01-22T10:22:02.000+00:00")
                 ),
                 continuationToken = "ct2"
             )
@@ -76,10 +67,7 @@ class NexusServiceTest {
         } returns Mono.just(
             NexusSearchResponse(
                 items = listOf(
-                    NexusItem(
-                        version = "test4",
-                        assets = listOf(NexusAsset("2011-02-22T20:11:02.000+00:00"))
-                    )
+                    getNexusItem("name4", "test4", "2011-02-22T20:11:02.000+00:00")
                 ),
                 continuationToken = null
             )
@@ -124,3 +112,11 @@ class NexusServiceTest {
         }.run { assertThat(message).isEqualTo("Lorem ipsum dolor sit amet") }
     }
 }
+
+fun getNexusItem(name: String, version: String, lastModified: String) = NexusItem(
+    id = "id_$name",
+    repository = "repo",
+    name = name,
+    version = version,
+    assets = listOf(NexusAsset("repo", "docker", NexusCheckSum("sha1_$name", "sha256_$name"), lastModified))
+)

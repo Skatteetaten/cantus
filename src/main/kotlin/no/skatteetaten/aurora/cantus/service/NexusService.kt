@@ -15,4 +15,21 @@ class NexusService(val nexusClient: NexusClient) {
                 else nexusClient.getVersions(imageGroup, name, repository, it.continuationToken)
             }
             .flatMapIterable { response -> response.items.map { Version(it.version, it.assets[0].lastModified) } }
+
+    fun getImage(fromRepo: String?, name: String?, version: String?, sha256: String?): Mono<ImageDto?> {
+        val nexusSearchResponseMono = nexusClient.getImage(fromRepo ?: "", name ?: "", version ?: "", sha256 ?: "")
+        return nexusSearchResponseMono.flatMap {
+            if (it.items.size != 1) Mono.empty()
+            else with(it.items.first()) {
+                Mono.just(
+                    ImageDto(
+                        repository = this.repository,
+                        name = this.name,
+                        version = this.version,
+                        sha256 = assets.first().checksum.sha256
+                    )
+                )
+            }
+        }
+    }
 }

@@ -11,10 +11,28 @@ data class NexusSearchResponse(
 )
 
 data class NexusItem(
+    val id: String,
+    val repository: String,
+    val name: String,
     val version: String,
     val assets: List<NexusAsset>
 )
 
 data class NexusAsset(
+    val repository: String,
+    val format: String,
+    val checksum: NexusCheckSum,
     val lastModified: String
+)
+
+data class NexusCheckSum(
+    val sha1: String,
+    val sha256: String
+)
+
+data class ImageDto(
+    val repository: String,
+    val name: String,
+    val version: String,
+    val sha256: String
 )
