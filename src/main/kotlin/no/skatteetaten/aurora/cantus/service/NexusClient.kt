@@ -50,7 +50,7 @@ class NexusClient(
             .bodyToMono(NexusSearchResponse::class.java)
             .handleError(
                 imageRepoCommand = null,
-                message = "operation=GET_IMAGE_FROM_NEXUS name=$name version=$version repository=$repository sha256=$sha256"
+                message = "operation=GET_IMAGE_FROM_NEXUS name=$name version=$version repository=$repository sha256=$sha256 format=docker"
             )
     }
 }

@@ -36,3 +36,8 @@ data class ImageDto(
     val version: String,
     val sha256: String
 )
+
+data class SingleImageResponse(
+    val success: Boolean,
+    val image: ImageDto?
+)

@@ -8,7 +8,6 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
-import reactor.core.publisher.Mono
 
 const val RELEASE_REPO = "internal-hosted-release"
 const val SNAPSHOT_REPO = "internal-hosted-snapshot"
@@ -27,17 +26,20 @@ class NexusController(val nexusService: NexusService) {
     }
 
     @PostMapping("/image/move")
-    fun moveImage(
+    suspend fun moveImage(
         @RequestBody moveImageCommand: MoveImageCommand
         // TODO: add code to verify Flyttebil as source
-    ): Mono<MoveImageResult> {
+    ): MoveImageResult {
         // Search for image and validate that it correspond with exactly one instance in the expected repo
-        val image = with(moveImageCommand) {
-            nexusService.getImage(fromRepo, name, version, sha256)
+        val singleImageResponse = with(moveImageCommand) {
+            nexusService.getSingleImage(fromRepo, name, version, sha256)
         }
-
-        // Move if move command seems valid
-
+//        return singleImageResponse.flatMap { if (it.success) with(moveImageCommand) {
+//            nexusService.moveSingleImage(fromRepo, toRepo, name, version, sha256) else retur}
+//        }
+//
+//        // Move if move command seems valid
+//
         val moveImageResult = MoveImageResult(
             true,
             moveImageCommand.name ?: "",
@@ -46,7 +48,7 @@ class NexusController(val nexusService: NexusService) {
             moveImageCommand.sha256 ?: ""
         )
 
-        return Mono.just(moveImageResult)
+        return moveImageResult
     }
 }
 
