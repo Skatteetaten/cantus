@@ -34,10 +34,34 @@ data class ImageDto(
     val repository: String,
     val name: String,
     val version: String,
-    val sha256: String
+    val sha256: String?
 )
 
 data class SingleImageResponse(
     val success: Boolean,
+    val message: String,
     val image: ImageDto?
+)
+
+data class MoveImageResponse(
+    val success: Boolean,
+    val message: String,
+    val image: ImageDto?
+)
+
+data class NexusMoveResponse(
+    val status: Int,
+    val message: String,
+    val data: NexusMoveResponseData
+)
+
+data class NexusMoveResponseData(
+    val destination: String,
+    val componentsMoved: List<NexusComponentMoved>?
+)
+
+data class NexusComponentMoved(
+    val name: String,
+    val version: String,
+    val id: String
 )

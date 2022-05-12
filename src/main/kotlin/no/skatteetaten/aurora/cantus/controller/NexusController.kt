@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
+import reactor.core.publisher.Mono
 
 const val RELEASE_REPO = "internal-hosted-release"
 const val SNAPSHOT_REPO = "internal-hosted-snapshot"
@@ -29,26 +30,38 @@ class NexusController(val nexusService: NexusService) {
     suspend fun moveImage(
         @RequestBody moveImageCommand: MoveImageCommand
         // TODO: add code to verify Flyttebil as source
-    ): MoveImageResult {
+    ): Mono<MoveImageResult> {
         // Search for image and validate that it correspond with exactly one instance in the expected repo
-        val singleImageResponse = with(moveImageCommand) {
-            nexusService.getSingleImage(fromRepo, name, version, sha256)
+        with(moveImageCommand) {
+            return nexusService.getSingleImage(fromRepo, name, version, sha256)
+                .flatMap { singleImageResponse ->
+                    if (singleImageResponse.success)
+                        nexusService.moveImage(fromRepo, toRepo, name, version, sha256)
+                            .flatMap {
+                                Mono.just(
+                                    MoveImageResult(
+                                        success = it.success,
+                                        message = it.message,
+                                        name = name ?: "",
+                                        version = version ?: "",
+                                        repository = toRepo,
+                                        sha256 = sha256 ?: ""
+                                    )
+                                )
+                            }
+                    else
+                        Mono.just(
+                            MoveImageResult(
+                                success = false,
+                                message = singleImageResponse.message,
+                                name = name ?: "",
+                                version = version ?: "",
+                                repository = toRepo,
+                                sha256 = sha256 ?: ""
+                            )
+                        )
+                }
         }
-//        return singleImageResponse.flatMap { if (it.success) with(moveImageCommand) {
-//            nexusService.moveSingleImage(fromRepo, toRepo, name, version, sha256) else retur}
-//        }
-//
-//        // Move if move command seems valid
-//
-        val moveImageResult = MoveImageResult(
-            true,
-            moveImageCommand.name ?: "",
-            moveImageCommand.version ?: "",
-            moveImageCommand.toRepo,
-            moveImageCommand.sha256 ?: ""
-        )
-
-        return moveImageResult
     }
 }
 
@@ -60,4 +73,11 @@ data class MoveImageCommand(
     val sha256: String?
 )
 
-data class MoveImageResult(val success: Boolean, val name: String, val version: String, val repository: String, val sha256: String)
+data class MoveImageResult(
+    val success: Boolean,
+    val message: String,
+    val name: String,
+    val version: String,
+    val repository: String,
+    val sha256: String
+)
