@@ -2,7 +2,7 @@ package no.skatteetaten.aurora.cantus.service
 
 data class Version(
     val name: String,
-    val lastModified: String
+    val lastModified: String?
 )
 
 data class NexusSearchResponse(
@@ -22,7 +22,7 @@ data class NexusAsset(
     val repository: String,
     val format: String,
     val checksum: NexusCheckSum,
-    val lastModified: String
+    val lastModified: String?
 )
 
 data class NexusCheckSum(

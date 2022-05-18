@@ -4,6 +4,7 @@ import assertk.assertThat
 import assertk.assertions.hasSize
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
+import assertk.assertions.isNullOrEmpty
 import no.skatteetaten.aurora.cantus.controller.CantusException
 import no.skatteetaten.aurora.mockmvc.extensions.mockwebserver.execute
 import no.skatteetaten.aurora.mockmvc.extensions.mockwebserver.setJsonFileAsBody
@@ -22,7 +23,7 @@ class NexusClientTest {
     fun `Parse response from the Nexus API getVersions`() {
 
         val response = MockResponse()
-            .setJsonFileAsBody("nexusClientResponse.json")
+            .setJsonFileAsBody("nexusClientSearchResponseGetVersions.json")
             .addHeader("Content-Type", "application/json")
 
         server.execute(response) {
@@ -70,7 +71,7 @@ class NexusClientTest {
     fun `Parse response from the Nexus API getImage`() {
 
         val response = MockResponse()
-            .setJsonFileAsBody("nexusClientResponseGetImage.json")
+            .setJsonFileAsBody("nexusClientSearchResponseGetImage.json")
             .addHeader("Content-Type", "application/json")
 
         server.execute(response) {
@@ -80,17 +81,33 @@ class NexusClientTest {
                 .run {
                     assertThat(this).isNotNull()
                     assertThat(this!!.items).isNotNull()
-                    assertThat(items).hasSize(3)
-                    assertThat(items[0].version).isEqualTo("1")
+                    assertThat(items).hasSize(1)
+                    assertThat(items[0].repository).isEqualTo("internal-hosted-client")
+                    assertThat(items[0].name).isEqualTo("no_skatteetaten_aurora_demo/whoami")
+                    assertThat(items[0].version).isEqualTo("2.7.3")
                     assertThat(items[0].assets).hasSize(1)
-                    assertThat(items[0].assets[0].lastModified).isEqualTo("2021-11-17T08:45:45.104+00:00")
-                    assertThat(items[1].version).isEqualTo("2")
-                    assertThat(items[1].assets).hasSize(1)
-                    assertThat(items[1].assets[0].lastModified).isEqualTo("2021-11-17T10:21:24.837+00:00")
-                    assertThat(items[2].version).isEqualTo("3")
-                    assertThat(items[2].assets).hasSize(1)
-                    assertThat(items[2].assets[0].lastModified).isEqualTo("2022-02-09T22:12:14.140+00:00")
-                    assertThat(continuationToken).isEqualTo("123abc")
+                    assertThat(items[0].assets[0].lastModified).isNullOrEmpty()
+                    assertThat(continuationToken).isNullOrEmpty()
+                }
+        }
+    }
+
+    @Test
+    fun `Parse empty response from the Nexus API getImage`() {
+
+        val response = MockResponse()
+            .setJsonFileAsBody("nexusClientSearchResponseEmpty.json")
+            .addHeader("Content-Type", "application/json")
+
+        server.execute(response) {
+            nexusClient
+                .getImage("internal-hosted-client", "no_skatteetaten_aurora_demo/whoami", "2.7.3", "")
+                .block()
+                .run {
+                    assertThat(this).isNotNull()
+                    assertThat(this!!.items).isNotNull()
+                    assertThat(items).hasSize(0)
+                    assertThat(continuationToken).isNullOrEmpty()
                 }
         }
     }
