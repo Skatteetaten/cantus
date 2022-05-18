@@ -111,4 +111,61 @@ class NexusClientTest {
                 }
         }
     }
+
+    @Test
+    fun `Parse normal response from the Nexus API moveImage`() {
+
+        val response = MockResponse()
+            .setJsonFileAsBody("nexusClientMoveResponseSuccessful.json")
+            .addHeader("Content-Type", "application/json")
+
+        server.execute(response) {
+            nexusClient.moveImage(
+                "internal-hosted-client",
+                "internal-hosted-release",
+                "no_skatteetaten_aurora_demo/whoami",
+                "2.7.3",
+                ""
+            )
+                .block()
+                .run {
+                    assertThat(this).isNotNull()
+                    assertThat(this!!.status).isEqualTo(200)
+                    assertThat(this.message).isEqualTo("Move Successful")
+                    assertThat(this.data).isNotNull()
+                    assertThat(this.data.destination).isEqualTo("internal-hosted-release")
+                    assertThat(this.data.componentsMoved).isNotNull()
+                    assertThat(this.data.componentsMoved!!).hasSize(1)
+                    assertThat(this.data.componentsMoved!![0].name).isEqualTo("no_skatteetaten_aurora_demo/whoami")
+                    assertThat(this.data.componentsMoved!![0].version).isEqualTo("2.7.3")
+                    assertThat(this.data.componentsMoved!![0].id).isEqualTo("#27:3065")
+                }
+        }
+    }
+
+    @Test
+    fun `Parse not found response from the Nexus API moveImage`() {
+
+        val response = MockResponse()
+            .setJsonFileAsBody("nexusClientMoveResponseNoComponents.json")
+            .addHeader("Content-Type", "application/json")
+
+        server.execute(response) {
+            nexusClient.moveImage(
+                "internal-hosted-client",
+                "internal-hosted-release",
+                "no_skatteetaten_aurora_demo/whoami",
+                "2.7.3",
+                ""
+            )
+                .block()
+                .run {
+                    assertThat(this).isNotNull()
+                    assertThat(this!!.status).isEqualTo(404)
+                    assertThat(this.message).isEqualTo("No components found")
+                    assertThat(this.data).isNotNull()
+                    assertThat(this.data.destination).isEqualTo("internal-hosted-release")
+                }
+        }
+    }
 }

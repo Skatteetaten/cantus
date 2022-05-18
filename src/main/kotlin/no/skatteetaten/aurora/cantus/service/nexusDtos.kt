@@ -1,5 +1,7 @@
 package no.skatteetaten.aurora.cantus.service
 
+import com.fasterxml.jackson.annotation.JsonProperty
+
 data class Version(
     val name: String,
     val lastModified: String?
@@ -57,6 +59,7 @@ data class NexusMoveResponse(
 
 data class NexusMoveResponseData(
     val destination: String,
+    @JsonProperty("components moved")
     val componentsMoved: List<NexusComponentMoved>?
 )
 

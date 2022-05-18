@@ -1,0 +1,21 @@
+{
+  "status": 404,
+  "message": "No components found",
+  "data": {
+    "destination": "internal-hosted-release",
+    "query parameters": {
+      "sha256": [
+        "e2052b9a7e92869aff5650d44b30d4f143e7802df9fe3c8d76637c41004fb316"
+      ],
+      "repository": [
+        "internal-hosted-client"
+      ],
+      "name": [
+        "no_skatteetaten_aurora_demo/whoami"
+      ],
+      "version": [
+        "2.7.3"
+      ]
+    }
+  }
+}
