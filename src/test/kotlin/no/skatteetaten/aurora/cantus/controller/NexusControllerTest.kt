@@ -3,12 +3,15 @@ package no.skatteetaten.aurora.cantus.controller
 import com.ninjasquad.springmockk.MockkBean
 import io.mockk.every
 import no.skatteetaten.aurora.cantus.service.NexusService
+import no.skatteetaten.aurora.cantus.service.SingleImageResponse
 import no.skatteetaten.aurora.cantus.service.Version
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest
+import org.springframework.http.MediaType
 import org.springframework.test.web.reactive.server.WebTestClient
 import reactor.core.publisher.Flux
+import reactor.core.publisher.Mono
 
 @WebFluxTest(controllers = [NexusController::class])
 class NexusControllerTest {
@@ -85,5 +88,47 @@ class NexusControllerTest {
             .expectStatus().is5xxServerError
             .expectBody()
             .jsonPath("$.status").isEqualTo(500)
+    }
+
+    @Test
+    fun `Call moveImage with too many matches`() {
+
+        every {
+            nexusService.getSingleImage(
+                "internal-hosted-client",
+                "no_skatteetaten_aurora_demo/whoami",
+                null,
+                null
+            )
+        } returns Mono.just(
+            SingleImageResponse(
+                success = false,
+                message = "Got too many matches when expecting single match",
+                image = null
+            )
+        )
+
+        webTestClient
+            .post()
+            .uri("/image/move")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(
+                MoveImageCommand(
+                    fromRepo = "internal-hosted-client",
+                    toRepo = "internal-hosted-release",
+                    name = "no_skatteetaten_aurora_demo/whoami",
+                    version = null,
+                    sha256 = null
+                )
+            )
+            .exchange()
+            .expectStatus().isOk
+            .expectBody()
+            .jsonPath("$.success").isEqualTo(false)
+            .jsonPath("$.message").isEqualTo("Got too many matches when expecting single match")
+            .jsonPath("$.name").isEqualTo("no_skatteetaten_aurora_demo/whoami")
+            .jsonPath("$.version").isEqualTo("")
+            .jsonPath("$.repository").isEqualTo("internal-hosted-client")
+            .jsonPath("$.sha256").isEqualTo("")
     }
 }

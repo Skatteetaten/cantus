@@ -27,40 +27,48 @@ class NexusController(val nexusService: NexusService) {
     }
 
     @PostMapping("/image/move")
-    suspend fun moveImage(
-        @RequestBody moveImageCommand: MoveImageCommand
+    fun moveImage(
+        @RequestBody moveImageCmd: MoveImageCommand
         // TODO: add code to verify Flyttebil as source
     ): Mono<MoveImageResult> {
         // Search for image and validate that it correspond with exactly one instance in the expected repo
-        with(moveImageCommand) {
-            return nexusService.getSingleImage(fromRepo, name, version, sha256)
-                .flatMap { singleImageResponse ->
-                    if (singleImageResponse.success)
-                        nexusService.moveImage(fromRepo, toRepo, name, version, sha256)
-                            .flatMap {
-                                Mono.just(
-                                    MoveImageResult(
-                                        success = it.success,
-                                        message = it.message,
-                                        name = name ?: "",
-                                        version = version ?: "",
-                                        repository = toRepo,
-                                        sha256 = sha256 ?: ""
-                                    )
-                                )
-                            }
-                    else
+        return nexusService.getSingleImage(
+            moveImageCmd.fromRepo,
+            moveImageCmd.name,
+            moveImageCmd.version,
+            moveImageCmd.sha256
+        ).flatMap { singleImageResponse ->
+            if (singleImageResponse.success)
+                nexusService.moveImage(
+                    singleImageResponse.image!!.repository,
+                    moveImageCmd.toRepo,
+                    singleImageResponse.image.name,
+                    singleImageResponse.image.version,
+                    singleImageResponse.image.sha256
+                )
+                    .flatMap {
                         Mono.just(
                             MoveImageResult(
-                                success = false,
-                                message = singleImageResponse.message,
-                                name = name ?: "",
-                                version = version ?: "",
-                                repository = toRepo,
-                                sha256 = sha256 ?: ""
+                                success = it.success,
+                                message = it.message,
+                                name = it.image!!.name,
+                                version = it.image.version,
+                                repository = it.image.repository,
+                                sha256 = it.image.sha256 ?: ""
                             )
                         )
-                }
+                    }
+            else
+                Mono.just(
+                    MoveImageResult(
+                        success = false,
+                        message = singleImageResponse.message,
+                        name = moveImageCmd.name ?: "",
+                        version = moveImageCmd.version ?: "",
+                        repository = moveImageCmd.fromRepo,
+                        sha256 = moveImageCmd.sha256 ?: ""
+                    )
+                )
         }
     }
 }
