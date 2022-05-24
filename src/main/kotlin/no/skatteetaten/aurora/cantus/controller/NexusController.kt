@@ -1,5 +1,6 @@
 package no.skatteetaten.aurora.cantus.controller
 
+import mu.KotlinLogging
 import no.skatteetaten.aurora.cantus.service.NexusService
 import no.skatteetaten.aurora.cantus.service.Version
 import org.springframework.web.bind.annotation.GetMapping
@@ -9,6 +10,8 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+
+private val logger = KotlinLogging.logger {}
 
 const val RELEASE_REPO = "internal-hosted-release"
 const val SNAPSHOT_REPO = "internal-hosted-snapshot"
@@ -47,6 +50,11 @@ class NexusController(val nexusService: NexusService) {
                     singleImageResponse.image.sha256
                 )
                     .flatMap {
+                        if (it.success) {
+                            logger.info { "Moved image ${it.image!!.name}:${it.image.version} to ${it.image.repository}" }
+                        } else {
+                            logger.warn { "Failed to move image ${singleImageResponse.image.name}:${singleImageResponse.image.version}" }
+                        }
                         Mono.just(
                             MoveImageResult(
                                 success = it.success,
@@ -58,7 +66,8 @@ class NexusController(val nexusService: NexusService) {
                             )
                         )
                     }
-            else
+            else {
+                logger.warn { "Could not find single image for search criteria. Message: ${singleImageResponse.message}" }
                 Mono.just(
                     MoveImageResult(
                         success = false,
@@ -69,6 +78,7 @@ class NexusController(val nexusService: NexusService) {
                         sha256 = moveImageCmd.sha256 ?: ""
                     )
                 )
+            }
         }
     }
 }
