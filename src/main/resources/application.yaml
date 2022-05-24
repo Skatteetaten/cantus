@@ -7,13 +7,10 @@ info:
 spring:
     application:
         name: cantus
-
     profiles:
         active: local
-
     codec:
         max-in-memory-size: -1 # unlimited
-
     zipkin:
         enabled: false
 
@@ -27,8 +24,6 @@ logging:
             apache:
                 catalina: WARN
                 velocity: WARN
-
-
 
 aurora:
     webflux:
@@ -71,13 +66,13 @@ integrations:
             https: true
             auth: Basic
             readOnly: false
-    nexus.url: https://container-nexus.sits.no
-
+    nexus.url: ${NEXUS_API_URL:https://container-nexus.sits.no}
 
 ---
 spring:
-    profiles: local
-    #http.log-request-details: true
+    config:
+        activate:
+            on-profile: local
 
 cantus:
     username: cantus
@@ -88,10 +83,16 @@ server:
 
 logging:
     level:
+        no.skatteetaten: DEBUG
     #reactor.netty.http.client.HttpClient: DEBUG # Needs wiretap in ApplicationConfig
     pattern:
         console: "%d [%-9.9thread] %highlight(%-5level) %cyan(%logger:%L) %X - %msg %n%rEx{full}"
 
+integrations:
+    nexus.url: ${NEXUS_API_URL:https://utv-nexus.sits.no/}
+
 ---
 spring:
-    profiles: openshift
+    config:
+        activate:
+            on-profile: openshift
