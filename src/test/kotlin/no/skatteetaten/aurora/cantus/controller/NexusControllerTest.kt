@@ -2,6 +2,9 @@ package no.skatteetaten.aurora.cantus.controller
 
 import com.ninjasquad.springmockk.MockkBean
 import io.mockk.every
+import no.skatteetaten.aurora.cantus.service.ImageDto
+import no.skatteetaten.aurora.cantus.service.MoveImageResponse
+import no.skatteetaten.aurora.cantus.service.NexusMoveService
 import no.skatteetaten.aurora.cantus.service.NexusService
 import no.skatteetaten.aurora.cantus.service.SingleImageResponse
 import no.skatteetaten.aurora.cantus.service.Version
@@ -18,6 +21,9 @@ class NexusControllerTest {
 
     @MockkBean
     private lateinit var nexusService: NexusService
+
+    @MockkBean
+    private lateinit var nexusMoveService: NexusMoveService
 
     @Autowired
     private lateinit var webTestClient: WebTestClient
@@ -94,7 +100,7 @@ class NexusControllerTest {
     fun `Call moveImage with too many matches`() {
 
         every {
-            nexusService.getSingleImage(
+            nexusMoveService.getSingleImage(
                 "internal-hosted-client",
                 "no_skatteetaten_aurora_demo/whoami",
                 null,
@@ -130,5 +136,73 @@ class NexusControllerTest {
             .jsonPath("$.version").isEqualTo("")
             .jsonPath("$.repository").isEqualTo("internal-hosted-client")
             .jsonPath("$.sha256").isEqualTo("")
+    }
+
+    @Test
+    fun `Call moveImage with success`() {
+
+        every {
+            nexusMoveService.getSingleImage(
+                "internal-hosted-client",
+                "no_skatteetaten_aurora_demo/whoami",
+                "2.7.3",
+                null
+            )
+        } returns Mono.just(
+            SingleImageResponse(
+                success = true,
+                message = "Got exactly one matching image",
+                image = ImageDto(
+                    repository = "internal-hosted-client",
+                    name = "no_skatteetaten_aurora_demo/whoami",
+                    version = "2.7.3",
+                    sha256 = "sha256_testsha"
+                )
+            )
+        )
+
+        every {
+            nexusMoveService.moveImage(
+                "internal-hosted-client",
+                "internal-hosted-release",
+                "no_skatteetaten_aurora_demo/whoami",
+                "2.7.3",
+                "sha256_testsha"
+            )
+        } returns Mono.just(
+            MoveImageResponse(
+                success = true,
+                message = "Move Successful",
+                image = ImageDto(
+                    repository = "internal-hosted-release",
+                    name = "no_skatteetaten_aurora_demo/whoami",
+                    version = "2.7.3",
+                    sha256 = "sha256_testsha"
+                )
+            )
+        )
+
+        webTestClient
+            .post()
+            .uri("/image/move")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(
+                MoveImageCommand(
+                    fromRepo = "internal-hosted-client",
+                    toRepo = "internal-hosted-release",
+                    name = "no_skatteetaten_aurora_demo/whoami",
+                    version = "2.7.3",
+                    sha256 = null
+                )
+            )
+            .exchange()
+            .expectStatus().isOk
+            .expectBody()
+            .jsonPath("$.success").isEqualTo(true)
+            .jsonPath("$.message").isEqualTo("Move Successful")
+            .jsonPath("$.name").isEqualTo("no_skatteetaten_aurora_demo/whoami")
+            .jsonPath("$.version").isEqualTo("2.7.3")
+            .jsonPath("$.repository").isEqualTo("internal-hosted-release")
+            .jsonPath("$.sha256").isEqualTo("sha256_testsha")
     }
 }

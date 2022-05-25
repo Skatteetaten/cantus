@@ -1,6 +1,7 @@
 package no.skatteetaten.aurora.cantus.controller
 
 import mu.KotlinLogging
+import no.skatteetaten.aurora.cantus.service.NexusMoveService
 import no.skatteetaten.aurora.cantus.service.NexusService
 import no.skatteetaten.aurora.cantus.service.Version
 import org.springframework.web.bind.annotation.GetMapping
@@ -17,7 +18,10 @@ const val RELEASE_REPO = "internal-hosted-release"
 const val SNAPSHOT_REPO = "internal-hosted-snapshot"
 
 @RestController
-class NexusController(val nexusService: NexusService) {
+class NexusController(
+    private val nexusService: NexusService,
+    private val nexusMoveService: NexusMoveService,
+) {
 
     @GetMapping("/versions")
     fun getVersions(
@@ -35,14 +39,14 @@ class NexusController(val nexusService: NexusService) {
         // TODO: add code to verify Flyttebil as source
     ): Mono<MoveImageResult> {
         // Search for image and validate that it correspond with exactly one instance in the expected repo
-        return nexusService.getSingleImage(
+        return nexusMoveService.getSingleImage(
             moveImageCmd.fromRepo,
             moveImageCmd.name,
             moveImageCmd.version,
             moveImageCmd.sha256
         ).flatMap { singleImageResponse ->
             if (singleImageResponse.success)
-                nexusService.moveImage(
+                nexusMoveService.moveImage(
                     singleImageResponse.image!!.repository,
                     moveImageCmd.toRepo,
                     singleImageResponse.image.name,
