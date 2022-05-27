@@ -13,9 +13,9 @@ import reactor.core.publisher.Mono
 @Component
 class NexusClient(
     webClientBuilder: WebClient.Builder,
-    @Value("\${integrations.nexus.url}") nexusUrl: String
+    @Value("\${integrations.nexus.url}") val nexusUrl: String,
+    @Value("\${integrations.nexus.token}") val nexusToken: String
 ) {
-
     private val client = webClientBuilder.baseUrl(nexusUrl).build()
 
     fun getVersions(
@@ -49,6 +49,7 @@ class NexusClient(
                 "/service/rest/v1/search?name={name}&version={version}&repository={repository}&sha256={sha256}&format=docker",
                 repository, name, version, sha256
             )
+            .header("Authorization", "Basic $nexusToken")
             .retrieve()
             .bodyToMono(NexusSearchResponse::class.java)
             .handleError(
@@ -71,6 +72,7 @@ class NexusClient(
                 toRepository, fromRepository, name, version, sha256
             )
             .accept(MediaType.APPLICATION_JSON)
+            .header("Authorization", "Basic $nexusToken")
             .retrieve()
             .onStatus(HttpStatus::is5xxServerError) {
                 it.bodyToMono<String>().defaultIfEmpty("").flatMap { body -> Mono.error(CantusException(body)) }

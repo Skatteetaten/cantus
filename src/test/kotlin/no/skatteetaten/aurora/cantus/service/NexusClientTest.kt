@@ -17,7 +17,7 @@ import org.springframework.web.reactive.function.client.WebClient
 class NexusClientTest {
 
     private val server = MockWebServer()
-    private val nexusClient = NexusClient(WebClient.builder(), server.url("/").toString())
+    private val nexusClient = NexusClient(WebClient.builder(), server.url("/").toString(), "a_test_token")
 
     @Test
     fun `Parse response from the Nexus API getVersions`() {
