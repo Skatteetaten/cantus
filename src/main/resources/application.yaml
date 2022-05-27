@@ -89,7 +89,10 @@ logging:
         console: "%d [%-9.9thread] %highlight(%-5level) %cyan(%logger:%L) %X - %msg %n%rEx{full}"
 
 integrations:
-    nexus.url: ${NEXUS_API_URL:https://utv-nexus.sits.no/}
+    nexus:
+        url: ${NEXUS_API_URL:https://utv-nexus.sits.no/}
+        token: $NEXUS_API_TOKEN
+
 
 ---
 spring:

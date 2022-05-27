@@ -46,7 +46,7 @@ class NexusClient(
         return client
             .get()
             .uri(
-                "/service/rest/v1/search?name={name}&version={version}&repository={repository}&sha256={sha256}&format=docker",
+                "/service/rest/v1/search?repository={repository}&name={name}&version={version}&sha256={sha256}&format=docker",
                 repository, name, version, sha256
             )
             .header("Authorization", "Basic $nexusToken")
@@ -68,7 +68,7 @@ class NexusClient(
         return client
             .post()
             .uri(
-                "/service/rest/v1/staging/move/{toRepository}?name={name}&version={version}&repository={fromRepository}&sha256={sha256}&format=docker",
+                "/service/rest/v1/staging/move/{toRepository}?repository={fromRepository}&name={name}&version={version}&sha256={sha256}&format=docker",
                 toRepository, fromRepository, name, version, sha256
             )
             .accept(MediaType.APPLICATION_JSON)
