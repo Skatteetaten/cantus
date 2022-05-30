@@ -91,7 +91,7 @@ logging:
 integrations:
     nexus:
         url: ${NEXUS_API_URL:https://utv-nexus.sits.no/}
-        token: $NEXUS_API_TOKEN
+        token: ${NEXUS_API_TOKEN}
 
 
 ---

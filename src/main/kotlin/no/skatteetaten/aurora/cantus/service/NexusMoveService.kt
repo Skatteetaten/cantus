@@ -60,7 +60,7 @@ class NexusMoveServiceReactive(private val nexusClient: NexusClient) : NexusMove
                             repository = it.data.destination,
                             name = it.data.componentsMoved!!.first().name,
                             version = it.data.componentsMoved.first().version,
-                            sha256 = null
+                            sha256 = sha256 ?: ""
                         )
                     )
                 ) else Mono.just(
