@@ -14,5 +14,9 @@ class NexusService(val nexusClient: NexusClient) {
                 if (it.continuationToken == null) Mono.empty()
                 else nexusClient.getVersions(imageGroup, name, repository, it.continuationToken)
             }
-            .flatMapIterable { response -> response.items.map { Version(it.version, it.assets[0].lastModified) } }
+            .flatMapIterable { response ->
+                response
+                    .items
+                    .mapNotNull { item -> item.assets[0].lastModified?.let { Version(item.version, it) } }
+            }
 }

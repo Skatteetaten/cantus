@@ -16,5 +16,5 @@ data class NexusItem(
 )
 
 data class NexusAsset(
-    val lastModified: String
+    val lastModified: String?
 )
