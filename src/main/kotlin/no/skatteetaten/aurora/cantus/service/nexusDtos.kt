@@ -36,7 +36,7 @@ data class ImageDto(
     val repository: String,
     val name: String,
     val version: String,
-    val sha256: String?
+    val sha256: String
 )
 
 data class SingleImageResponse(

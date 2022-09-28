@@ -97,14 +97,14 @@ class NexusControllerTest {
     }
 
     @Test
-    fun `Call moveImage with too many matches`() {
+    fun `Call moveImage with empty sha256`() {
 
         every {
             nexusMoveService.getSingleImage(
                 "internal-hosted-client",
                 "no_skatteetaten_aurora_demo/whoami",
                 null,
-                null
+                ""
             )
         } returns Mono.just(
             SingleImageResponse(
@@ -124,7 +124,49 @@ class NexusControllerTest {
                     toRepo = "internal-hosted-release",
                     name = "no_skatteetaten_aurora_demo/whoami",
                     version = null,
-                    sha256 = null
+                    sha256 = ""
+                )
+            )
+            .exchange()
+            .expectStatus().isOk
+            .expectBody()
+            .jsonPath("$.success").isEqualTo(false)
+            .jsonPath("$.message").isEqualTo("Invalid input: sha256 is mandatory")
+            .jsonPath("$.name").isEqualTo("no_skatteetaten_aurora_demo/whoami")
+            .jsonPath("$.version").isEqualTo("")
+            .jsonPath("$.repository").isEqualTo("internal-hosted-client")
+            .jsonPath("$.sha256").isEqualTo("")
+    }
+
+    @Test
+    fun `Call moveImage with too many matches`() {
+
+        every {
+            nexusMoveService.getSingleImage(
+                "internal-hosted-client",
+                "no_skatteetaten_aurora_demo/whoami",
+                null,
+                "somesha"
+            )
+        } returns Mono.just(
+            SingleImageResponse(
+                success = false,
+                message = "Got too many matches when expecting single match",
+                image = null
+            )
+        )
+
+        webTestClient
+            .post()
+            .uri("/image/move")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(
+                MoveImageCommand(
+                    fromRepo = "internal-hosted-client",
+                    toRepo = "internal-hosted-release",
+                    name = "no_skatteetaten_aurora_demo/whoami",
+                    version = null,
+                    sha256 = "somesha"
                 )
             )
             .exchange()
@@ -135,7 +177,7 @@ class NexusControllerTest {
             .jsonPath("$.name").isEqualTo("no_skatteetaten_aurora_demo/whoami")
             .jsonPath("$.version").isEqualTo("")
             .jsonPath("$.repository").isEqualTo("internal-hosted-client")
-            .jsonPath("$.sha256").isEqualTo("")
+            .jsonPath("$.sha256").isEqualTo("somesha")
     }
 
     @Test
@@ -146,7 +188,7 @@ class NexusControllerTest {
                 "internal-hosted-client",
                 "no_skatteetaten_aurora_demo/whoami",
                 "2.7.3",
-                null
+                "sha256_testsha"
             )
         } returns Mono.just(
             SingleImageResponse(
@@ -192,7 +234,7 @@ class NexusControllerTest {
                     toRepo = "internal-hosted-release",
                     name = "no_skatteetaten_aurora_demo/whoami",
                     version = "2.7.3",
-                    sha256 = null
+                    sha256 = "sha256_testsha"
                 )
             )
             .exchange()

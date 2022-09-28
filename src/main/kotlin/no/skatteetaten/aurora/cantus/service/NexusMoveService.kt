@@ -15,9 +15,9 @@ class NexusMoveServiceReactive(private val nexusClient: NexusClient) : NexusMove
         fromRepo: String,
         name: String?,
         version: String?,
-        sha256: String?
+        sha256: String
     ): Mono<SingleImageResponse> {
-        val nexusSearchResponseMono = nexusClient.getImage(fromRepo, name ?: "", version ?: "", sha256 ?: "")
+        val nexusSearchResponseMono = nexusClient.getImage(fromRepo, name ?: "", version ?: "", sha256)
         return nexusSearchResponseMono.flatMap {
             if (it.items.size != 1) Mono.just(
                 SingleImageResponse(
@@ -48,9 +48,9 @@ class NexusMoveServiceReactive(private val nexusClient: NexusClient) : NexusMove
         toRepo: String,
         name: String?,
         version: String?,
-        sha256: String?
+        sha256: String
     ): Mono<MoveImageResponse> {
-        return nexusClient.moveImage(fromRepo, toRepo, name ?: "", version ?: "", sha256 ?: "")
+        return nexusClient.moveImage(fromRepo, toRepo, name ?: "", version ?: "", sha256)
             .flatMap {
                 if (HttpStatus.valueOf(it.status).is2xxSuccessful) Mono.just(
                     MoveImageResponse(
@@ -60,7 +60,7 @@ class NexusMoveServiceReactive(private val nexusClient: NexusClient) : NexusMove
                             repository = it.data.destination,
                             name = it.data.componentsMoved!!.first().name,
                             version = it.data.componentsMoved.first().version,
-                            sha256 = sha256 ?: ""
+                            sha256 = sha256
                         )
                     )
                 ) else Mono.just(
@@ -76,7 +76,7 @@ class NexusMoveServiceReactive(private val nexusClient: NexusClient) : NexusMove
 
 interface NexusMoveService {
 
-    fun getSingleImage(fromRepo: String, name: String?, version: String?, sha256: String?): Mono<SingleImageResponse> =
+    fun getSingleImage(fromRepo: String, name: String?, version: String?, sha256: String): Mono<SingleImageResponse> =
         integrationDisabled()
 
     fun moveImage(
@@ -84,7 +84,7 @@ interface NexusMoveService {
         toRepo: String,
         name: String?,
         version: String?,
-        sha256: String?
+        sha256: String
     ): Mono<MoveImageResponse> = integrationDisabled()
 
     private fun integrationDisabled(): Nothing =

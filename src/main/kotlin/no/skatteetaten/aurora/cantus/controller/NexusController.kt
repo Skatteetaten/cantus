@@ -39,6 +39,16 @@ class NexusController(
         // TODO: add code to verify Flyttebil as source
     ): Mono<MoveImageResult> {
         // Search for image and validate that it correspond with exactly one instance in the expected repo
+        if (moveImageCmd.sha256.isEmpty()) return Mono.just(
+            MoveImageResult(
+                success = false,
+                message = "Invalid input: sha256 is mandatory",
+                name = moveImageCmd.name ?: "",
+                version = moveImageCmd.version ?: "",
+                repository = moveImageCmd.fromRepo,
+                sha256 = moveImageCmd.sha256
+            )
+        )
         return nexusMoveService.getSingleImage(
             moveImageCmd.fromRepo,
             moveImageCmd.name,
@@ -66,7 +76,7 @@ class NexusController(
                                 name = it.image!!.name,
                                 version = it.image.version,
                                 repository = it.image.repository,
-                                sha256 = it.image.sha256 ?: ""
+                                sha256 = it.image.sha256
                             )
                         )
                     }
@@ -79,7 +89,7 @@ class NexusController(
                         name = moveImageCmd.name ?: "",
                         version = moveImageCmd.version ?: "",
                         repository = moveImageCmd.fromRepo,
-                        sha256 = moveImageCmd.sha256 ?: ""
+                        sha256 = moveImageCmd.sha256
                     )
                 )
             }
@@ -92,7 +102,7 @@ data class MoveImageCommand(
     val toRepo: String,
     val name: String?,
     val version: String?,
-    val sha256: String?
+    val sha256: String
 )
 
 data class MoveImageResult(

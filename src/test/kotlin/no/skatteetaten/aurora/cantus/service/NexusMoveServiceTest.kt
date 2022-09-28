@@ -27,7 +27,7 @@ class NexusMoveServiceTest {
                 "internal-hosted-client",
                 "no_skatteetaten_aurora_demo/whoami",
                 "2.7.3",
-                ""
+                "no_skatteetaten_aurora_demo/whoami"
             )
         } returns Mono.just(
             NexusSearchResponse(
@@ -39,7 +39,7 @@ class NexusMoveServiceTest {
         )
 
         nexusMoveService
-            .getSingleImage("internal-hosted-client", "no_skatteetaten_aurora_demo/whoami", "2.7.3", null)
+            .getSingleImage("internal-hosted-client", "no_skatteetaten_aurora_demo/whoami", "2.7.3", "no_skatteetaten_aurora_demo/whoami")
             .block()
             .let {
                 assertThat(it).isNotNull()
@@ -61,7 +61,7 @@ class NexusMoveServiceTest {
                 "internal-hosted-client",
                 "no_skatteetaten_aurora_demo/whoami",
                 "4.5.6",
-                ""
+                "nothingsha"
             )
         } returns Mono.just(
             NexusSearchResponse(
@@ -71,7 +71,7 @@ class NexusMoveServiceTest {
         )
 
         nexusMoveService
-            .getSingleImage("internal-hosted-client", "no_skatteetaten_aurora_demo/whoami", "4.5.6", null)
+            .getSingleImage("internal-hosted-client", "no_skatteetaten_aurora_demo/whoami", "4.5.6", "nothingsha")
             .block()
             .let {
                 assertThat(it).isNotNull()
@@ -89,7 +89,7 @@ class NexusMoveServiceTest {
                 "internal-hosted-client",
                 "no_skatteetaten_aurora_demo/whoami",
                 "",
-                ""
+                "somesha"
             )
         } returns Mono.just(
             NexusSearchResponse(
@@ -103,7 +103,7 @@ class NexusMoveServiceTest {
                 "internal-hosted-client",
                 "no_skatteetaten_aurora_demo/whoami",
                 "",
-                ""
+                "somesha"
             )
         } returns Mono.just(
             NexusSearchResponse(
@@ -116,7 +116,7 @@ class NexusMoveServiceTest {
         )
 
         nexusMoveService
-            .getSingleImage("internal-hosted-client", "no_skatteetaten_aurora_demo/whoami", null, null)
+            .getSingleImage("internal-hosted-client", "no_skatteetaten_aurora_demo/whoami", null, "somesha")
             .block()
             .let {
                 assertThat(it).isNotNull()
@@ -135,7 +135,7 @@ class NexusMoveServiceTest {
                 "internal-hosted-release",
                 "no_skatteetaten_aurora_demo/whoami",
                 "2.7.3",
-                ""
+                "shalala"
             )
         } returns Mono.just(
             NexusMoveResponse(
@@ -160,7 +160,7 @@ class NexusMoveServiceTest {
                 "internal-hosted-release",
                 "no_skatteetaten_aurora_demo/whoami",
                 "2.7.3",
-                null
+                "shalala"
             )
             .block()
             .let {
@@ -171,6 +171,7 @@ class NexusMoveServiceTest {
                 assertThat(it.image!!.name).isEqualTo("no_skatteetaten_aurora_demo/whoami")
                 assertThat(it.image!!.repository).isEqualTo("internal-hosted-release")
                 assertThat(it.image!!.version).isEqualTo("2.7.3")
+                assertThat(it.image!!.sha256).isEqualTo("shalala")
             }
     }
 
@@ -183,7 +184,7 @@ class NexusMoveServiceTest {
                 "internal-hosted-release",
                 "no_skatteetaten_aurora_demo/whoami",
                 "4.5.6",
-                ""
+                "shanot"
             )
         } returns Mono.just(
             NexusMoveResponse(
@@ -202,7 +203,7 @@ class NexusMoveServiceTest {
                 "internal-hosted-release",
                 "no_skatteetaten_aurora_demo/whoami",
                 "4.5.6",
-                null
+                "shanot"
             )
             .block()
             .let {
