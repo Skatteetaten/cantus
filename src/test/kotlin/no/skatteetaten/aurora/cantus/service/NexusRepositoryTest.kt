@@ -14,10 +14,11 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.springframework.web.reactive.function.client.WebClient
 
-class NexusClientTest {
+class NexusRepositoryTest {
 
     private val server = MockWebServer()
-    private val nexusClient = NexusClient(WebClient.builder(), server.url("/").toString(), "a_test_token")
+    private val mockWebClient: WebClient = WebClient.builder().baseUrl(server.url("/").toString()).build()
+    private val nexusRepository = NexusRepository(mockWebClient, mockWebClient)
 
     @Test
     fun `Parse response from the Nexus API getVersions`() {
@@ -27,7 +28,7 @@ class NexusClientTest {
             .addHeader("Content-Type", "application/json")
 
         server.execute(response) {
-            nexusClient
+            nexusRepository
                 .getVersions("no_skatteetaten_aurora", "test", "test", null)
                 .block()
                 .run {
@@ -52,7 +53,7 @@ class NexusClientTest {
     fun `Throw error message with detailed information when connection fails`() {
         server.execute(MockResponse().setResponseCode(500)) {
             val exception = assertThrows<CantusException> {
-                nexusClient
+                nexusRepository
                     .getVersions("no_skatteetaten_aurora", "testname", "testrepo", "123abc")
                     .block()
             }
@@ -75,8 +76,8 @@ class NexusClientTest {
             .addHeader("Content-Type", "application/json")
 
         server.execute(response) {
-            nexusClient
-                .getImage("internal-hosted-client", "no_skatteetaten_aurora_demo/whoami", "2.7.3", "")
+            nexusRepository
+                .getImageFromNexus("internal-hosted-client", "no_skatteetaten_aurora_demo/whoami", "2.7.3", "")
                 .block()
                 .run {
                     assertThat(this).isNotNull()
@@ -100,8 +101,8 @@ class NexusClientTest {
             .addHeader("Content-Type", "application/json")
 
         server.execute(response) {
-            nexusClient
-                .getImage("internal-hosted-client", "no_skatteetaten_aurora_demo/whoami", "2.7.3", "")
+            nexusRepository
+                .getImageFromNexus("internal-hosted-client", "no_skatteetaten_aurora_demo/whoami", "2.7.3", "")
                 .block()
                 .run {
                     assertThat(this).isNotNull()
@@ -120,7 +121,7 @@ class NexusClientTest {
             .addHeader("Content-Type", "application/json")
 
         server.execute(response) {
-            nexusClient.moveImage(
+            nexusRepository.moveImageInNexus(
                 "internal-hosted-client",
                 "internal-hosted-release",
                 "no_skatteetaten_aurora_demo/whoami",
@@ -151,7 +152,7 @@ class NexusClientTest {
             .addHeader("Content-Type", "application/json")
 
         server.execute(response) {
-            nexusClient.moveImage(
+            nexusRepository.moveImageInNexus(
                 "internal-hosted-client",
                 "internal-hosted-release",
                 "no_skatteetaten_aurora_demo/whoami",

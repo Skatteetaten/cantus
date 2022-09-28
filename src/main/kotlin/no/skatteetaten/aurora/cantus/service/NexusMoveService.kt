@@ -10,14 +10,16 @@ import reactor.core.publisher.Mono
 
 @Service
 @ConditionalOnBean(RequiresNexusToken::class)
-class NexusMoveServiceReactive(private val nexusClient: NexusClient) : NexusMoveService {
+class NexusMoveServiceReactive(
+    private val nexusRepository: NexusRepository
+) : NexusMoveService {
     override fun getSingleImage(
         fromRepo: String,
         name: String?,
         version: String?,
         sha256: String
     ): Mono<SingleImageResponse> {
-        val nexusSearchResponseMono = nexusClient.getImage(fromRepo, name ?: "", version ?: "", sha256)
+        val nexusSearchResponseMono = nexusRepository.getImageFromNexus(fromRepo, name ?: "", version ?: "", sha256)
         return nexusSearchResponseMono.flatMap {
             if (it.items.size != 1) Mono.just(
                 SingleImageResponse(
@@ -50,7 +52,7 @@ class NexusMoveServiceReactive(private val nexusClient: NexusClient) : NexusMove
         version: String?,
         sha256: String
     ): Mono<MoveImageResponse> {
-        return nexusClient.moveImage(fromRepo, toRepo, name ?: "", version ?: "", sha256)
+        return nexusRepository.moveImageInNexus(fromRepo, toRepo, name ?: "", version ?: "", sha256)
             .flatMap {
                 if (HttpStatus.valueOf(it.status).is2xxSuccessful) Mono.just(
                     MoveImageResponse(

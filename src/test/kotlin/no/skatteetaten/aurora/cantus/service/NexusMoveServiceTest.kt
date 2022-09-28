@@ -15,15 +15,15 @@ import reactor.core.publisher.Mono
 @WebFluxTest(controllers = [NexusMoveServiceReactive::class])
 class NexusMoveServiceTest {
 
-    private var nexusClient: NexusClient = mockk<NexusClient>()
+    private var nexusRepository: NexusRepository = mockk<NexusRepository>()
 
-    private var nexusMoveService = NexusMoveServiceReactive(nexusClient)
+    private var nexusMoveService = NexusMoveServiceReactive(nexusRepository)
 
     @Test
     fun `Call getSingleImage and return single match`() {
 
         every {
-            nexusClient.getImage(
+            nexusRepository.getImageFromNexus(
                 "internal-hosted-client",
                 "no_skatteetaten_aurora_demo/whoami",
                 "2.7.3",
@@ -57,7 +57,7 @@ class NexusMoveServiceTest {
     fun `Call getSingleImage and return error when no match`() {
 
         every {
-            nexusClient.getImage(
+            nexusRepository.getImageFromNexus(
                 "internal-hosted-client",
                 "no_skatteetaten_aurora_demo/whoami",
                 "4.5.6",
@@ -85,7 +85,7 @@ class NexusMoveServiceTest {
     fun `Call getSingleImage and return error when several matches`() {
 
         every {
-            nexusClient.getImage(
+            nexusRepository.getImageFromNexus(
                 "internal-hosted-client",
                 "no_skatteetaten_aurora_demo/whoami",
                 "",
@@ -99,7 +99,7 @@ class NexusMoveServiceTest {
         )
 
         every {
-            nexusClient.getImage(
+            nexusRepository.getImageFromNexus(
                 "internal-hosted-client",
                 "no_skatteetaten_aurora_demo/whoami",
                 "",
@@ -130,7 +130,7 @@ class NexusMoveServiceTest {
     fun `Call moveImage successfully`() {
 
         every {
-            nexusClient.moveImage(
+            nexusRepository.moveImageInNexus(
                 "internal-hosted-client",
                 "internal-hosted-release",
                 "no_skatteetaten_aurora_demo/whoami",
@@ -179,7 +179,7 @@ class NexusMoveServiceTest {
     fun `Call moveImage failing with not found`() {
 
         every {
-            nexusClient.moveImage(
+            nexusRepository.moveImageInNexus(
                 "internal-hosted-client",
                 "internal-hosted-release",
                 "no_skatteetaten_aurora_demo/whoami",

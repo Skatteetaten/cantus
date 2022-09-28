@@ -42,7 +42,7 @@ class DockerHttpClientNetworkTest {
     private val applicationConfig = ApplicationConfig()
 
     private val httpClient = DockerHttpClient(
-        applicationConfig.webClient(
+        applicationConfig.webClientDocker(
             WebClient.builder(),
             applicationConfig.tcpClient(100, 100, 100, null),
             "cantus",

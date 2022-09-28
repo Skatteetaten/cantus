@@ -16,7 +16,7 @@ import reactor.core.publisher.Mono
 class NexusServiceTest {
 
     @MockkBean
-    private lateinit var nexusClient: NexusClient
+    private lateinit var nexusRepository: NexusRepository
 
     @Autowired
     private lateinit var nexusService: NexusService
@@ -25,7 +25,7 @@ class NexusServiceTest {
     fun `Call getVersions recursively and respond with a complete list of versions`() {
 
         every {
-            nexusClient.getVersions(
+            nexusRepository.getVersions(
                 "no_skatteetaten_aurora",
                 "test",
                 "internal-hosted-release",
@@ -42,7 +42,7 @@ class NexusServiceTest {
         )
 
         every {
-            nexusClient.getVersions(
+            nexusRepository.getVersions(
                 "no_skatteetaten_aurora",
                 "test",
                 "internal-hosted-release",
@@ -58,7 +58,7 @@ class NexusServiceTest {
         )
 
         every {
-            nexusClient.getVersions(
+            nexusRepository.getVersions(
                 "no_skatteetaten_aurora",
                 "test",
                 "internal-hosted-release",
@@ -95,7 +95,7 @@ class NexusServiceTest {
     fun `Throw CantusException from getVersions`() {
 
         every {
-            nexusClient.getVersions(
+            nexusRepository.getVersions(
                 "no_skatteetaten_aurora",
                 "test",
                 "internal-hosted-release",
