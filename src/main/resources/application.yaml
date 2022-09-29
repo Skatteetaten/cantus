@@ -68,6 +68,10 @@ integrations:
             readOnly: false
     nexus.url: ${NEXUS_API_URL:https://container-nexus.sits.no}
 
+features:
+    moveimage:
+        active: false
+
 ---
 spring:
     config:
@@ -92,7 +96,6 @@ integrations:
     nexus:
         url: ${NEXUS_API_URL:https://utv-nexus.sits.no/}
         token: ${NEXUS_API_TOKEN}
-
 
 ---
 spring:

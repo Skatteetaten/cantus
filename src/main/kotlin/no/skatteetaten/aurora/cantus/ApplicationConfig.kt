@@ -176,3 +176,11 @@ class ApplicationConfig {
 @Component
 @ConditionalOnProperty("integrations.nexus.token")
 class RequiresNexusToken
+
+@Configuration
+class MoveImageConfig(
+    @Value("\${features.moveimage.active}")
+    val moveimageActive: String
+) {
+    fun isActive() = moveimageActive.toBoolean()
+}

@@ -5,6 +5,7 @@ import assertk.assertions.hasSize
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.isNullOrEmpty
+import no.skatteetaten.aurora.cantus.MoveImageConfig
 import no.skatteetaten.aurora.cantus.controller.CantusException
 import no.skatteetaten.aurora.mockmvc.extensions.mockwebserver.execute
 import no.skatteetaten.aurora.mockmvc.extensions.mockwebserver.setJsonFileAsBody
@@ -18,7 +19,8 @@ class NexusRepositoryTest {
 
     private val server = MockWebServer()
     private val mockWebClient: WebClient = WebClient.builder().baseUrl(server.url("/").toString()).build()
-    private val nexusRepository = NexusRepository(mockWebClient, mockWebClient)
+    private val nexusRepository = NexusRepository(mockWebClient, mockWebClient, MoveImageConfig("true"))
+    private val nexusRepositoryMoveInactive = NexusRepository(mockWebClient, mockWebClient, MoveImageConfig("false"))
 
     @Test
     fun `Parse response from the Nexus API getVersions`() {
@@ -168,5 +170,30 @@ class NexusRepositoryTest {
                     assertThat(this.data.destination).isEqualTo("internal-hosted-release")
                 }
         }
+    }
+
+    @Test
+    fun `Response from the moveImage when call to Nexus API is toggled off`() {
+
+        nexusRepositoryMoveInactive.moveImageInNexus(
+            "internal-hosted-client",
+            "internal-hosted-release",
+            "no_skatteetaten_aurora_demo/whoami",
+            "2.7.3",
+            ""
+        )
+            .block()
+            .run {
+                assertThat(this).isNotNull()
+                assertThat(this!!.status).isEqualTo(200)
+                assertThat(this.message).isEqualTo("Dummy move response")
+                assertThat(this.data).isNotNull()
+                assertThat(this.data.destination).isEqualTo("internal-hosted-release")
+                assertThat(this.data.componentsMoved).isNotNull()
+                assertThat(this.data.componentsMoved!!).hasSize(1)
+                assertThat(this.data.componentsMoved!![0].name).isEqualTo("no_skatteetaten_aurora_demo/whoami")
+                assertThat(this.data.componentsMoved!![0].version).isEqualTo("2.7.3")
+                assertThat(this.data.componentsMoved!![0].id).isEqualTo("dummyid")
+            }
     }
 }

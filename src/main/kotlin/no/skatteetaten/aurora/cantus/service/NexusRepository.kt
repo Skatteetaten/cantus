@@ -1,5 +1,7 @@
 package no.skatteetaten.aurora.cantus.service
 
+import mu.KotlinLogging
+import no.skatteetaten.aurora.cantus.MoveImageConfig
 import no.skatteetaten.aurora.cantus.ServiceTypes
 import no.skatteetaten.aurora.cantus.TargetService
 import no.skatteetaten.aurora.cantus.controller.CantusException
@@ -11,13 +13,16 @@ import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.bodyToMono
 import reactor.core.publisher.Mono
 
+private val logger = KotlinLogging.logger {}
+
 @Repository
 /**
  * NexusRepository is a DDD Repository for CRUD operations against Nexus
  */
 class NexusRepository(
     @TargetService(ServiceTypes.NEXUS) val webClientNexus: WebClient,
-    @TargetService(ServiceTypes.NEXUS_TOKEN) val webClientNexusToken: WebClient
+    @TargetService(ServiceTypes.NEXUS_TOKEN) val webClientNexusToken: WebClient,
+    private val moveImageConfig: MoveImageConfig
 ) {
 
     fun getVersions(
@@ -66,22 +71,48 @@ class NexusRepository(
         version: String,
         sha256: String
     ): Mono<NexusMoveResponse> {
-        return webClientNexusToken
-            .post()
-            .uri(
-                "/service/rest/v1/staging/move/{toRepository}?repository={fromRepository}&name={name}&version={version}&sha256={sha256}&format=docker",
-                toRepository, fromRepository, name, version, sha256
-            )
-            .accept(MediaType.APPLICATION_JSON)
-            .retrieve()
-            .onStatus(HttpStatus::is5xxServerError) {
-                it.bodyToMono<String>().defaultIfEmpty("").flatMap { body -> Mono.error(CantusException(body)) }
-            }
-            .bodyToMono(NexusMoveResponse::class.java)
-            .handleError(
-                imageRepoCommand = null,
-                message = "operation=POST_MOVE_IMAGE_IN_NEXUS name=$name version=$version fromRepository=$fromRepository " +
-                    "toRepository=$toRepository sha256=$sha256 format=docker"
-            )
+        if (moveImageConfig.isActive()) {
+            return webClientNexusToken
+                .post()
+                .uri(
+                    "/service/rest/v1/staging/move/{toRepository}?repository={fromRepository}&name={name}&version={version}&sha256={sha256}&format=docker",
+                    toRepository, fromRepository, name, version, sha256
+                )
+                .accept(MediaType.APPLICATION_JSON)
+                .retrieve()
+                .onStatus(HttpStatus::is5xxServerError) {
+                    it.bodyToMono<String>().defaultIfEmpty("").flatMap { body -> Mono.error(CantusException(body)) }
+                }
+                .bodyToMono(NexusMoveResponse::class.java)
+                .handleError(
+                    imageRepoCommand = null,
+                    message = "operation=POST_MOVE_IMAGE_IN_NEXUS name=$name version=$version fromRepository=$fromRepository " +
+                        "toRepository=$toRepository sha256=$sha256 format=docker"
+                )
+        } else {
+            logger.info("Move Image is not active - /service/rest/v1/staging/move/$toRepository?repository=$fromRepository&name=$name&version=$version&sha256=$sha256&format=docker was never sent")
+            return dummyMoveResponse(toRepository, name, version)
+        }
     }
+
+    private fun dummyMoveResponse(
+        toRepository: String,
+        name: String,
+        version: String
+    ) = Mono.just(
+        NexusMoveResponse(
+            status = 200,
+            message = "Dummy move response",
+            data = NexusMoveResponseData(
+                destination = toRepository,
+                componentsMoved = listOf(
+                    NexusComponentMoved(
+                        name = name,
+                        version = version,
+                        id = "dummyid"
+                    )
+                )
+            )
+        )
+    )
 }
