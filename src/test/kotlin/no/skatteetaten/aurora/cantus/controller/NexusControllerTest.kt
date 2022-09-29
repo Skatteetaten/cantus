@@ -128,14 +128,7 @@ class NexusControllerTest {
                 )
             )
             .exchange()
-            .expectStatus().isOk
-            .expectBody()
-            .jsonPath("$.success").isEqualTo(false)
-            .jsonPath("$.message").isEqualTo("Invalid input: sha256 is mandatory")
-            .jsonPath("$.name").isEqualTo("no_skatteetaten_aurora_demo/whoami")
-            .jsonPath("$.version").isEqualTo("")
-            .jsonPath("$.repository").isEqualTo("internal-hosted-client")
-            .jsonPath("$.sha256").isEqualTo("")
+            .expectStatus().isBadRequest
     }
 
     @Test

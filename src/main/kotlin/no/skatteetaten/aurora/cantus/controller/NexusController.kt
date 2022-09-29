@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import javax.validation.Valid
+import javax.validation.constraints.Size
 
 private val logger = KotlinLogging.logger {}
 
@@ -35,20 +37,10 @@ class NexusController(
 
     @PostMapping("/image/move")
     fun moveImage(
-        @RequestBody moveImageCmd: MoveImageCommand
+        @Valid @RequestBody moveImageCmd: MoveImageCommand
         // TODO: add code to verify Flyttebil as source
     ): Mono<MoveImageResult> {
         // Search for image and validate that it correspond with exactly one instance in the expected repo
-        if (moveImageCmd.sha256.isEmpty()) return Mono.just(
-            MoveImageResult(
-                success = false,
-                message = "Invalid input: sha256 is mandatory",
-                name = moveImageCmd.name ?: "",
-                version = moveImageCmd.version ?: "",
-                repository = moveImageCmd.fromRepo,
-                sha256 = moveImageCmd.sha256
-            )
-        )
         return nexusMoveService.getSingleImage(
             moveImageCmd.fromRepo,
             moveImageCmd.name,
@@ -98,10 +90,13 @@ class NexusController(
 }
 
 data class MoveImageCommand(
+    @field:Size(min = 1)
     val fromRepo: String,
+    @field:Size(min = 1)
     val toRepo: String,
     val name: String?,
     val version: String?,
+    @field:Size(min = 6)
     val sha256: String
 )
 
