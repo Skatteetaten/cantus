@@ -60,41 +60,39 @@ class NexusController(
                 )
                     .flatMap { movedImageDto ->
                         logger.info { "Moved image ${movedImageDto.name}:${movedImageDto.version} to ${movedImageDto.repository}" }
-                        Mono.just(ResponseEntity.ok().body(moveImageResultFromImageDto(movedImageDto)))
+                        Mono.just(ResponseEntity.ok().body(movedImageDto.moveImageResult()))
                     }
                     .doOnError {
                         logger.error { "Failed to move image ${singleImageDto.name}:${singleImageDto.version} with sha ${singleImageDto.sha256}" }
-                        Mono.just(
-                            ResponseEntity.internalServerError().body(moveImageResultFromImageDto(singleImageDto))
-                        )
+                        Mono.just(ResponseEntity.internalServerError().body(singleImageDto.moveImageResult()))
                     }
             }
             .switchIfEmpty {
                 logger.info { "Found no image for search criteria" }
                 Mono.just(
-                    ResponseEntity.ok().body(moveImageResultFromMoveImageCommand(moveImageCmd))
+                    ResponseEntity.ok().body(moveImageCmd.moveImageResult())
                 )
             }
             .doOnError { e -> logger.error("Error when searching for single image", e) }
             .onErrorResume { e ->
                 Mono.just(
-                    ResponseEntity.internalServerError().body(moveImageResultFromMoveImageCommand(moveImageCmd))
+                    ResponseEntity.internalServerError().body(moveImageCmd.moveImageResult())
                 )
             }
     }
 
-    private fun moveImageResultFromImageDto(movedImageDto: ImageDto) = MoveImageResult(
-        name = movedImageDto.name,
-        version = movedImageDto.version,
-        repository = movedImageDto.repository,
-        sha256 = movedImageDto.sha256
+    fun ImageDto.moveImageResult() = MoveImageResult(
+        name = this.name,
+        version = this.version,
+        repository = this.repository,
+        sha256 = this.sha256
     )
 
-    private fun moveImageResultFromMoveImageCommand(moveImageCmd: MoveImageCommand) = MoveImageResult(
-        name = moveImageCmd.name ?: "",
-        version = moveImageCmd.version ?: "",
-        repository = moveImageCmd.fromRepo,
-        sha256 = moveImageCmd.sha256
+    fun MoveImageCommand.moveImageResult() = MoveImageResult(
+        name = this.name ?: "",
+        version = this.version ?: "",
+        repository = this.fromRepo,
+        sha256 = this.sha256
     )
 }
 
