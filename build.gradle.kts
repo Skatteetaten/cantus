@@ -30,6 +30,7 @@ dependencies {
     testImplementation("io.mockk:mockk:1.12.4")
     testImplementation("com.willowtreeapps.assertk:assertk-jvm:0.25")
     testImplementation("com.ninja-squad:springmockk:3.1.0")
+    testImplementation("io.projectreactor:reactor-test:3.4.23")
 
     // Spring testing
     testImplementation("org.springframework.boot:spring-boot-starter-test")

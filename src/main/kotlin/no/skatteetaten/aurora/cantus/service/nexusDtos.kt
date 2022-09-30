@@ -39,18 +39,6 @@ data class ImageDto(
     val sha256: String
 )
 
-data class SingleImageResponse(
-    val success: Boolean,
-    val message: String,
-    val image: ImageDto?
-)
-
-data class MoveImageResponse(
-    val success: Boolean,
-    val message: String,
-    val image: ImageDto?
-)
-
 data class NexusMoveResponse(
     val status: Int,
     val message: String,

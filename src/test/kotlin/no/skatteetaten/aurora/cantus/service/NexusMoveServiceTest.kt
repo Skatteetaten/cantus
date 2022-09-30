@@ -2,15 +2,14 @@ package no.skatteetaten.aurora.cantus.service
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
-import assertk.assertions.isFalse
 import assertk.assertions.isNotNull
-import assertk.assertions.isNull
-import assertk.assertions.isTrue
 import io.mockk.every
 import io.mockk.mockk
+import no.skatteetaten.aurora.cantus.controller.CantusException
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest
 import reactor.core.publisher.Mono
+import reactor.test.StepVerifier
 
 @WebFluxTest(controllers = [NexusMoveServiceReactive::class])
 class NexusMoveServiceTest {
@@ -43,18 +42,15 @@ class NexusMoveServiceTest {
             .block()
             .let {
                 assertThat(it).isNotNull()
-                assertThat(it!!.success).isTrue()
-                assertThat(it.message).isEqualTo("Got exactly one matching image")
-                assertThat(it.image).isNotNull()
-                assertThat(it.image!!.name).isEqualTo("no_skatteetaten_aurora_demo/whoami")
-                assertThat(it.image!!.repository).isEqualTo("repo")
-                assertThat(it.image!!.version).isEqualTo("2.7.3")
-                assertThat(it.image!!.sha256).isEqualTo("sha256_no_skatteetaten_aurora_demo/whoami")
+                assertThat(it!!.name).isEqualTo("no_skatteetaten_aurora_demo/whoami")
+                assertThat(it.repository).isEqualTo("repo")
+                assertThat(it.version).isEqualTo("2.7.3")
+                assertThat(it.sha256).isEqualTo("sha256_no_skatteetaten_aurora_demo/whoami")
             }
     }
 
     @Test
-    fun `Call getSingleImage and return error when no match`() {
+    fun `Call getSingleImage and return empty when no match`() {
 
         every {
             nexusRepository.getImageFromNexus(
@@ -70,33 +66,15 @@ class NexusMoveServiceTest {
             )
         )
 
-        nexusMoveService
+        val result = nexusMoveService
             .getSingleImage("internal-hosted-client", "no_skatteetaten_aurora_demo/whoami", "4.5.6", "nothingsha")
-            .block()
-            .let {
-                assertThat(it).isNotNull()
-                assertThat(it!!.success).isFalse()
-                assertThat(it.message).isEqualTo("Found no matching image")
-                assertThat(it.image).isNull()
-            }
+
+        StepVerifier.create(result)
+            .verifyComplete()
     }
 
     @Test
     fun `Call getSingleImage and return error when several matches`() {
-
-        every {
-            nexusRepository.getImageFromNexus(
-                "internal-hosted-client",
-                "no_skatteetaten_aurora_demo/whoami",
-                "",
-                "somesha"
-            )
-        } returns Mono.just(
-            NexusSearchResponse(
-                items = emptyList(),
-                continuationToken = null
-            )
-        )
 
         every {
             nexusRepository.getImageFromNexus(
@@ -115,15 +93,12 @@ class NexusMoveServiceTest {
             )
         )
 
-        nexusMoveService
+        val error = nexusMoveService
             .getSingleImage("internal-hosted-client", "no_skatteetaten_aurora_demo/whoami", null, "somesha")
-            .block()
-            .let {
-                assertThat(it).isNotNull()
-                assertThat(it!!.success).isFalse()
-                assertThat(it.message).isEqualTo("Got too many matches when expecting single match")
-                assertThat(it.image).isNull()
-            }
+
+        StepVerifier.create(error)
+            .expectErrorMatches { throwable -> (throwable is CantusException && throwable.message.equals("Got too many matches when expecting single match")) }
+            .verify()
     }
 
     @Test
@@ -165,13 +140,10 @@ class NexusMoveServiceTest {
             .block()
             .let {
                 assertThat(it).isNotNull()
-                assertThat(it!!.success).isTrue()
-                assertThat(it.message).isEqualTo("Move Successful")
-                assertThat(it.image).isNotNull()
-                assertThat(it.image!!.name).isEqualTo("no_skatteetaten_aurora_demo/whoami")
-                assertThat(it.image!!.repository).isEqualTo("internal-hosted-release")
-                assertThat(it.image!!.version).isEqualTo("2.7.3")
-                assertThat(it.image!!.sha256).isEqualTo("shalala")
+                assertThat(it!!.name).isEqualTo("no_skatteetaten_aurora_demo/whoami")
+                assertThat(it.repository).isEqualTo("internal-hosted-release")
+                assertThat(it.version).isEqualTo("2.7.3")
+                assertThat(it.sha256).isEqualTo("shalala")
             }
     }
 
@@ -197,7 +169,7 @@ class NexusMoveServiceTest {
             )
         )
 
-        nexusMoveService
+        val error = nexusMoveService
             .moveImage(
                 "internal-hosted-client",
                 "internal-hosted-release",
@@ -205,12 +177,9 @@ class NexusMoveServiceTest {
                 "4.5.6",
                 "shanot"
             )
-            .block()
-            .let {
-                assertThat(it).isNotNull()
-                assertThat(it!!.success).isFalse()
-                assertThat(it.message).isEqualTo("No components found")
-                assertThat(it.image).isNull()
-            }
+
+        StepVerifier.create(error)
+            .expectErrorMatches { throwable -> (throwable is CantusException && throwable.message.equals("Error when moving image: No components found. Status: 404")) }
+            .verify()
     }
 }

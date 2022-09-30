@@ -1,9 +1,11 @@
 package no.skatteetaten.aurora.cantus.controller
 
 import mu.KotlinLogging
+import no.skatteetaten.aurora.cantus.service.ImageDto
 import no.skatteetaten.aurora.cantus.service.NexusMoveService
 import no.skatteetaten.aurora.cantus.service.NexusService
 import no.skatteetaten.aurora.cantus.service.Version
+import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -11,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import reactor.kotlin.core.publisher.switchIfEmpty
 import javax.validation.Valid
 import javax.validation.constraints.Size
 
@@ -39,54 +42,60 @@ class NexusController(
     fun moveImage(
         @Valid @RequestBody moveImageCmd: MoveImageCommand
         // TODO: add code to verify Flyttebil as source
-    ): Mono<MoveImageResult> {
+    ): Mono<ResponseEntity<MoveImageResult>> {
         // Search for image and validate that it correspond with exactly one instance in the expected repo
         return nexusMoveService.getSingleImage(
             moveImageCmd.fromRepo,
             moveImageCmd.name,
             moveImageCmd.version,
             moveImageCmd.sha256
-        ).flatMap { singleImageResponse ->
-            if (singleImageResponse.success)
+        )
+            .flatMap { singleImageDto ->
                 nexusMoveService.moveImage(
-                    singleImageResponse.image!!.repository,
+                    singleImageDto!!.repository,
                     moveImageCmd.toRepo,
-                    singleImageResponse.image.name,
-                    singleImageResponse.image.version,
-                    singleImageResponse.image.sha256
+                    singleImageDto.name,
+                    singleImageDto.version,
+                    singleImageDto.sha256
                 )
-                    .flatMap {
-                        if (it.success) {
-                            logger.info { "Moved image ${it.image!!.name}:${it.image.version} to ${it.image.repository}" }
-                        } else {
-                            logger.warn { "Failed to move image ${singleImageResponse.image.name}:${singleImageResponse.image.version}" }
-                        }
+                    .flatMap { movedImageDto ->
+                        logger.info { "Moved image ${movedImageDto.name}:${movedImageDto.version} to ${movedImageDto.repository}" }
+                        Mono.just(ResponseEntity.ok().body(moveImageResultFromImageDto(movedImageDto)))
+                    }
+                    .doOnError {
+                        logger.error { "Failed to move image ${singleImageDto.name}:${singleImageDto.version} with sha ${singleImageDto.sha256}" }
                         Mono.just(
-                            MoveImageResult(
-                                success = it.success,
-                                message = it.message,
-                                name = it.image!!.name,
-                                version = it.image.version,
-                                repository = it.image.repository,
-                                sha256 = it.image.sha256
-                            )
+                            ResponseEntity.internalServerError().body(moveImageResultFromImageDto(singleImageDto))
                         )
                     }
-            else {
-                logger.warn { "Could not find single image for search criteria. Message: ${singleImageResponse.message}" }
+            }
+            .switchIfEmpty {
+                logger.info { "Found no image for search criteria" }
                 Mono.just(
-                    MoveImageResult(
-                        success = false,
-                        message = singleImageResponse.message,
-                        name = moveImageCmd.name ?: "",
-                        version = moveImageCmd.version ?: "",
-                        repository = moveImageCmd.fromRepo,
-                        sha256 = moveImageCmd.sha256
-                    )
+                    ResponseEntity.ok().body(moveImageResultFromMoveImageCommand(moveImageCmd))
                 )
             }
-        }
+            .doOnError { e -> logger.error("Error when searching for single image", e) }
+            .onErrorResume { e ->
+                Mono.just(
+                    ResponseEntity.internalServerError().body(moveImageResultFromMoveImageCommand(moveImageCmd))
+                )
+            }
     }
+
+    private fun moveImageResultFromImageDto(movedImageDto: ImageDto) = MoveImageResult(
+        name = movedImageDto.name,
+        version = movedImageDto.version,
+        repository = movedImageDto.repository,
+        sha256 = movedImageDto.sha256
+    )
+
+    private fun moveImageResultFromMoveImageCommand(moveImageCmd: MoveImageCommand) = MoveImageResult(
+        name = moveImageCmd.name ?: "",
+        version = moveImageCmd.version ?: "",
+        repository = moveImageCmd.fromRepo,
+        sha256 = moveImageCmd.sha256
+    )
 }
 
 data class MoveImageCommand(
@@ -101,8 +110,6 @@ data class MoveImageCommand(
 )
 
 data class MoveImageResult(
-    val success: Boolean,
-    val message: String,
     val name: String,
     val version: String,
     val repository: String,

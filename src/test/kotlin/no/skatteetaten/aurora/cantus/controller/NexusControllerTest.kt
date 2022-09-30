@@ -3,10 +3,8 @@ package no.skatteetaten.aurora.cantus.controller
 import com.ninjasquad.springmockk.MockkBean
 import io.mockk.every
 import no.skatteetaten.aurora.cantus.service.ImageDto
-import no.skatteetaten.aurora.cantus.service.MoveImageResponse
 import no.skatteetaten.aurora.cantus.service.NexusMoveService
 import no.skatteetaten.aurora.cantus.service.NexusService
-import no.skatteetaten.aurora.cantus.service.SingleImageResponse
 import no.skatteetaten.aurora.cantus.service.Version
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -106,13 +104,7 @@ class NexusControllerTest {
                 null,
                 ""
             )
-        } returns Mono.just(
-            SingleImageResponse(
-                success = false,
-                message = "Got too many matches when expecting single match",
-                image = null
-            )
-        )
+        } returns Mono.error(CantusException("Got too many matches when expecting single match"))
 
         webTestClient
             .post()
@@ -141,13 +133,7 @@ class NexusControllerTest {
                 null,
                 "somesha"
             )
-        } returns Mono.just(
-            SingleImageResponse(
-                success = false,
-                message = "Got too many matches when expecting single match",
-                image = null
-            )
-        )
+        } returns Mono.error(CantusException("Got too many matches when expecting single match"))
 
         webTestClient
             .post()
@@ -163,10 +149,8 @@ class NexusControllerTest {
                 )
             )
             .exchange()
-            .expectStatus().isOk
+            .expectStatus().is5xxServerError
             .expectBody()
-            .jsonPath("$.success").isEqualTo(false)
-            .jsonPath("$.message").isEqualTo("Got too many matches when expecting single match")
             .jsonPath("$.name").isEqualTo("no_skatteetaten_aurora_demo/whoami")
             .jsonPath("$.version").isEqualTo("")
             .jsonPath("$.repository").isEqualTo("internal-hosted-client")
@@ -184,15 +168,11 @@ class NexusControllerTest {
                 "sha256_testsha"
             )
         } returns Mono.just(
-            SingleImageResponse(
-                success = true,
-                message = "Got exactly one matching image",
-                image = ImageDto(
-                    repository = "internal-hosted-client",
-                    name = "no_skatteetaten_aurora_demo/whoami",
-                    version = "2.7.3",
-                    sha256 = "sha256_testsha"
-                )
+            ImageDto(
+                repository = "internal-hosted-client",
+                name = "no_skatteetaten_aurora_demo/whoami",
+                version = "2.7.3",
+                sha256 = "sha256_testsha"
             )
         )
 
@@ -205,15 +185,12 @@ class NexusControllerTest {
                 "sha256_testsha"
             )
         } returns Mono.just(
-            MoveImageResponse(
-                success = true,
-                message = "Move Successful",
-                image = ImageDto(
-                    repository = "internal-hosted-release",
-                    name = "no_skatteetaten_aurora_demo/whoami",
-                    version = "2.7.3",
-                    sha256 = "sha256_testsha"
-                )
+            ImageDto(
+                repository = "internal-hosted-release",
+                name = "no_skatteetaten_aurora_demo/whoami",
+                version = "2.7.3",
+                sha256 = "sha256_testsha"
+
             )
         )
 
@@ -233,8 +210,6 @@ class NexusControllerTest {
             .exchange()
             .expectStatus().isOk
             .expectBody()
-            .jsonPath("$.success").isEqualTo(true)
-            .jsonPath("$.message").isEqualTo("Move Successful")
             .jsonPath("$.name").isEqualTo("no_skatteetaten_aurora_demo/whoami")
             .jsonPath("$.version").isEqualTo("2.7.3")
             .jsonPath("$.repository").isEqualTo("internal-hosted-release")
