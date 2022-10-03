@@ -42,7 +42,7 @@ class NexusController(
     fun moveImage(
         @Valid @RequestBody moveImageCmd: MoveImageCommand
         // TODO: add code to verify Flyttebil as source
-    ): Mono<ResponseEntity<MoveImageResult>> {
+    ): Mono<ResponseEntity<MoveImageResult?>> {
         // Search for image and validate that it correspond with exactly one instance in the expected repo
         return nexusMoveService.getSingleImage(
             moveImageCmd.fromRepo,
@@ -70,7 +70,7 @@ class NexusController(
             .switchIfEmpty {
                 logger.info { "Found no image for search criteria" }
                 Mono.just(
-                    ResponseEntity.ok().body(moveImageCmd.moveImageResult())
+                    ResponseEntity.notFound().build()
                 )
             }
             .doOnError { e -> logger.error("Error when searching for single image", e) }
