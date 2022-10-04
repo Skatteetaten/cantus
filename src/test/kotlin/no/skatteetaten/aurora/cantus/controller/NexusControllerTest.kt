@@ -97,15 +97,6 @@ class NexusControllerTest {
     @Test
     fun `Call moveImage with empty sha256`() {
 
-        every {
-            nexusMoveService.getSingleImage(
-                "internal-hosted-client",
-                "no_skatteetaten_aurora_demo/whoami",
-                null,
-                ""
-            )
-        } returns Mono.error(CantusException("Got too many matches when expecting single match"))
-
         webTestClient
             .post()
             .uri("/image/move")
@@ -214,5 +205,85 @@ class NexusControllerTest {
             .jsonPath("$.version").isEqualTo("2.7.3")
             .jsonPath("$.repository").isEqualTo("internal-hosted-release")
             .jsonPath("$.sha256").isEqualTo("sha256_testsha")
+    }
+
+    @Test
+    fun `Call moveImage failing to move image`() {
+
+        every {
+            nexusMoveService.getSingleImage(
+                "internal-hosted-client",
+                null,
+                null,
+                "sha256_testsha"
+            )
+        } returns Mono.just(
+            ImageDto(
+                repository = "internal-hosted-client",
+                name = "no_skatteetaten_aurora_demo/whoami",
+                version = "2.7.3",
+                sha256 = "sha256_testsha"
+            )
+        )
+
+        every {
+            nexusMoveService.moveImage(
+                "internal-hosted-client",
+                "internal-hosted-release",
+                "no_skatteetaten_aurora_demo/whoami",
+                "2.7.3",
+                "sha256_testsha"
+            )
+        } returns Mono.error(CantusException("Error when moving image: Error from Nexus. Status: Fail"))
+
+        webTestClient
+            .post()
+            .uri("/image/move")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(
+                MoveImageCommand(
+                    fromRepo = "internal-hosted-client",
+                    toRepo = "internal-hosted-release",
+                    name = null,
+                    version = null,
+                    sha256 = "sha256_testsha"
+                )
+            )
+            .exchange()
+            .expectStatus().is5xxServerError
+            .expectBody()
+            .jsonPath("$.name").isEqualTo("no_skatteetaten_aurora_demo/whoami")
+            .jsonPath("$.version").isEqualTo("2.7.3")
+            .jsonPath("$.repository").isEqualTo("internal-hosted-client")
+            .jsonPath("$.sha256").isEqualTo("sha256_testsha")
+    }
+
+    @Test
+    fun `Call moveImage failing to find any matching image to move`() {
+
+        every {
+            nexusMoveService.getSingleImage(
+                "internal-hosted-client",
+                "no_skatteetaten_aurora_demo/whoami",
+                null,
+                "sha256_nomatch"
+            )
+        } returns Mono.empty()
+
+        webTestClient
+            .post()
+            .uri("/image/move")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(
+                MoveImageCommand(
+                    fromRepo = "internal-hosted-client",
+                    toRepo = "internal-hosted-release",
+                    name = "no_skatteetaten_aurora_demo/whoami",
+                    version = null,
+                    sha256 = "sha256_nomatch"
+                )
+            )
+            .exchange()
+            .expectStatus().isNotFound
     }
 }
