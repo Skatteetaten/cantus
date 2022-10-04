@@ -63,9 +63,12 @@ class NexusController(
                         Mono.just(ResponseEntity.ok().body(movedImageDto.moveImageResult()))
                     }
                     .doOnError {
-                        logger.error { "Failed to move image ${singleImageDto.name}:${singleImageDto.version} with sha ${singleImageDto.sha256}" }
-                        Mono.just(ResponseEntity.internalServerError().body(singleImageDto.moveImageResult()))
+                        logger.error(
+                            "Failed to move image ${singleImageDto.name}:${singleImageDto.version} with sha ${singleImageDto.sha256}",
+                            it
+                        )
                     }
+                    .onErrorReturn(ResponseEntity.internalServerError().body(singleImageDto.moveImageResult()))
             }
             .switchIfEmpty {
                 logger.info { "Found no image for search criteria" }
@@ -74,11 +77,7 @@ class NexusController(
                 )
             }
             .doOnError { e -> logger.error("Error when searching for single image", e) }
-            .onErrorResume { e ->
-                Mono.just(
-                    ResponseEntity.internalServerError().body(moveImageCmd.moveImageResult())
-                )
-            }
+            .onErrorReturn(ResponseEntity.internalServerError().body(moveImageCmd.moveImageResult()))
     }
 
     fun ImageDto.moveImageResult() = MoveImageResult(
