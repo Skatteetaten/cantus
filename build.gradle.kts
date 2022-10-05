@@ -14,11 +14,11 @@ aurora {
 dependencies {
     implementation("uk.q3c.rest:hal-kotlin:0.5.4.0.db32476")
 
-    implementation("io.projectreactor.kotlin:reactor-kotlin-extensions:1.1.5")
+    implementation("io.projectreactor.kotlin:reactor-kotlin-extensions:1.1.6")
 
     // Coroutines
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-slf4j:1.6.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-slf4j:1.6.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.2")
 
     // Spring
     implementation("org.springframework.boot:spring-boot-starter-webflux")
@@ -29,7 +29,7 @@ dependencies {
     testImplementation("no.skatteetaten.aurora:mockwebserver-extensions-kotlin:1.3.1")
     testImplementation("io.mockk:mockk:1.12.4")
     testImplementation("com.willowtreeapps.assertk:assertk-jvm:0.25")
-    testImplementation("com.ninja-squad:springmockk:3.1.0")
+    testImplementation("com.ninja-squad:springmockk:3.1.1")
     testImplementation("io.projectreactor:reactor-test:3.4.23")
 
     // Spring testing
