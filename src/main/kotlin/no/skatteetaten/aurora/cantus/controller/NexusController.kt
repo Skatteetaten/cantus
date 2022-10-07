@@ -51,24 +51,7 @@ class NexusController(
             moveImageCmd.sha256
         )
             .flatMap { singleImageDto ->
-                nexusMoveService.moveImage(
-                    singleImageDto!!.repository,
-                    moveImageCmd.toRepo,
-                    singleImageDto.name,
-                    singleImageDto.version,
-                    singleImageDto.sha256
-                )
-                    .flatMap { movedImageDto ->
-                        logger.info { "Moved image ${movedImageDto.name}:${movedImageDto.version} to ${movedImageDto.repository}" }
-                        Mono.just(ResponseEntity.ok().body(movedImageDto.moveImageResult()))
-                    }
-                    .doOnError {
-                        logger.error(
-                            "Failed to move image ${singleImageDto.name}:${singleImageDto.version} with sha ${singleImageDto.sha256}",
-                            it
-                        )
-                    }
-                    .onErrorReturn(ResponseEntity.internalServerError().body(singleImageDto.moveImageResult()))
+                moveImageInNexus(singleImageDto, moveImageCmd.toRepo)
             }
             .switchIfEmpty {
                 logger.info { "Found no image for search criteria" }
@@ -80,14 +63,36 @@ class NexusController(
             .onErrorReturn(ResponseEntity.internalServerError().body(moveImageCmd.moveImageResult()))
     }
 
-    fun ImageDto.moveImageResult() = MoveImageResult(
+    private fun moveImageInNexus(
+        singleImageDto: ImageDto,
+        toRepo: String
+    ) = nexusMoveService.moveImage(
+        singleImageDto.repository,
+        toRepo,
+        singleImageDto.name,
+        singleImageDto.version,
+        singleImageDto.sha256
+    )
+        .flatMap { movedImageDto ->
+            logger.info { "Moved image ${movedImageDto.name}:${movedImageDto.version} to ${movedImageDto.repository}" }
+            Mono.just(ResponseEntity.ok().body(movedImageDto.moveImageResult()))
+        }
+        .doOnError {
+            logger.error(
+                "Failed to move image ${singleImageDto.name}:${singleImageDto.version} with sha ${singleImageDto.sha256}",
+                it
+            )
+        }
+        .onErrorReturn(ResponseEntity.internalServerError().body(singleImageDto.moveImageResult()))
+
+    private fun ImageDto.moveImageResult() = MoveImageResult(
         name = this.name,
         version = this.version,
         repository = this.repository,
         sha256 = this.sha256
     )
 
-    fun MoveImageCommand.moveImageResult() = MoveImageResult(
+    private fun MoveImageCommand.moveImageResult() = MoveImageResult(
         name = this.name ?: "",
         version = this.version ?: "",
         repository = this.fromRepo,
