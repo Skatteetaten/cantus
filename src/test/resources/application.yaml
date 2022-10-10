@@ -27,3 +27,6 @@ integrations:
             url: url
             https: false
             auth: None
+    nexus:
+        url: nexusurl.no
+        token: nexus_token

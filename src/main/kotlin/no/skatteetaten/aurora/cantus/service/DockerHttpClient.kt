@@ -23,13 +23,13 @@ const val MANIFEST_V2_MEDIATYPE_VALUE = "application/vnd.docker.distribution.man
 
 @Service
 class DockerHttpClient(
-    val webClient: WebClient
+    val webClientDocker: WebClient
 ) {
 
     fun getUploadUUID(
         to: ImageRepoCommand
     ): String {
-        val manifestResponse = webClient.request(
+        val manifestResponse = webClientDocker.request(
             imageRepoCommand = to,
             method = HttpMethod.POST,
             path = "{imageGroup}/{imageName}/blobs/uploads/"
@@ -51,7 +51,7 @@ class DockerHttpClient(
         manifest: ImageManifestResponseDto
     ): Boolean {
         val manifestBody = createObjectMapper().writeValueAsString(manifest.manifestBody)
-        return webClient.request(
+        return webClientDocker.request(
             imageRepoCommand = to,
             method = HttpMethod.PUT,
             path = "{imageGroup}/{imageName}/manifests/{imageTag}"
@@ -72,7 +72,7 @@ class DockerHttpClient(
         uuid: String,
         digest: String,
         data: Mono<ByteArray>
-    ): Boolean = webClient.request(
+    ): Boolean = webClientDocker.request(
         imageRepoCommand = to,
         method = HttpMethod.PUT, path = "{imageGroup}/{imageName}/blobs/uploads/{uuid}?digest={digest}",
         pathVariables = mapOf("uuid" to uuid, "digest" to digest)
@@ -89,7 +89,7 @@ class DockerHttpClient(
         ).let { true }
 
     fun getImageManifest(imageRepoCommand: ImageRepoCommand): ImageManifestResponseDto {
-        val response = webClient
+        val response = webClientDocker
             .request(imageRepoCommand, "{imageGroup}/{imageName}/manifests/{imageTag}")
             .headers {
                 it.accept = listOf(MediaType.valueOf(MANIFEST_V2_MEDIATYPE_VALUE))
@@ -121,7 +121,7 @@ class DockerHttpClient(
         return ImageManifestResponseDto(contentType.toString(), contentDigestLabel, manifest)
     }
 
-    fun getImageTags(imageRepoCommand: ImageRepoCommand): ImageTagsResponseDto? = webClient
+    fun getImageTags(imageRepoCommand: ImageRepoCommand): ImageTagsResponseDto? = webClientDocker
         .request(imageRepoCommand, "{imageGroup}/{imageName}/tags/list")
         .retrieve()
         .bodyToMono<ImageTagsResponseDto>()
@@ -138,7 +138,7 @@ class DockerHttpClient(
         )
 
     fun getLayer(imageRepoCommand: ImageRepoCommand, digest: String): Mono<ByteArray> =
-        webClient.request(
+        webClientDocker.request(
             imageRepoCommand = imageRepoCommand,
             path = "{imageGroup}/{imageName}/blobs/{digest}",
             pathVariables = mapOf("digest" to digest)
@@ -150,7 +150,7 @@ class DockerHttpClient(
         imageRepoCommand: ImageRepoCommand,
         digest: String
     ): ByteArray? {
-        return webClient.request(
+        return webClientDocker.request(
             imageRepoCommand = imageRepoCommand,
             path = "{imageGroup}/{imageName}/blobs/{digest}",
             pathVariables = mapOf("digest" to digest)
@@ -167,7 +167,7 @@ class DockerHttpClient(
         imageRepoCommand: ImageRepoCommand,
         digest: String
     ): Boolean {
-        val result = webClient.request(
+        val result = webClientDocker.request(
             imageRepoCommand = imageRepoCommand,
             method = HttpMethod.HEAD,
             pathVariables = mapOf("digest" to digest),

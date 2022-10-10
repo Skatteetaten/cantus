@@ -25,3 +25,5 @@ class RequestResultException(
     val repoUrl: String,
     cause: Throwable? = null
 ) : RuntimeException("", cause)
+
+class IntegrationDisabledException(message: String) : CantusException(message)

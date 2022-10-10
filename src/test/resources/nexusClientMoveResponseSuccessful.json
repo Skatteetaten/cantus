@@ -1,0 +1,14 @@
+{
+  "status": 200,
+  "message": "Move Successful",
+  "data": {
+    "destination": "internal-hosted-release",
+    "components moved": [
+      {
+        "name": "no_skatteetaten_aurora_demo/whoami",
+        "version": "2.7.3",
+        "id": "#27:3065"
+      }
+    ]
+  }
+}

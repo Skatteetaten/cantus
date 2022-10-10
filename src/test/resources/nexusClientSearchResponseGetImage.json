@@ -1,0 +1,32 @@
+{
+  "items": [
+    {
+      "id": "aW50ZXJuYWwtaG9zdGVkLWNsaWVudDpkZmJlZjA5ZWZlMTY0NGVhMWEyMmQ2OGIwMDA0YTcwNg",
+      "repository": "internal-hosted-client",
+      "format": "docker",
+      "group": null,
+      "name": "no_skatteetaten_aurora_demo/whoami",
+      "version": "2.7.3",
+      "assets": [
+        {
+          "downloadUrl": "https://utv-nexus.sits.no/repository/internal-hosted-client/v2/no_skatteetaten_aurora_demo/whoami/manifests/2.7.3",
+          "path": "v2/no_skatteetaten_aurora_demo/whoami/manifests/2.7.3",
+          "id": "aW50ZXJuYWwtaG9zdGVkLWNsaWVudDo4NTEzNTY1MmE5NzhiZTlhZjAxNjE2ZDRmN2UwNDc0Nw",
+          "repository": "internal-hosted-client",
+          "format": "docker",
+          "checksum": {
+            "sha1": "67c06e341f31b0a2b2e3f434be5a899f42a31a59",
+            "sha256": "e2052b9a7e92869aff5650d44b30d4f143e7802df9fe3c8d76637c41004fb316"
+          },
+          "contentType": "application/vnd.docker.distribution.manifest.v2+json",
+          "lastModified": null,
+          "uploader": null,
+          "uploaderIp": null,
+          "fileSize": 0
+        }
+      ],
+      "tags": []
+    }
+  ],
+  "continuationToken": null
+}
